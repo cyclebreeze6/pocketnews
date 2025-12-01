@@ -17,7 +17,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
       <SiteHeader />
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 bg-card">
-          <div className="container px-[20%] md:px-6">
+          <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center space-y-4 text-center">
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none font-headline">
                 {channel.name}
@@ -30,7 +30,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
         </section>
         
         <section className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container px-[20%] md:px-6">
+          <div className="container px-4 md:px-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {channelVideos.length > 0 ? (
                 channelVideos.map((video) => <VideoCard key={video.id} video={video} />)
