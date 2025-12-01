@@ -51,7 +51,7 @@ export default function Home() {
             </div>
           </div>
           <div className="lg:col-span-1">
-            <h2 className="text-xl font-bold mb-4 font-headline">My Headlines</h2>
+            <h2 className="text-xl font-bold mb-4 font-headline" id="my-headlines">My Headlines</h2>
             <div className="space-y-2">
               {relatedVideos.map((relatedVideo, index) => {
                 const relatedChannel = channels.find(c => c.id === relatedVideo.channelId);
