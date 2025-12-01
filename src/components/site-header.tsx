@@ -5,6 +5,31 @@ import { Tv2, Search, AppWindow, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
+import { cn } from '@/lib/utils';
+
+const navLinks = [
+    { href: '/#my-headlines', label: 'My Headlines', active: true },
+    { href: '/#breaking-news', label: 'Breaking News' },
+    { href: '/#live-news', label: 'Live News' },
+    { href: '/#podcasts', label: 'Podcasts' },
+    { href: '/#world-news', label: 'World News' },
+    { href: '/#local-news', label: 'Local News' },
+    { href: '/#politics', label: 'Politics' },
+    { href: '/#business-and-economy', label: 'Business and Economy' },
+    { href: '/#technology', label: 'Technology' },
+    { href: '/#health', label: 'Health' },
+    { href: '/#climate-and-environment', label: 'Climate and Environment' },
+    { href: '/#entertainment', label: 'Entertainment' },
+    { href: '/#sports', label: 'Sports' },
+    { href: '/#fashion-and-style', label: 'Fashion & Style' },
+    { href: '/#culture-and-lifestyle', label: 'Culture & Lifestyle' },
+    { href: '/#travel', label: 'Travel' },
+    { href: '/#interviews-and-documentaries', label: 'Interviews & Documentaries' },
+    { href: '/#short-clips', label: 'Short Clips' },
+    { href: '/#weather', label: 'Weather' },
+];
+
 
 export default function SiteHeader() {
   const pathname = usePathname();
@@ -30,7 +55,7 @@ export default function SiteHeader() {
                 <Input placeholder="Search" className="pl-9 bg-input" />
               </div>
               <Button variant="outline" size="sm" className="hidden sm:inline-flex"><AppWindow className="mr-2 h-4 w-4" /> Get the App</Button>
-              <Button size="sm">Get Started</Button>
+              <Button size="sm" asChild><Link href="/login">Get Started</Link></Button>
               <Button variant="ghost" size="icon" className="hidden sm:inline-flex"><MoreVertical className="h-4 w-4" /></Button>
               <Button variant="ghost" size="icon" className="sm:hidden"><Search className="h-4 w-4" /></Button>
             </div>
@@ -39,20 +64,23 @@ export default function SiteHeader() {
       </header>
       <div className="sticky top-16 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container px-4 sm:px-6 md:px-8">
-          <nav className="hidden md:flex items-center space-x-4 py-2">
-            <Link href="/#my-headlines" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
-              My Headlines
-            </Link>
-            <Link href="/#editors-picks" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
-              Editor's Picks
-            </Link>
-            <Link href="/#news" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
-              News
-            </Link>
-            <Link href="/#local" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
-              Local News
-            </Link>
-          </nav>
+          <ScrollArea className="w-full whitespace-nowrap">
+            <nav className="flex items-center space-x-4 py-2">
+              {navLinks.map(link => (
+                <Link 
+                  key={link.href}
+                  href={link.href} 
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary whitespace-nowrap",
+                    link.active ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </div>
       </div>
     </>
