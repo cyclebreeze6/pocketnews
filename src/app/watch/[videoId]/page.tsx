@@ -4,10 +4,11 @@ import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Share, Star, Clock } from 'lucide-react';
+import { Share, Clock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { FollowButton } from '@/components/follow-button';
 
 export default function WatchPage({ params }: { params: { videoId: string } }) {
   const video = videos.find((v) => v.id === params.videoId);
@@ -45,7 +46,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline"><Star className="mr-2 h-4 w-4" /> Follow</Button>
+                    {channel && <FollowButton channelName={channel.name} />}
                     <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
                 </div>
             </div>

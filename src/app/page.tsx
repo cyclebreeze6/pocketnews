@@ -4,9 +4,10 @@ import SiteHeader from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
-import { Share, Star, Clock } from 'lucide-react';
+import { Share, Clock } from 'lucide-react';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { FollowButton } from '@/components/follow-button';
 
 export default function Home() {
   const video = videos[0];
@@ -39,7 +40,7 @@ export default function Home() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline"><Star className="mr-2 h-4 w-4" /> Follow</Button>
+                    {channel && <FollowButton channelName={channel.name} />}
                     <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
                 </div>
             </div>
