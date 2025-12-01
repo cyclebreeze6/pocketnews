@@ -1,12 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Tv2, Search, AppWindow, MoreVertical } from 'lucide-react';
+import { Tv2, Search, AppWindow, MoreVertical, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
-import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const navLinks = [
     { href: '/#my-headlines', label: 'My Headlines', active: true },
@@ -29,6 +34,10 @@ const navLinks = [
     { href: '/#short-clips', label: 'Short Clips' },
     { href: '/#weather', label: 'Weather' },
 ];
+
+const VISIBLE_LINKS = 6;
+const visibleLinks = navLinks.slice(0, VISIBLE_LINKS);
+const hiddenLinks = navLinks.slice(VISIBLE_LINKS);
 
 
 export default function SiteHeader() {
@@ -64,23 +73,36 @@ export default function SiteHeader() {
       </header>
       <div className="sticky top-16 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container px-4 sm:px-6 md:px-8">
-          <ScrollArea className="w-full whitespace-nowrap">
             <nav className="flex items-center space-x-4 py-2">
-              {navLinks.map(link => (
+              {visibleLinks.map(link => (
                 <Link 
                   key={link.href}
                   href={link.href} 
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-primary whitespace-nowrap",
-                    link.active ? "text-foreground" : "text-muted-foreground"
+                     link.active ? "text-foreground" : "text-muted-foreground",
+                     "hidden md:inline-block" // Hide some on smaller screens if needed
                   )}
                 >
                   {link.label}
                 </Link>
               ))}
+               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="text-sm font-medium text-muted-foreground hover:text-primary">
+                    More
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {[...navLinks.slice(0, VISIBLE_LINKS).filter(l => !l.active), ...hiddenLinks].map(link => (
+                     <DropdownMenuItem key={link.href} asChild>
+                        <Link href={link.href}>{link.label}</Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
         </div>
       </div>
     </>
