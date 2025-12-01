@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { users } from '@/lib/data';
 
 const navLinks = [
     { href: '/#my-headlines', label: 'My Headlines', active: true },
@@ -51,6 +52,7 @@ export default function SiteHeader() {
   }
 
   const isLoggedIn = true; // Mock login state
+  const currentUser = users[1]; // Mock current user
 
   return (
     <>
@@ -84,13 +86,13 @@ export default function SiteHeader() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {isLoggedIn ? (
+              {isLoggedIn && currentUser ? (
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src="https://picsum.photos/seed/user2/100/100" alt="@shadcn" />
-                          <AvatarFallback>JD</AvatarFallback>
+                          <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
+                          <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                       </Button>
                     </DropdownMenuTrigger>

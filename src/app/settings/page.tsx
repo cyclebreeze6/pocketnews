@@ -15,9 +15,11 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { users } from '@/lib/data';
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const currentUser = users[1]; // Mock current user
 
   const handleSaveChanges = (section: string) => {
     toast({
@@ -25,6 +27,19 @@ export default function SettingsPage() {
       description: `Your ${section} have been updated.`,
     });
   };
+
+  if (!currentUser) {
+    return (
+       <div className="flex min-h-screen w-full flex-col">
+        <SiteHeader />
+        <main className="flex-1 py-12 md:py-16">
+          <div className="container px-4 md:px-6">
+            <p>Please log in to see your settings.</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -46,18 +61,18 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src="https://picsum.photos/seed/user2/100/100" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarImage src={currentUser.avatar} />
+                    <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <Button variant="outline">Change Photo</Button>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" defaultValue="Jane Doe" />
+                  <Input id="name" defaultValue={currentUser.name} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="jane.doe@example.com" />
+                  <Input id="email" type="email" defaultValue={currentUser.email} />
                 </div>
                 <Button onClick={() => handleSaveChanges('profile settings')}>Save Changes</Button>
               </CardContent>
