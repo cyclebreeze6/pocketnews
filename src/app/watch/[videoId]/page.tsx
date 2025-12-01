@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 
 
 export default function WatchPage({ params }: { params: { videoId: string } }) {
@@ -44,6 +44,12 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
       description: 'The video link has been copied.',
     });
   };
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -126,7 +132,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                               className="rounded-md object-cover"
                             />
                             <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
-                              {Math.floor(Math.random() * 5)}:{Math.floor(Math.random()*50+10)}
+                               {formatDuration(relatedVideo.watchTime*60)}
                             </div>
                           </div>
                           <div className="flex flex-col justify-between">
@@ -134,7 +140,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                               {isPlaying && <p className="text-xs text-primary font-semibold mb-1 animate-pulse">Now Playing</p>}
                               <h3 className="text-sm font-semibold line-clamp-2 leading-snug group-hover:text-primary">{relatedVideo.title}</h3>
                             </div>
-                            <p className="text-xs text-muted-foreground">{relatedChannel?.name} • {Math.floor(Math.random()*12)+1}h ago</p>
+                            <p className="text-xs text-muted-foreground">{relatedChannel?.name} • {formatDistanceToNow(new Date(relatedVideo.createdAt))} ago</p>
                           </div>
                         </div>
                       </div>
