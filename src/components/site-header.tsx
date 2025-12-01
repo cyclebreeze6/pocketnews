@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Tv2, Search, AppWindow, MoreVertical, ChevronDown } from 'lucide-react';
+import { Tv2, Search, Bell, MoreVertical, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 
 const navLinks = [
@@ -63,7 +65,21 @@ export default function SiteHeader() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search" className="pl-9 bg-input" />
               </div>
-              <Button variant="outline" size="sm" className="hidden sm:inline-flex"><AppWindow className="mr-2 h-4 w-4" /> Get the App</Button>
+               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
+                    <Bell className="h-4 w-4" />
+                    <span className="sr-only">Notifications</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>New video in Tech Forward</DropdownMenuItem>
+                  <DropdownMenuItem>Your subscription is expiring soon</DropdownMenuItem>
+                  <DropdownMenuItem>Live event starting in 5 minutes</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button size="sm" asChild><Link href="/login">Get Started</Link></Button>
               <Button variant="ghost" size="icon" className="hidden sm:inline-flex"><MoreVertical className="h-4 w-4" /></Button>
               <Button variant="ghost" size="icon" className="sm:hidden"><Search className="h-4 w-4" /></Button>
