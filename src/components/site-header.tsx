@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Tv2, Search, Bell, MoreVertical, ChevronDown } from 'lucide-react';
+import { Tv2, Search, Bell, MoreVertical, ChevronDown, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const navLinks = [
     { href: '/#my-headlines', label: 'My Headlines', active: true },
@@ -49,6 +50,8 @@ export default function SiteHeader() {
     return null;
   }
 
+  const isLoggedIn = true; // Mock login state
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -80,7 +83,31 @@ export default function SiteHeader() {
                   <DropdownMenuItem>Live event starting in 5 minutes</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button size="sm" asChild><Link href="/login">Get Started</Link></Button>
+
+              {isLoggedIn ? (
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="https://picsum.photos/seed/user2/100/100" alt="@shadcn" />
+                          <AvatarFallback>JD</AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild><Link href="/dashboard">Dashboard</Link></DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link href="/following">Following</Link></DropdownMenuItem>
+                      <DropdownMenuItem>Settings</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>Logout</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+              ) : (
+                <Button size="sm" asChild><Link href="/login">Get Started</Link></Button>
+              )}
+              
               <Button variant="ghost" size="icon" className="hidden sm:inline-flex"><MoreVertical className="h-4 w-4" /></Button>
               <Button variant="ghost" size="icon" className="sm:hidden"><Search className="h-4 w-4" /></Button>
             </div>
