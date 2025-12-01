@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Share, Star, Clock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function WatchPage({ params }: { params: { videoId: string } }) {
   const video = videos.find((v) => v.id === params.videoId);
@@ -58,39 +59,41 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
           </div>
           <div className="lg:col-span-1">
             <h2 className="text-xl font-bold mb-4 font-headline">My Headlines</h2>
-            <div className="space-y-2">
-              {relatedVideos.map((relatedVideo) => {
-                const relatedChannel = channels.find(c => c.id === relatedVideo.channelId);
-                const isPlaying = relatedVideo.id === video.id;
+            <ScrollArea className="h-[calc(6*96px)] pr-4">
+              <div className="space-y-2">
+                {relatedVideos.map((relatedVideo) => {
+                  const relatedChannel = channels.find(c => c.id === relatedVideo.channelId);
+                  const isPlaying = relatedVideo.id === video.id;
 
-                return (
-                  <Link key={relatedVideo.id} href={`/watch/${relatedVideo.id}`}>
-                    <div className={`group p-2 rounded-lg transition-colors ${isPlaying ? 'bg-card' : 'hover:bg-card/50'}`}>
-                      <div className="flex gap-4">
-                        <div className="relative w-32 h-20 flex-shrink-0">
-                          <Image
-                            src={relatedVideo.thumbnailUrl}
-                            alt={relatedVideo.title}
-                            fill
-                            className="rounded-md object-cover"
-                          />
-                           <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
-                            {Math.floor(Math.random() * 5)}:{Math.floor(Math.random()*50+10)}
+                  return (
+                    <Link key={relatedVideo.id} href={`/watch/${relatedVideo.id}`}>
+                      <div className={`group p-2 rounded-lg transition-colors ${isPlaying ? 'bg-card' : 'hover:bg-card/50'}`}>
+                        <div className="flex gap-4">
+                          <div className="relative w-32 h-20 flex-shrink-0">
+                            <Image
+                              src={relatedVideo.thumbnailUrl}
+                              alt={relatedVideo.title}
+                              fill
+                              className="rounded-md object-cover"
+                            />
+                            <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
+                              {Math.floor(Math.random() * 5)}:{Math.floor(Math.random()*50+10)}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-col justify-between">
-                          <div>
-                            {isPlaying && <p className="text-xs text-primary font-semibold mb-1">Now Playing</p>}
-                            <h3 className="text-sm font-semibold line-clamp-2 leading-snug group-hover:text-primary">{relatedVideo.title}</h3>
+                          <div className="flex flex-col justify-between">
+                            <div>
+                              {isPlaying && <p className="text-xs text-primary font-semibold mb-1 animate-pulse">Now Playing</p>}
+                              <h3 className="text-sm font-semibold line-clamp-2 leading-snug group-hover:text-primary">{relatedVideo.title}</h3>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{relatedChannel?.name} • {Math.floor(Math.random()*12)+1}h ago</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">{relatedChannel?.name} • {Math.floor(Math.random()*12)+1}h ago</p>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </ScrollArea>
             <div className="mt-6 bg-yellow-800/20 p-4 rounded-lg text-center">
                 <p className="text-sm mb-2">Enjoy ad-free news from 400+ local, national, and global channels</p>
                 <Button variant="secondary" size="sm">Go ad-free</Button>
