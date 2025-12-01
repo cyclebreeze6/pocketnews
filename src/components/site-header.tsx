@@ -73,7 +73,7 @@ export default function SiteHeader() {
       </header>
       <div className="sticky top-16 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container px-4 sm:px-6 md:px-8">
-            <nav className="flex items-center space-x-4 py-2">
+            <nav className="flex items-center justify-center space-x-6 py-2">
               {visibleLinks.map(link => (
                 <Link 
                   key={link.href}
@@ -81,7 +81,7 @@ export default function SiteHeader() {
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-primary whitespace-nowrap",
                      link.active ? "text-foreground" : "text-muted-foreground",
-                     "hidden md:inline-block" // Hide some on smaller screens if needed
+                     "hidden md:inline-block"
                   )}
                 >
                   {link.label}
