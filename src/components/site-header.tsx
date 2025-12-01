@@ -99,7 +99,7 @@ export default function SiteHeader() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild><Link href="/dashboard">Dashboard</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link href="/following">Following</Link></DropdownMenuItem>
-                      <DropdownMenuItem>Settings</DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link href="/settings">Settings</Link></DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem>Logout</DropdownMenuItem>
                     </DropdownMenuContent>
