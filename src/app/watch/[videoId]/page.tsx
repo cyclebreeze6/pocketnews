@@ -1,14 +1,23 @@
+
+'use client';
+
 import { videos, channels } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Share, Clock } from 'lucide-react';
+import { Share, Clock, Copy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FollowButton } from '@/components/follow-button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect, useState } from 'react';
+
 
 export default function WatchPage({ params }: { params: { videoId: string } }) {
   const video = videos.find((v) => v.id === params.videoId);
@@ -19,6 +28,20 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
 
   const channel = channels.find((c) => c.id === video.channelId);
   const relatedVideos = videos.filter((v) => v.id !== video.id);
+  const { toast } = useToast();
+  const [videoUrl, setVideoUrl] = useState('');
+
+  useEffect(() => {
+    setVideoUrl(window.location.href);
+  }, []);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(videoUrl);
+    toast({
+      title: 'Copied to clipboard!',
+      description: 'The video link has been copied.',
+    });
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -47,7 +70,30 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                 </div>
                 <div className="flex items-center gap-2">
                     {channel && <FollowButton channelName={channel.name} />}
-                    <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                            <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Share Video</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                        Copy the link below to share this video.
+                                    </p>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="video-link">Video Link</Label>
+                                    <div className="flex items-center space-x-2">
+                                        <Input id="video-link" value={videoUrl} readOnly />
+                                        <Button onClick={copyToClipboard} size="icon" variant="outline">
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
 
