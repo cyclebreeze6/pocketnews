@@ -22,7 +22,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
       <main className="flex-1 py-6 md:py-8">
-        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 px-[20%]">
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4">
               <VideoPlayer youtubeId={video.youtubeId} />
