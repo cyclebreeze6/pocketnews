@@ -3,6 +3,7 @@ import Image from 'next/image';
 import type { Video } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Eye, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface VideoCardProps {
   video: Video;
@@ -31,7 +32,7 @@ export function VideoCard({ video }: VideoCardProps) {
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                <span>{new Date(video.createdAt).toLocaleDateString()}</span>
+                <span>{format(new Date(video.createdAt), 'PP')}</span>
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { format } from "date-fns";
 
 export default function VideosPage() {
   return (
@@ -39,7 +40,7 @@ export default function VideosPage() {
                     <Badge variant="outline">{channel?.name || 'Uncategorized'}</Badge>
                   </TableCell>
                   <TableCell>{video.views.toLocaleString()}</TableCell>
-                  <TableCell>{new Date(video.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>{format(new Date(video.createdAt), 'PP')}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

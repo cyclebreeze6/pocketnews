@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { videos, channels } from '@/lib/data';
@@ -17,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
 
 
 export default function WatchPage({ params }: { params: { videoId: string } }) {
@@ -63,7 +65,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                             <p className="font-semibold">{channel?.name || 'News Source'}</p>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Clock className="h-4 w-4" />
-                                <span>{new Date(video.createdAt).toLocaleDateString()}</span>
+                                <span>{format(new Date(video.createdAt), 'PP')}</span>
                             </div>
                         </div>
                     </div>
