@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { users } from '@/lib/data';
+import { ScrollArea } from './ui/scroll-area';
 
 const navLinks = [
     { href: '/#my-headlines', label: 'My Headlines', active: true },
@@ -118,36 +119,22 @@ export default function SiteHeader() {
       </header>
       <div className="sticky top-16 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container px-4 sm:px-6 md:px-8">
-            <nav className="flex items-center justify-center space-x-6 py-2">
-              {visibleLinks.map(link => (
-                <Link 
-                  key={link.href}
-                  href={link.href} 
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary whitespace-nowrap",
-                     link.active ? "text-foreground" : "text-muted-foreground",
-                     "hidden md:inline-block"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-sm font-medium text-muted-foreground hover:text-primary">
-                    More
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {[...navLinks.slice(0, VISIBLE_LINKS).filter(l => !l.active), ...hiddenLinks].map(link => (
-                     <DropdownMenuItem key={link.href} asChild>
-                        <Link href={link.href}>{link.label}</Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </nav>
+            <ScrollArea className="w-full whitespace-nowrap">
+              <nav className="flex w-max items-center justify-center space-x-6 py-2">
+                {navLinks.map(link => (
+                  <Link 
+                    key={link.href}
+                    href={link.href} 
+                    className={cn(
+                      "text-sm font-medium transition-colors hover:text-primary whitespace-nowrap pb-2",
+                       link.active ? "text-foreground border-b-2 border-primary" : "text-muted-foreground",
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            </ScrollArea>
         </div>
       </div>
     </>
