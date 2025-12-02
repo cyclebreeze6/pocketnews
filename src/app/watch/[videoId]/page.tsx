@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Share, Star, Check } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
