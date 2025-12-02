@@ -1,0 +1,183 @@
+rules_version = '2';
+
+/**
+ * This Firestore Security Ruleset implements a Role-Based Access Control (RBAC) model
+ * for the Pocketnews TV application. It establishes a clear distinction between
+ * public content, private user data, and privileged administrative actions.
+ *
+ * Core Philosophy:
+ * The security model is designed to be secure by default. Public content (channels and videos)
+ * is globally readable, but all write operations are restricted to administrators. User data
+ * is strictly private, accessible only to the owning user, with a narrow exception for admins
+ * to view (but not modify) individual user profiles for support purposes.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores private user data. Each user has exclusive control over their own document.
+ * - /channels/{channelId}: A top-level collection for TV channels. This data is public.
+ * - /channels/{channelId}/videos/{videoId}: A subcollection for videos belonging to a channel. This data is also public.
+ * - /roles_admin/{userId}: A dedicated collection for Database-Based Access Control (DBAC). The existence
+ *   of a document here grants a user global administrator privileges. This collection is not
+ *   client-writable.
+ *
+ * Key Security Decisions:
+ * - Admin Role Management: Administrator status is determined by the existence of a document in the
+ *   `/roles_admin/{userId}` collection. This is more secure than a boolean field on a user document,
+ *   as it cannot be manipulated by users.
+ * - Public Content vs. Private Data: A clear structural segregation exists between public-read collections
+ *   (`/channels`) and private-read/write collections (`/users`).
+ * - No User Listing: To protect user privacy and prevent data scraping, listing documents from the `/users`
+ *   and `/roles_admin` collections is explicitly disallowed for all clients.
+ * - Immutable Ownership: Critical relational identifiers (e.g., a User's `id`, a Video's `channelId`) are
+ *   enforced to be immutable after creation to maintain data integrity.
+ *
+ * Denormalization for Authorization:
+ * The primary authorization mechanism is DBAC via the `/roles_admin` collection, which avoids costly lookups.
+ * For relational integrity, the `channelId` is denormalized onto each `video` document. The rules enforce
+ * that this denormalized ID matches the parent collection path, ensuring videos cannot be created under the
+ * wrong channel.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to provide clear, reusable, and auditable logic.
+
+    /**
+     * Checks if the request is coming from an authenticated user.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the given userId.
+     * This is the foundation of the user-ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the user has administrative privileges.
+     * Admin status is securely determined by the existence of a document
+     * in the read-only /roles_admin collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * Verifies that a document already exists.
+     * CRITICAL for all update and delete operations to prevent acting on non-existent data.
+     */
+    function isExistingDoc() {
+      return resource != null;
+    }
+
+    /**
+     * Combines owner check with an existence check for update/delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && isExistingDoc();
+    }
+
+    /**
+     * Combines admin check with an existence check for update/delete operations.
+     */
+    function isExistingAdmin() {
+      return isAdmin() && isExistingDoc();
+    }
+
+    /**
+     * Ensures that when a user document is created, its internal 'id' field
+     * matches the document's ID, which is the user's auth UID.
+     */
+    function userHasConsistentId(userId) {
+      return request.resource.data.id == userId;
+    }
+    
+    /**
+     * Prevents a user from changing their own ID or isAdmin status.
+     * The `isAdmin` field in the user document is for UI display only;
+     * authorization is handled by the `/roles_admin` collection.
+     */
+    function userCanUpdateSelf() {
+        let isIdImmutable = request.resource.data.id == resource.data.id;
+        let isRoleFieldImmutable = !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == resource.data.isAdmin;
+        return isIdImmutable && isRoleFieldImmutable;
+    }
+
+    /**
+     * Ensures that a new video's internal 'channelId' matches its parent path.
+     */
+    function videoHasConsistentChannelId(channelId) {
+      return request.resource.data.channelId == channelId;
+    }
+
+    /**
+     * Ensures a video's parent channel cannot be changed after creation.
+     */
+    function videoChannelIsImmutable() {
+      return request.resource.data.channelId == resource.data.channelId;
+    }
+
+    /**
+     * @description Manages user profile data.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own user document for the first time.
+     * @deny (list) Any user, including an admin, attempting to list all user documents.
+     * @principle Restricts access to a user's own data tree and prevents user data enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false;
+      allow create: if isOwner(userId) && userHasConsistentId(userId);
+      allow update: if isExistingOwner(userId) && userCanUpdateSelf();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Defines the collection of publicly viewable TV channels.
+     * @path /channels/{channelId}
+     * @allow (get, list) Any user, including unauthenticated visitors, reading channel data.
+     * @deny (create) A non-administrative user attempting to create a new channel.
+     * @principle Enforces public read access for content while restricting all write operations to administrators.
+     */
+    match /channels/{channelId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update: if isExistingAdmin();
+      allow delete: if isExistingAdmin();
+
+      /**
+       * @description Defines the collection of videos belonging to a channel.
+       * @path /channels/{channelId}/videos/{videoId}
+       * @allow (list) Any user, including unauthenticated visitors, listing videos for a channel.
+       * @deny (update) A non-administrative user attempting to modify a video's title.
+       * @principle Validates relational integrity by ensuring a video's `channelId` field matches its parent path.
+       */
+      match /videos/{videoId} {
+        allow get: if true;
+        allow list: if true;
+        allow create: if isAdmin() && videoHasConsistentChannelId(channelId);
+        allow update: if isExistingAdmin() && videoChannelIsImmutable();
+        allow delete: if isExistingAdmin();
+      }
+    }
+
+    /**
+     * @description Manages admin role assignments via document existence (DBAC). This collection is read-only from clients.
+     * @path /roles_admin/{userId}
+     * @allow (N/A) No client operation is permitted.
+     * @deny (create, update, delete) Any user, including an admin, attempting to modify roles from the client.
+     * @principle Secures role management by making it a backend-only or console-only operation, preventing privilege escalation from the client.
+     */
+    match /roles_admin/{userId} {
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
