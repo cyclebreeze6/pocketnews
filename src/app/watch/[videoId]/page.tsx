@@ -6,7 +6,7 @@ import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Share, Star } from 'lucide-react';
+import { Share, Star, Check } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -29,10 +29,18 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
 
   const { toast } = useToast();
   const [videoUrl, setVideoUrl] = useState('');
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
     setVideoUrl(window.location.href);
-  }, [params.videoId]);
+    // In a real app, you'd fetch the follow status from a user's profile
+    const mockFollowedChannels = ['1']; // Mock: user follows channel '1'
+    if (channel && mockFollowedChannels.includes(channel.id)) {
+      setIsFollowing(true);
+    } else {
+      setIsFollowing(false);
+    }
+  }, [params.videoId, channel]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(videoUrl);
@@ -41,6 +49,15 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
       description: 'The video link has been copied.',
     });
   };
+
+  const handleFollow = () => {
+    // In a real app, this would trigger an API call to update the user's follow status
+    setIsFollowing(!isFollowing);
+     toast({
+      title: isFollowing ? `Unfollowed ${channel?.name}` : `Followed ${channel?.name}!`,
+      description: isFollowing ? 'You will no longer receive notifications.' : 'You will now be notified of new videos.',
+    });
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -67,7 +84,10 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline"><Star className="mr-2 h-4 w-4" /> Follow</Button>
+                    <Button variant={isFollowing ? 'secondary': 'outline'} onClick={handleFollow}>
+                      {isFollowing ? <Check className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </Button>
                     <Button variant="secondary" onClick={copyToClipboard}><Share className="mr-2 h-4 w-4" /> Share</Button>
                 </div>
             </div>
