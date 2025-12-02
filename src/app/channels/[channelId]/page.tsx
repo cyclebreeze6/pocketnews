@@ -190,9 +190,3 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
     </div>
   );
 }
-
-export async function generateStaticParams() {
-  return channels.map((channel) => ({
-    channelId: channel.id,
-  }));
-}
