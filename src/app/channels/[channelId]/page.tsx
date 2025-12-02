@@ -5,20 +5,19 @@
 import { channels, videos } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/site-header';
-import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Share, Clock, Copy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FollowButton } from '@/components/follow-button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { VideoPlayer } from '@/components/video-player';
 
 export default function ChannelPage({ params }: { params: { channelId: string } }) {
   const channel = channels.find((c) => c.id === params.channelId);
@@ -108,7 +107,6 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {channel && <FollowButton channelName={channel.name} />}
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
@@ -144,7 +142,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
             </div>
           </div>
           <div className="lg:col-span-1">
-            <h2 className="text-xl font-bold mb-4 font-headline" id="my-headlines">My Headlines</h2>
+            <h2 className="text-xl font-bold mb-4 font-headline" id="my-headlines">More from {channel.name}</h2>
              <ScrollArea className="h-[calc(6*96px)] pr-4">
               <div className="space-y-2">
                 {relatedVideos.map((relatedVideo, index) => {

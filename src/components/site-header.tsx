@@ -97,7 +97,6 @@ export default function SiteHeader() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild><Link href="/dashboard">Dashboard</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link href="/channels">All Channels</Link></DropdownMenuItem>
-                      <DropdownMenuItem asChild><Link href="/following">Following</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link href="/settings">Settings</Link></DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem>Logout</DropdownMenuItem>

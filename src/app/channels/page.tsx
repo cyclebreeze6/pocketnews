@@ -2,9 +2,7 @@
 
 import SiteHeader from '@/components/site-header';
 import { channels } from '@/lib/data';
-import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { FollowButton } from '@/components/follow-button';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 
@@ -31,10 +29,7 @@ export default function AllChannelsPage() {
                       <p className="text-sm text-muted-foreground line-clamp-1">{channel.description}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <FollowButton channelName={channel.name} />
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </Link>
             ))}

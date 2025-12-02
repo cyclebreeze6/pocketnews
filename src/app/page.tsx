@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Share, Clock, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FollowButton } from '@/components/follow-button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -72,7 +71,7 @@ export default function Home() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {channel && <FollowButton channelName={channel.name} />}
+                    
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
