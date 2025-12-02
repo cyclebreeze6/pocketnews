@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Tv2, Search, Bell, MoreVertical, ChevronDown, User } from 'lucide-react';
+import { Tv2, Search, Bell, MoreVertical, ChevronDown, User, Clapperboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import { users } from '@/lib/data';
 import { ScrollArea } from './ui/scroll-area';
 
 const navLinks = [
-    { href: '/#my-headlines', label: 'My Headlines', active: true },
+    { href: '/#my-headlines', label: 'My Headlines' },
     { href: '/#breaking-news', label: 'Breaking News' },
     { href: '/#live-news', label: 'Live News' },
     { href: '/#podcasts', label: 'Podcasts' },
@@ -40,11 +40,6 @@ const navLinks = [
     { href: '/#weather', label: 'Weather' },
 ];
 
-const VISIBLE_LINKS = 6;
-const visibleLinks = navLinks.slice(0, VISIBLE_LINKS);
-const hiddenLinks = navLinks.slice(VISIBLE_LINKS);
-
-
 export default function SiteHeader() {
   const pathname = usePathname();
 
@@ -52,8 +47,8 @@ export default function SiteHeader() {
     return null;
   }
 
-  const isLoggedIn = true; // Mock login state
-  const currentUser = users[1]; // Mock current user
+  const isLoggedIn = true; 
+  const currentUser = users[1];
 
   return (
     <>
@@ -101,6 +96,7 @@ export default function SiteHeader() {
                       <DropdownMenuLabel>My Account</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild><Link href="/dashboard">Dashboard</Link></DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link href="/channels">All Channels</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link href="/following">Following</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link href="/settings">Settings</Link></DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -127,7 +123,9 @@ export default function SiteHeader() {
                     href={link.href} 
                     className={cn(
                       "text-sm font-medium transition-colors hover:text-primary whitespace-nowrap pb-2",
-                       link.active ? "text-foreground border-b-2 border-primary" : "text-muted-foreground",
+                       pathname === link.href || (pathname === '/' && link.href === '/#my-headlines')
+                         ? "text-foreground border-b-2 border-primary" 
+                         : "text-muted-foreground",
                     )}
                   >
                     {link.label}
