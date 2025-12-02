@@ -14,7 +14,7 @@ body {
     --card-foreground: 210 40% 98%;
     --popover: 222 39% 23%;
     --popover-foreground: 210 40% 98%;
-    --primary: 0 84% 60%; /* #ef4444 - red-500 */
+    --primary: 262 82% 57%; /* A vibrant violet */
     --primary-foreground: 210 40% 98%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -26,8 +26,8 @@ body {
     --destructive-foreground: 0 0% 98%;
     --border: 215 28% 27%; /* A bit lighter for borders */
     --input: 215 28% 22%;
-    --ring: 0 84% 60%;
-    --chart-1: 0 84% 60%;
+    --ring: 262 82% 57%;
+    --chart-1: 262 82% 57%;
     --chart-2: 210 40% 96.1%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
@@ -36,12 +36,12 @@ body {
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 0 84% 60%;
+    --sidebar-primary: 262 82% 57%;
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-accent: 222 39% 23%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 215 28% 27%;
-    --sidebar-ring: 0 84% 60%;
+    --sidebar-ring: 262 82% 57%;
   }
 }
 
