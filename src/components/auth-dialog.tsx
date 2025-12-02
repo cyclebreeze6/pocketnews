@@ -12,6 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { useState } from 'react';
+import { useAuth, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthDialogProps {
   open: boolean;
@@ -20,12 +23,43 @@ interface AuthDialogProps {
 }
 
 export function AuthDialog({ open, onOpenChange, onLoginSuccess }: AuthDialogProps) {
+  const auth = useAuth();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
 
-  const handleLogin = () => {
-    // Mock login logic
-    onLoginSuccess();
-    onOpenChange(false);
-  }
+  const handleLogin = async () => {
+    try {
+      initiateEmailSignIn(auth, email, password);
+      onLoginSuccess();
+      onOpenChange(false);
+      toast({ title: 'Logged in successfully!' });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error logging in',
+        description: error.message,
+      });
+    }
+  };
+
+  const handleSignUp = async () => {
+     try {
+      initiateEmailSignUp(auth, email, password);
+      // Here you would typically also save the user's name to your database
+      onLoginSuccess();
+      onOpenChange(false);
+      toast({ title: 'Signed up successfully!' });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error signing up',
+        description: error.message,
+      });
+    }
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,11 +79,11 @@ export function AuthDialog({ open, onOpenChange, onLoginSuccess }: AuthDialogPro
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="m@example.com" />
+                <Input id="email" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <Button onClick={handleLogin} className="w-full mt-2">Log In</Button>
             </div>
@@ -64,17 +98,17 @@ export function AuthDialog({ open, onOpenChange, onLoginSuccess }: AuthDialogPro
             <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" placeholder="Your Name" />
+                    <Input id="name" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
               <div className="grid gap-2">
                 <Label htmlFor="email-signup">Email</Label>
-                <Input id="email-signup" type="email" placeholder="m@example.com" />
+                <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password-signup">Password</Label>
-                <Input id="password-signup" type="password" />
+                <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              <Button onClick={handleLogin} className="w-full mt-2">Sign Up</Button>
+              <Button onClick={handleSignUp} className="w-full mt-2">Sign Up</Button>
             </div>
           </TabsContent>
         </Tabs>

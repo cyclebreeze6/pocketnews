@@ -2,15 +2,53 @@
 'use client';
 
 import SiteHeader from '@/components/site-header';
-import { users } from '@/lib/data';
+import { useDoc, useFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import type { UserProfile } from '@/lib/types';
 
 export default function ProfileSettingsPage() {
-    const user = users[0]; // mock user
+    const { firestore } = useFirebase();
+    const { user } = useUser();
+    const { toast } = useToast();
+
+    const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+    const { data: userProfile, isLoading } = useDoc<UserProfile>(userProfileRef);
+
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+
+    useEffect(() => {
+        if (userProfile) {
+            setName(userProfile.name || '');
+            setEmail(userProfile.email || '');
+        } else if (user) {
+            setName(user.displayName || '');
+            setEmail(user.email || '');
+        }
+    }, [userProfile, user]);
+
+    const handleSaveChanges = () => {
+        if (!user) return;
+        const profileData = {
+            id: user.uid,
+            name,
+            email
+        };
+        setDocumentNonBlocking(userProfileRef!, profileData, { merge: true });
+        toast({ title: 'Profile updated successfully!' });
+    };
+
+    if (isLoading) {
+        return <div>Loading profile...</div>;
+    }
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
@@ -27,8 +65,8 @@ export default function ProfileSettingsPage() {
                 <CardContent className="space-y-6">
                     <div className="flex items-center gap-4">
                         <Avatar className="w-20 h-20">
-                            <AvatarImage src={user.avatar} alt={user.name} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={user?.photoURL || `https://avatar.vercel.sh/${user?.uid}.png`} alt={name} />
+                            <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
                             <Button>Change Photo</Button>
@@ -37,14 +75,14 @@ export default function ProfileSettingsPage() {
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="name">Name</Label>
-                        <Input id="name" defaultValue={user.name} />
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" defaultValue={user.email} />
+                        <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled />
                     </div>
 
-                    <Button>Save Changes</Button>
+                    <Button onClick={handleSaveChanges}>Save Changes</Button>
                 </CardContent>
             </Card>
         </div>

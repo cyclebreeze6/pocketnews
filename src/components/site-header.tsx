@@ -3,11 +3,8 @@
 
 import Link from 'next/link';
 import {
-  Tv2,
   Search,
-  Clapperboard,
   MonitorPlay,
-  ChevronDown,
   Bell,
   Check,
   History,
@@ -16,16 +13,12 @@ import {
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { ScrollArea } from './ui/scroll-area';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { users, videos, channels } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 import {
@@ -38,42 +31,40 @@ import {
 } from './ui/dropdown-menu';
 import { useState } from 'react';
 import { AuthDialog } from './auth-dialog';
-
-const navLinks = [
-  { href: '/', label: 'My Headlines' },
-  { href: '/picks', label: "Editor's Picks" },
-  { href: '/news', label: 'News' },
-  { href: '/local', label: 'Local News' },
-  { href: '/business', label: 'Business' },
-  { href: '/scitech', label: 'SciTech' },
-  { href: '/politics', label: 'Politics' },
-  { href: '/entertainment', label: 'Entertainment' },
-  { href: '/sports', label: 'Sports' },
-];
+import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import type { Video, Channel, UserFollow } from '@/lib/types';
+import { collection, query, where, limit } from 'firebase/firestore';
 
 export default function SiteHeader() {
-  const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
-  const loggedInUser = users[0]; // Mock logged-in user
 
-  const followedChannels = ['1']; // Mock followed channel IDs
-  const recentVideos = videos
-    .filter(
-      (v) =>
-        followedChannels.includes(v.channelId) &&
-        new Date(v.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    ) // in last 7 days
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const followsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'follows') : null, [firestore, user]);
+  const { data: followedChannels } = useCollection<UserFollow>(followsQuery);
+
+  const recentVideosQuery = useMemoFirebase(() => {
+    if (!followedChannels || followedChannels.length === 0) return null;
+    const followedChannelIds = followedChannels.map(f => f.channelId);
+    return query(
+      collection(firestore, 'videos'),
+      where('channelId', 'in', followedChannelIds),
+      // where('createdAt', '>', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)), // Last 7 days
+      limit(5) // Limit notifications
+    );
+  }, [firestore, followedChannels]);
+
+  const { data: recentVideos } = useCollection<Video>(recentVideosQuery);
+  const { data: channels } = useCollection<Channel>(useMemoFirebase(() => collection(firestore, 'channels'), [firestore]));
 
   const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
+    setIsAuthDialogOpen(false);
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    auth.signOut();
   };
-
 
   return (
     <>
@@ -113,9 +104,9 @@ export default function SiteHeader() {
 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
+                    <Button variant="ghost" size="icon" className="relative" disabled={!user}>
                       <Bell className="h-5 w-5" />
-                      {recentVideos.length > 0 && (
+                      {recentVideos && recentVideos.length > 0 && (
                         <span className="absolute top-1 right-1 flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
@@ -135,9 +126,9 @@ export default function SiteHeader() {
                       </div>
                        <Separator />
                       <div className="grid gap-2">
-                        {recentVideos.length > 0 ? (
+                        {recentVideos && recentVideos.length > 0 ? (
                           recentVideos.map((video) => {
-                            const channel = channels.find(c => c.id === video.channelId);
+                            const channel = channels?.find(c => c.id === video.channelId);
                             return (
                                <Link href={`/watch/${video.id}`} key={video.id}>
                                 <div
@@ -146,7 +137,7 @@ export default function SiteHeader() {
                                 >
                                   <Avatar className="h-8 w-8 mt-1">
                                       <AvatarImage src={`https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
-                                      <AvatarFallback>{channel?.name.charAt(0)}</AvatarFallback>
+                                      <AvatarFallback>{channel?.name?.charAt(0)}</AvatarFallback>
                                   </Avatar>
                                   <div className="grid gap-1">
                                       <p className="text-sm font-medium leading-none">
@@ -177,22 +168,23 @@ export default function SiteHeader() {
                   </PopoverContent>
                 </Popover>
 
-                {isLoggedIn ? (
+                {!isUserLoading && (
+                   user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={loggedInUser.avatar} alt={loggedInUser.name} />
-                          <AvatarFallback>{loggedInUser.name.charAt(0)}</AvatarFallback>
+                          <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`} alt={user.displayName || 'User'} />
+                          <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="end" forceMount>
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{loggedInUser.name}</p>
+                          <p className="text-sm font-medium leading-none">{user.displayName || 'Anonymous User'}</p>
                           <p className="text-xs leading-none text-muted-foreground">
-                            {loggedInUser.email}
+                            {user.email}
                           </p>
                         </div>
                       </DropdownMenuLabel>
@@ -215,6 +207,7 @@ export default function SiteHeader() {
                   </DropdownMenu>
                 ) : (
                   <Button size="sm" onClick={() => setIsAuthDialogOpen(true)}>Get Started</Button>
+                )
                 )}
               </nav>
               <Button variant="ghost" size="icon" className="sm:hidden">
@@ -224,34 +217,6 @@ export default function SiteHeader() {
           </div>
         </div>
       </header>
-      <div className="sticky top-16 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container px-4 sm:px-6 md:px-8">
-          <ScrollArea className="w-full whitespace-nowrap">
-            <nav className="flex w-max items-center justify-center space-x-6 py-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    'text-sm font-medium transition-colors hover:text-primary whitespace-nowrap pb-2',
-                    pathname === link.href
-                      ? 'text-foreground border-b-2 border-destructive'
-                      : 'text-muted-foreground'
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <Link
-                href="#"
-                className="text-sm font-medium text-muted-foreground hover:text-primary whitespace-nowrap pb-2 flex items-center"
-              >
-                More categories <ChevronDown className="h-4 w-4 ml-1" />
-              </Link>
-            </nav>
-          </ScrollArea>
-        </div>
-      </div>
       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={handleLoginSuccess} />
     </>
   );

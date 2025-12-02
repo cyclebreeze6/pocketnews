@@ -1,22 +1,59 @@
 'use client';
 
 import Link from 'next/link';
-import { channels, videos } from '@/lib/data';
+import { useCollection, useFirebase, useMemoFirebase, useUser } from '@/firebase';
 import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Share, Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import type { Video, Channel } from '@/lib/types';
+import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
-  const featuredVideo = videos[0];
-  const otherVideos = videos.slice(0, 7); // Show more videos in the sidebar
-  const channel = channels.find((c) => c.id === featuredVideo.channelId);
+  const { firestore } = useFirebase();
+  const { user } = useUser();
+  const { toast } = useToast();
+
+  const videosQuery = useMemoFirebase(() => collection(firestore, 'videos'), [firestore]);
+  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
+  
+  const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+  const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+
+  const featuredVideo = videos?.[0];
+  const otherVideos = videos?.slice(0, 7);
+  const channel = channels?.find((c) => c.id === featuredVideo?.channelId);
+
+  const handleFollow = () => {
+    if (!user || !channel) {
+      toast({
+        variant: 'destructive',
+        title: 'Please log in to follow channels.',
+      });
+      return;
+    }
+    const followRef = doc(firestore, 'users', user.uid, 'follows', channel.id);
+    setDocumentNonBlocking(followRef, {
+      channelId: channel.id,
+      userId: user.uid,
+      followedAt: serverTimestamp(),
+    }, { merge: true });
+    toast({
+      title: `Followed ${channel?.name}!`,
+      description: 'You will now be notified of new videos.',
+    });
+  };
+
+  if (videosLoading || channelsLoading || !featuredVideo || !channel || !otherVideos) {
+    return <div>Loading...</div>; // Or a more sophisticated loading skeleton
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -39,11 +76,11 @@ export default function Home() {
                     </Avatar>
                     <div>
                         <p className="font-semibold">{channel?.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(featuredVideo.createdAt))} ago</p>
+                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(featuredVideo.createdAt as string))} ago</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline"><Star className="mr-2 h-4 w-4" /> Follow</Button>
+                    <Button variant="outline" onClick={handleFollow}><Star className="mr-2 h-4 w-4" /> Follow</Button>
                     <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
                 </div>
             </div>
@@ -80,7 +117,7 @@ export default function Home() {
                             <div className="flex-grow">
                                 {index === 0 && <Badge variant="default" className="mb-1 text-xs">Now Playing</Badge>}
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(new Date(video.createdAt))} ago</p>
+                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(new Date(video.createdAt as string))} ago</p>
                             </div>
                         </Link>
                         )

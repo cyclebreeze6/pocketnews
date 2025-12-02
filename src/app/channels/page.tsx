@@ -1,13 +1,22 @@
 'use client';
 
 import SiteHeader from '@/components/site-header';
-import { channels } from '@/lib/data';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import type { Channel } from '@/lib/types';
+import { collection } from 'firebase/firestore';
 
 export default function AllChannelsPage() {
+  const { firestore } = useFirebase();
+  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
+  const { data: channels, isLoading } = useCollection<Channel>(channelsQuery);
+
+  if (isLoading) {
+    return <div>Loading channels...</div>;
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
@@ -17,7 +26,7 @@ export default function AllChannelsPage() {
             All Channels
           </h1>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {channels.map((channel) => (
+            {channels?.map((channel) => (
               <Link href={`/channels/${channel.id}`} key={channel.id} className="group">
                 <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 h-full">
                     <div className="flex flex-col items-center justify-center p-6 text-center h-full">

@@ -1,6 +1,5 @@
 'use client';
 
-import { videos, channels } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
@@ -9,38 +8,49 @@ import { Button } from '@/components/ui/button';
 import { Share, Star, Check } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
+import { useCollection, useDoc, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, where, limit, serverTimestamp } from 'firebase/firestore';
+import type { Video, Channel, UserFollow } from '@/lib/types';
 
 
 export default function WatchPage({ params }: { params: { videoId: string } }) {
-  const video = videos.find((v) => v.id === params.videoId);
-
-  if (!video) {
-    notFound();
-  }
-
-  const channel = channels.find((c) => c.id === video.channelId);
-  const otherVideos = videos.filter((v) => v.id !== video.id).slice(0, 7);
-
+  const { firestore } = useFirebase();
+  const { user } = useUser();
   const { toast } = useToast();
+
+  const videoRef = useMemoFirebase(() => doc(firestore, 'videos', params.videoId), [firestore, params.videoId]);
+  const { data: video, isLoading: videoLoading } = useDoc<Video>(videoRef);
+  
+  const channelRef = useMemoFirebase(() => video ? doc(firestore, 'channels', video.channelId) : null, [firestore, video]);
+  const { data: channel, isLoading: channelLoading } = useDoc<Channel>(channelRef);
+
+  const otherVideosQuery = useMemoFirebase(() => video ? query(collection(firestore, 'videos'), where('id', '!=', video.id), limit(7)) : null, [firestore, video]);
+  const { data: otherVideos, isLoading: otherVideosLoading } = useCollection<Video>(otherVideosQuery);
+
+  const followRef = useMemoFirebase(() => user && channel ? doc(firestore, 'users', user.uid, 'follows', channel.id) : null, [user, channel]);
+  const { data: userFollow } = useDoc<UserFollow>(followRef);
+
   const [videoUrl, setVideoUrl] = useState('');
-  const [isFollowing, setIsFollowing] = useState(false);
+  const isFollowing = !!userFollow;
 
   useEffect(() => {
     setVideoUrl(window.location.href);
-    // In a real app, you'd fetch the follow status from a user's profile
-    const mockFollowedChannels = ['1']; // Mock: user follows channel '1'
-    if (channel && mockFollowedChannels.includes(channel.id)) {
-      setIsFollowing(true);
-    } else {
-      setIsFollowing(false);
+     if (user && video) {
+      const historyRef = doc(firestore, 'users', user.uid, 'history', video.id);
+      setDocumentNonBlocking(historyRef, {
+        videoId: video.id,
+        watchedAt: serverTimestamp(),
+        videoTitle: video.title,
+        channelId: video.channelId,
+      }, { merge: true });
     }
-  }, [params.videoId, channel]);
+  }, [params.videoId, user, video, firestore]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(videoUrl);
@@ -50,13 +60,30 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
     });
   };
 
-  const handleFollow = () => {
-    // In a real app, this would trigger an API call to update the user's follow status
-    setIsFollowing(!isFollowing);
-     toast({
-      title: isFollowing ? `Unfollowed ${channel?.name}` : `Followed ${channel?.name}!`,
-      description: isFollowing ? 'You will no longer receive notifications.' : 'You will now be notified of new videos.',
-    });
+  const handleFollowToggle = () => {
+    if (!user || !channel) {
+      toast({ variant: 'destructive', title: 'Please log in to follow.' });
+      return;
+    }
+    if (isFollowing) {
+      deleteDocumentNonBlocking(followRef!);
+      toast({ title: `Unfollowed ${channel.name}` });
+    } else {
+      setDocumentNonBlocking(followRef!, {
+        channelId: channel.id,
+        userId: user.uid,
+        followedAt: serverTimestamp(),
+      }, { merge: true });
+      toast({ title: `Followed ${channel.name}!` });
+    }
+  };
+  
+  if (videoLoading || channelLoading || otherVideosLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!video) {
+    notFound();
   }
 
   return (
@@ -76,15 +103,15 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                 <div className="flex items-center gap-3">
                     <Avatar>
                         <AvatarImage src={`https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
-                        <AvatarFallback>{channel?.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{channel?.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                         <p className="font-semibold">{channel?.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(video.createdAt))} ago</p>
+                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(video.createdAt as string))} ago</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant={isFollowing ? 'secondary': 'outline'} onClick={handleFollow}>
+                    <Button variant={isFollowing ? 'secondary': 'outline'} onClick={handleFollowToggle}>
                       {isFollowing ? <Check className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
                       {isFollowing ? 'Following' : 'Follow'}
                     </Button>
@@ -106,8 +133,8 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
 
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
-                    {otherVideos.map((videoItem, index) => {
-                        const videoChannel = channels.find(c => c.id === videoItem.channelId);
+                    {otherVideos?.map((videoItem) => {
+                        const videoChannel = channel; // Simplified for this context
                         const isPlaying = videoItem.id === video.id;
                         return (
                         <Link key={videoItem.id} href={`/watch/${videoItem.id}`} className="group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
@@ -125,7 +152,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                             <div className="flex-grow">
                                 {isPlaying && <Badge variant="default" className="mb-1 text-xs">Now Playing</Badge>}
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{videoItem.title}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(new Date(videoItem.createdAt))} ago</p>
+                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(new Date(videoItem.createdAt as string))} ago</p>
                             </div>
                         </Link>
                         )
@@ -146,10 +173,4 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
       </footer>
     </div>
   );
-}
-
-export async function generateStaticParams() {
-  return videos.map((video) => ({
-    videoId: video.id,
-  }));
 }
