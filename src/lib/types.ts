@@ -2,10 +2,10 @@ import { Timestamp } from 'firebase/firestore';
 
 export interface User {
   id: string;
-  name: string;
+  displayName: string;
   email: string;
   avatar?: string;
-  role?: 'admin' | 'user';
+  isAdmin?: boolean;
 }
 
 export interface Channel {
@@ -38,6 +38,7 @@ export interface UserFollow {
 }
 
 export interface WatchHistory {
+  id: string;
   userId: string;
   videoId: string;
   watchedAt: Timestamp;

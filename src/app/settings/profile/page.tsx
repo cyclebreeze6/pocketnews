@@ -2,7 +2,7 @@
 'use client';
 
 import SiteHeader from '@/components/site-header';
-import { useDoc, useFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useDoc, useFirebase, useUser, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,27 +21,27 @@ export default function ProfileSettingsPage() {
     const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
     const { data: userProfile, isLoading } = useDoc<UserProfile>(userProfileRef);
 
-    const [name, setName] = useState('');
+    const [displayName, setDisplayName] = useState('');
     const [email, setEmail] = useState('');
 
     useEffect(() => {
         if (userProfile) {
-            setName(userProfile.name || '');
+            setDisplayName(userProfile.displayName || '');
             setEmail(userProfile.email || '');
         } else if (user) {
-            setName(user.displayName || '');
+            setDisplayName(user.displayName || '');
             setEmail(user.email || '');
         }
     }, [userProfile, user]);
 
     const handleSaveChanges = () => {
-        if (!user) return;
+        if (!user || !userProfileRef) return;
         const profileData = {
             id: user.uid,
-            name,
+            displayName,
             email
         };
-        setDocumentNonBlocking(userProfileRef!, profileData, { merge: true });
+        setDocumentNonBlocking(userProfileRef, profileData, { merge: true });
         toast({ title: 'Profile updated successfully!' });
     };
 
@@ -65,8 +65,8 @@ export default function ProfileSettingsPage() {
                 <CardContent className="space-y-6">
                     <div className="flex items-center gap-4">
                         <Avatar className="w-20 h-20">
-                            <AvatarImage src={user?.photoURL || `https://avatar.vercel.sh/${user?.uid}.png`} alt={name} />
-                            <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={user?.photoURL || `https://avatar.vercel.sh/${user?.uid}.png`} alt={displayName} />
+                            <AvatarFallback>{displayName?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
                             <Button>Change Photo</Button>
@@ -75,7 +75,7 @@ export default function ProfileSettingsPage() {
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="name">Name</Label>
-                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                        <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
