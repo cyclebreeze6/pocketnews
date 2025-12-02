@@ -58,7 +58,6 @@ export default function Home() {
           
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <h2 className="text-xl font-bold mb-4 font-headline">A free newscast made just for you</h2>
             <h3 className="text-lg font-semibold mb-2 text-muted-foreground">My Headlines</h3>
 
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
