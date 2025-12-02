@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser } from '@/firebase';
 import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
@@ -14,15 +14,21 @@ import { Share, Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Video, Channel } from '@/lib/types';
-import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { notFound } from 'next/navigation';
 
-export default function Home() {
+export default function CategoryPage({ params }: { params: { categoryName: string } }) {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
 
-  const videosQuery = useMemoFirebase(() => collection(firestore, 'videos'), [firestore]);
+  const categoryName = decodeURIComponent(params.categoryName);
+
+  const videosQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName)),
+    [firestore, categoryName]
+  );
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
@@ -52,8 +58,26 @@ export default function Home() {
     });
   };
 
-  if (videosLoading || channelsLoading || !featuredVideo || !channel || !otherVideos) {
-    return <div>Loading...</div>; // Or a more sophisticated loading skeleton
+  if (videosLoading || channelsLoading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!videos || videos.length === 0) {
+     return (
+        <div className="flex min-h-screen w-full flex-col">
+            <SiteHeader />
+            <main className="flex-1 py-12 md:py-16 text-center">
+                <h1 className="text-3xl font-bold tracking-tight mb-4 font-headline">
+                    Category: {categoryName}
+                </h1>
+                <p>No videos found in this category yet.</p>
+            </main>
+        </div>
+     )
+  }
+
+  if (!featuredVideo || !channel || !otherVideos) {
+    return <div>Loading...</div>; 
   }
 
   return (
@@ -63,11 +87,14 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 sm:px-6 md:px-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
+             <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">
+                Category: {categoryName}
+            </h1>
             <div className="aspect-video mb-4">
               <VideoPlayer youtubeId={featuredVideo.youtubeId} />
             </div>
             
-            <h1 className="text-2xl md:text-3xl font-bold font-headline mb-4">{featuredVideo.title}</h1>
+            <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{featuredVideo.title}</h2>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <div className="flex items-center gap-3">
@@ -88,15 +115,15 @@ export default function Home() {
             
             <div className="flex items-center gap-2 mt-4">
                 <p className="text-sm font-medium">Related topics</p>
-                <Link href="/category/News"><Badge variant="outline">#news</Badge></Link>
-                <Link href="/category/Technology"><Badge variant="outline">#technology</Badge></Link>
-                <Link href="/category/Sports"><Badge variant="outline">#sports</Badge></Link>
+                <Badge variant="outline">#ukraine</Badge>
+                <Badge variant="outline">#trump</Badge>
+                <Badge variant="outline">#russia</Badge>
             </div>
           </div>
           
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <h3 className="text-lg font-semibold mb-2 text-muted-foreground">My Headlines</h3>
+            <h3 className="text-lg font-semibold mb-2 text-muted-foreground mt-16">More in {categoryName}</h3>
 
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">

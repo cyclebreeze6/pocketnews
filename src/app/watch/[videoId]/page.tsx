@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound } from 'next/navigation';
@@ -121,9 +122,9 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
             
             <div className="flex items-center gap-2 mt-4">
                 <p className="text-sm font-medium">Related topics</p>
-                <Badge variant="outline">#ukraine</Badge>
-                <Badge variant="outline">#trump</Badge>
-                <Badge variant="outline">#russia</Badge>
+                <Link href="/category/News"><Badge variant="outline">#news</Badge></Link>
+                <Link href="/category/Technology"><Badge variant="outline">#technology</Badge></Link>
+                <Link href="/category/Sports"><Badge variant="outline">#sports</Badge></Link>
             </div>
           </div>
           
