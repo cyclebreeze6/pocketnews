@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +10,10 @@ import {
   ChevronDown,
   Bell,
   Check,
+  History,
+  Settings,
+  User,
+  LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
@@ -23,6 +28,16 @@ import {
 import { users, videos, channels } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { useState } from 'react';
+import { AuthDialog } from './auth-dialog';
 
 const navLinks = [
   { href: '/', label: 'My Headlines' },
@@ -38,6 +53,8 @@ const navLinks = [
 
 export default function SiteHeader() {
   const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const loggedInUser = users[0]; // Mock logged-in user
 
   const followedChannels = ['1']; // Mock followed channel IDs
@@ -48,6 +65,14 @@ export default function SiteHeader() {
         new Date(v.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     ) // in last 7 days
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
 
 
   return (
@@ -152,7 +177,45 @@ export default function SiteHeader() {
                   </PopoverContent>
                 </Popover>
 
-                <Button size="sm">Get Started</Button>
+                {isLoggedIn ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={loggedInUser.avatar} alt={loggedInUser.name} />
+                          <AvatarFallback>{loggedInUser.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">{loggedInUser.name}</p>
+                          <p className="text-xs leading-none text-muted-foreground">
+                            {loggedInUser.email}
+                          </p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
+                      </DropdownMenuItem>
+                       <DropdownMenuItem asChild>
+                        <Link href="/settings"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button size="sm" onClick={() => setIsAuthDialogOpen(true)}>Get Started</Button>
+                )}
               </nav>
               <Button variant="ghost" size="icon" className="sm:hidden">
                 <Search className="h-4 w-4" />
@@ -189,6 +252,7 @@ export default function SiteHeader() {
           </ScrollArea>
         </div>
       </div>
+      <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={handleLoginSuccess} />
     </>
   );
 }
