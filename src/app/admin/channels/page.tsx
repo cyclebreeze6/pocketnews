@@ -106,7 +106,17 @@ export default function AdminChannelsPage() {
                 logoUrl: logoUrl,
                 createdAt: serverTimestamp(),
             };
-            addDocumentNonBlocking(channelsCollection, newChannelData);
+            // Use addDocumentNonBlocking for creating a new document
+            const newDocRefPromise = addDocumentNonBlocking(channelsCollection, newChannelData);
+            
+            // The function returns a promise that resolves with the new DocumentReference
+            newDocRefPromise.then(newDocRef => {
+                if (newDocRef) {
+                    // Now update the document with its own ID
+                    setDocumentNonBlocking(newDocRef, { id: newDocRef.id }, { merge: true });
+                }
+            });
+
             toast({ title: 'Channel created!' });
         }
 
