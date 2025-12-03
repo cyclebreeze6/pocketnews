@@ -30,7 +30,7 @@ export default function SeedDataPage() {
 
   const handleGrantAdmin = async () => {
     setIsGrantingAdmin(true);
-    // This is your specific user ID from the error logs.
+    // This is the specific user ID for 'valentinoboss18@gmail.com' from the error logs.
     const adminId = 'Kmjzk20TQ9fJSK24tnxoP9C1jg83';
     
     try {
@@ -48,7 +48,7 @@ export default function SeedDataPage() {
 
       toast({
         title: 'Admin Role Granted!',
-        description: `User ${adminId} has been granted full administrator privileges. Please refresh the page to access the admin panel.`,
+        description: `User valentinoboss18@gmail.com has been granted full administrator privileges. Please refresh the page to access the admin panel.`,
       });
     } catch (error: any) {
       console.error('Error granting admin role:', error);
