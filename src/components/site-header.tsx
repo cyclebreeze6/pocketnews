@@ -71,7 +71,7 @@ export default function SiteHeader() {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container px-4 sm:px-6 md:px-8">
           <div className="flex h-16 items-center">
-            <div className="mr-4 flex items-center">
+            <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
                 <svg
                   role="img"
@@ -89,12 +89,15 @@ export default function SiteHeader() {
                 </span>
               </Link>
             </div>
-            <div className="flex flex-1 items-center justify-end space-x-2">
-              <div className="relative w-full max-w-sm hidden sm:block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search" className="pl-9 bg-input" />
-              </div>
+            
+            <div className="flex-1 flex justify-center items-center">
+                <div className="relative w-full max-w-sm hidden sm:block">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search" className="pl-9 bg-input" />
+                </div>
+            </div>
 
+            <div className="flex items-center justify-end space-x-2">
               <nav className="hidden md:flex items-center space-x-2">
                 <Link href="/channels">
                   <Button variant="ghost" size="sm">
