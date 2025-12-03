@@ -1,11 +1,11 @@
 'use client';
 
-import SiteHeader from '@/components/site-header';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import SiteHeader from '../../components/site-header';
+import { useCollection, useFirebase, useMemoFirebase } from '../../firebase';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import Link from 'next/link';
-import { Card } from '@/components/ui/card';
-import type { Channel } from '@/lib/types';
+import { Card } from '../../components/ui/card';
+import type { Channel } from '../../lib/types';
 import { collection } from 'firebase/firestore';
 
 export default function AllChannelsPage() {

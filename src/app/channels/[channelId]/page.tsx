@@ -1,12 +1,12 @@
 'use client';
 
-import { useCollection, useDoc, useFirebase, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirebase, useMemoFirebase } from '../../../firebase';
 import { notFound } from 'next/navigation';
-import SiteHeader from '@/components/site-header';
-import { VideoCard } from '@/components/video-card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import SiteHeader from '../../../components/site-header';
+import { VideoCard } from '../../../components/video-card';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { collection, doc, query, where } from 'firebase/firestore';
-import type { Channel, Video } from '@/lib/types';
+import type { Channel, Video } from '../../../lib/types';
 
 export default function ChannelPage({ params }: { params: { channelId: string } }) {
   const { firestore } = useFirebase();

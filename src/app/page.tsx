@@ -3,20 +3,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
-import SiteHeader from '@/components/site-header';
-import { VideoPlayer } from '@/components/video-player';
-import { Badge } from '@/components/ui/badge';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking } from '../firebase';
+import SiteHeader from '../components/site-header';
+import { VideoPlayer } from '../components/video-player';
+import { Badge } from '../components/ui/badge';
 import Image from 'next/image';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import { Share, Star, PlayCircle } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
-import type { Video, Channel } from '@/lib/types';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Card, CardContent } from '../components/ui/card';
+import type { Video, Channel } from '../lib/types';
 import { collection, doc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../hooks/use-toast';
 import { useState } from 'react';
 import {
   Dialog,
@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '../components/ui/dialog';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -112,7 +112,7 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div className="aspect-video mb-4 md:rounded-lg overflow-hidden">
+            <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
               <VideoPlayer youtubeId={featuredVideo.youtubeId} />
             </div>
             

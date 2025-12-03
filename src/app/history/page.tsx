@@ -1,15 +1,16 @@
 
+
 'use client';
 
-import SiteHeader from '@/components/site-header';
-import { useCollection, useFirebase, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
+import SiteHeader from '../components/site-header';
+import { useCollection, useFirebase, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '../firebase';
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import { Trash2, X } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import type { WatchHistory, Video, Channel } from '@/lib/types';
+import { Separator } from '../components/ui/separator';
+import type { WatchHistory, Video, Channel } from '../lib/types';
 import { collection, doc } from 'firebase/firestore';
 
 export default function HistoryPage() {
