@@ -3,7 +3,7 @@
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { PlusCircle, MoreHorizontal, Trash2, Loader2 } from 'lucide-react';
@@ -99,15 +99,14 @@ export default function AdminChannelsPage() {
             toast({ title: 'Channel updated!' });
         } else {
             // Create new channel
-            const newChannelRef = doc(collection(firestore, 'channels'));
+            const channelsCollection = collection(firestore, 'channels');
             const newChannelData = {
-                id: newChannelRef.id,
                 name: channelName,
                 description: channelDescription,
                 logoUrl: logoUrl,
                 createdAt: serverTimestamp(),
             };
-            setDocumentNonBlocking(newChannelRef, newChannelData, {});
+            addDocumentNonBlocking(channelsCollection, newChannelData);
             toast({ title: 'Channel created!' });
         }
 
