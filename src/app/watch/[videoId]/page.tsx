@@ -117,6 +117,12 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
       toast({ title: `Followed ${channel.name}!` });
     }
   };
+
+  const handleVideoEnd = () => {
+    if (nextVideoId) {
+      router.push(`/watch/${nextVideoId}`);
+    }
+  };
   
   if (videoLoading || channelLoading || otherVideosLoading || allVideosLoading) {
     return <div>Loading...</div>;
@@ -134,7 +140,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={video.youtubeVideoId} />
+              <VideoPlayer youtubeId={video.youtubeVideoId} onEnd={handleVideoEnd} />
             </div>
             
             <div className="px-4 md:px-0">

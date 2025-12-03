@@ -9,9 +9,10 @@ import { cn } from '../lib/utils';
 
 interface VideoPlayerProps {
   youtubeId: string;
+  onEnd?: () => void;
 }
 
-export function VideoPlayer({ youtubeId }: VideoPlayerProps) {
+export function VideoPlayer({ youtubeId, onEnd }: VideoPlayerProps) {
   const [player, setPlayer] = useState<YouTubePlayer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -71,11 +72,16 @@ export function VideoPlayer({ youtubeId }: VideoPlayerProps) {
   };
 
   const onStateChange = (event: { data: number }) => {
-    // 1 = playing, 2 = paused
-    if (event.data === 1) {
+    // 0 = ended, 1 = playing, 2 = paused
+    if (event.data === 0) { // Video ended
+        if (onEnd) {
+            onEnd();
+        }
+    }
+    else if (event.data === 1) { // Playing
       setIsPlaying(true);
       showControls();
-    } else {
+    } else { // Paused or other states
       setIsPlaying(false);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       setIsShowingControls(true);
