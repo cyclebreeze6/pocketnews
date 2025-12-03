@@ -130,7 +130,7 @@ export default function VideoEditPage() {
     }
 
     let logoUrl = '';
-    if (newChannelLogoFile) {
+    if (newChannelLogoFile && storage) {
         try {
             const filePath = `channel-logos/${Date.now()}_${newChannelLogoFile.name}`;
             logoUrl = await uploadFile(storage, newChannelLogoFile, filePath);
@@ -140,18 +140,20 @@ export default function VideoEditPage() {
             return;
         }
     }
-
-    const newChannelData = {
+    
+    const newChannelRef = doc(collection(firestore, 'channels'));
+    const newChannelData: Channel = {
+        id: newChannelRef.id,
         name: newChannelName,
-        description: 'Newly added channel',
+        description: 'Newly added channel', // Default description
         createdAt: serverTimestamp(),
         logoUrl: logoUrl,
     }
-    const newDocRef = await addDocumentNonBlocking(collection(firestore, 'channels'), newChannelData);
-    if(newDocRef) {
-        updateDocumentNonBlocking(newDocRef, {id: newDocRef.id});
-        setVideoDetails(prev => ({...prev, channelId: newDocRef.id}));
-    }
+    
+    setDocumentNonBlocking(newChannelRef, newChannelData, {});
+
+    setVideoDetails(prev => ({...prev, channelId: newChannelRef.id}));
+    
     toast({title: 'Channel Added!', description: `${newChannelName} has been created.`});
     
     setNewChannelName('');
