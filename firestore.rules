@@ -112,7 +112,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages user profile data.
+     * @description Manages user profile data and their subcollections.
      * @path /users/{userId}
      * @allow (create) An authenticated user creating their own user document for the first time.
      * @deny (list) Any user, including an admin, attempting to list all user documents.
@@ -124,6 +124,24 @@ service cloud.firestore {
       allow create: if isOwner(userId) && userHasConsistentId(userId);
       allow update: if isExistingOwner(userId) && userCanUpdateSelf();
       allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Manages a user's followed channels.
+       * @path /users/{userId}/follows/{channelId}
+       * @allow (read, write, delete) The user to manage their own follows.
+       */
+      match /follows/{channelId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+
+      /**
+       * @description Manages a user's watch history.
+       * @path /users/{userId}/history/{videoId}
+       * @allow (read, write, delete) The user to manage their own history.
+       */
+      match /history/{videoId} {
+         allow read, write, delete: if isOwner(userId);
+      }
     }
 
     /**
