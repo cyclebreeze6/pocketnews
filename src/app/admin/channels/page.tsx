@@ -1,31 +1,25 @@
 'use client';
 
 import { Button } from '../../../components/ui/button';
-import { Card, CardContent } from '../../../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { PlusCircle, MoreHorizontal, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Loader2, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../../components/ui/dialog';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { useState } from 'react';
 import { useToast } from '../../../hooks/use-toast';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
+import { Textarea } from '../../../components/ui/textarea';
 
 export default function AdminChannelsPage() {
   const { firestore } = useFirebase();
@@ -35,7 +29,6 @@ export default function AdminChannelsPage() {
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels } = useCollection<Channel>(channelsQuery);
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -55,22 +48,25 @@ export default function AdminChannelsPage() {
     }
   };
 
-  const resetDialogState = () => {
+  const resetForm = () => {
     setChannelName('');
     setChannelDescription('');
     setLogoFile(null);
     setLogoPreview(null);
     setEditingChannel(null);
-    setIsDialogOpen(false);
   };
 
-  const handleOpenDialog = (channel: Channel | null = null) => {
-    setEditingChannel(channel);
-    setChannelName(channel ? channel.name : '');
-    setChannelDescription(channel ? channel.description : '');
-    setLogoPreview(channel?.logoUrl || null);
-    setLogoFile(null);
-    setIsDialogOpen(true);
+  const handleSetEditing = (channel: Channel | null) => {
+    if (channel) {
+      setEditingChannel(channel);
+      setChannelName(channel.name);
+      setChannelDescription(channel.description);
+      setLogoPreview(channel.logoUrl || null);
+      setLogoFile(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      resetForm();
+    }
   };
 
   const handleSaveChanges = async () => {
@@ -106,13 +102,10 @@ export default function AdminChannelsPage() {
                 logoUrl: logoUrl,
                 createdAt: serverTimestamp(),
             };
-            // Use addDocumentNonBlocking for creating a new document
             const newDocRefPromise = addDocumentNonBlocking(channelsCollection, newChannelData);
             
-            // The function returns a promise that resolves with the new DocumentReference
             newDocRefPromise.then(newDocRef => {
                 if (newDocRef) {
-                    // Now update the document with its own ID
                     setDocumentNonBlocking(newDocRef, { id: newDocRef.id }, { merge: true });
                 }
             });
@@ -120,7 +113,7 @@ export default function AdminChannelsPage() {
             toast({ title: 'Channel created!' });
         }
 
-        resetDialogState();
+        resetForm();
     } catch (error) {
         console.error("Failed to save channel:", error);
         toast({ variant: 'destructive', title: 'Save failed', description: 'Could not upload the logo or save channel data.' });
@@ -140,11 +133,56 @@ export default function AdminChannelsPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight font-headline">Manage Channels</h1>
-        <Button onClick={() => handleOpenDialog()}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Channel
-        </Button>
       </div>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>{editingChannel ? 'Edit Channel' : 'Add New Channel'}</CardTitle>
+          <CardDescription>
+            {editingChannel ? `Editing the channel "${editingChannel.name}"` : 'Fill out the form below to add a new channel.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 grid gap-4">
+               <div className="grid gap-2">
+                  <Label htmlFor="name">Channel Name</Label>
+                  <Input id="name" value={channelName} onChange={(e) => setChannelName(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
+                </div>
+            </div>
+            <div className="grid gap-2 content-start">
+                <Label htmlFor="logo">Channel Logo</Label>
+                <div className="relative w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+                    {logoPreview ? (
+                        <Image src={logoPreview} alt="Logo preview" layout="fill" className="object-cover rounded-lg" />
+                    ) : (
+                        <span>Logo</span>
+                    )}
+                </div>
+                <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
+                <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 1MB.</p>
+            </div>
+          </div>
+        </CardContent>
+        <div className="p-6 pt-0 flex justify-between">
+            <div>
+              {editingChannel && (
+                <Button variant="outline" onClick={resetForm}>
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel Edit
+                </Button>
+              )}
+            </div>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSaving ? 'Saving...' : (editingChannel ? 'Update Channel' : 'Add Channel')}
+            </Button>
+        </div>
+      </Card>
 
       <Card>
         <CardContent className="mt-6">
@@ -179,7 +217,7 @@ export default function AdminChannelsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenDialog(channel)}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSetEditing(channel)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDelete(channel.id)} className="text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
@@ -193,36 +231,6 @@ export default function AdminChannelsPage() {
           </Table>
         </CardContent>
       </Card>
-      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialogState()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingChannel ? 'Edit Channel' : 'Add New Channel'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Channel Name</Label>
-              <Input id="name" value={channelName} onChange={(e) => setChannelName(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Input id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-                <Label htmlFor="logo">Channel Logo</Label>
-                {logoPreview && <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-md" />}
-                <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
-                <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 1MB.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={resetDialogState}>Cancel</Button>
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
