@@ -122,9 +122,7 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      // TEMPORARY: Allow any signed-in user to list users to unblock admin panel.
-      // This MUST be changed back to `if isAdmin();` after the first admin is configured.
-      allow list: if isSignedIn();
+      allow list: if isAdmin();
       allow create: if isOwner(userId) && userHasConsistentId(userId);
       allow update: if isExistingOwner(userId) && userCanUpdateSelf() || isExistingAdmin();
       allow delete: if isExistingOwner(userId) || isExistingAdmin();
