@@ -2,22 +2,22 @@
 
 'use client';
 
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Share, Star, Check, PlayCircle } from 'lucide-react';
+import { Share, Star, Check, PlayCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCollection, useDoc, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, limit, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, query, where, limit, serverTimestamp, Timestamp, orderBy } from 'firebase/firestore';
 import type { Video, Channel, UserFollow } from '@/lib/types';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -31,16 +31,39 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
 
+  // Fetch the current video
   const videoRef = useMemoFirebase(() => doc(firestore, 'videos', params.videoId), [firestore, params.videoId]);
   const { data: video, isLoading: videoLoading } = useDoc<Video>(videoRef);
   
+  // Fetch the associated channel
   const channelRef = useMemoFirebase(() => video ? doc(firestore, 'channels', video.channelId) : null, [firestore, video]);
   const { data: channel, isLoading: channelLoading } = useDoc<Channel>(channelRef);
 
+  // Fetch all videos for next/previous navigation
+  const allVideosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), orderBy('createdAt', 'desc')), [firestore]);
+  const { data: allVideos, isLoading: allVideosLoading } = useCollection<Video>(allVideosQuery);
+
+  // Determine next and previous videos
+  const { previousVideoId, nextVideoId } = useMemo(() => {
+    if (!allVideos || allVideos.length === 0) {
+      return { previousVideoId: null, nextVideoId: null };
+    }
+    const currentIndex = allVideos.findIndex(v => v.id === params.videoId);
+    if (currentIndex === -1) {
+      return { previousVideoId: null, nextVideoId: null };
+    }
+    const previousVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
+    const nextVideo = currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
+    return { previousVideoId: previousVideo?.id, nextVideoId: nextVideo?.id };
+  }, [allVideos, params.videoId]);
+
+  // Fetch a list of other videos for the sidebar
   const otherVideosQuery = useMemoFirebase(() => video ? query(collection(firestore, 'videos'), where('id', '!=', video.id), limit(7)) : null, [firestore, video]);
   const { data: otherVideos, isLoading: otherVideosLoading } = useCollection<Video>(otherVideosQuery);
 
+  // Check if user is following the channel
   const followRef = useMemoFirebase(() => user && channel ? doc(firestore, 'users', user.uid, 'follows', channel.id) : null, [user, channel]);
   const { data: userFollow } = useDoc<UserFollow>(followRef);
 
@@ -86,7 +109,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
     }
   };
   
-  if (videoLoading || channelLoading || otherVideosLoading) {
+  if (videoLoading || channelLoading || otherVideosLoading || allVideosLoading) {
     return <div>Loading...</div>;
   }
 
@@ -98,20 +121,31 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
       <main className="flex-1 md:py-8">
-        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-4 sm:px-6 md:px-8">
+        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden">
-              <VideoPlayer youtubeId={video.youtubeId} />
+              <VideoPlayer youtubeId={video.youtubeVideoId} />
             </div>
             
             <div className="px-4 md:px-0">
-                <h1 className="text-2xl md:text-3xl font-bold font-headline mb-4">{video.title}</h1>
+                <div className="flex justify-between items-center mb-4">
+                  <h1 className="text-2xl md:text-3xl font-bold font-headline">{video.title}</h1>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={() => previousVideoId && router.push(`/watch/${previousVideoId}`)} disabled={!previousVideoId}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                     <Button variant="outline" size="icon" onClick={() => nextVideoId && router.push(`/watch/${nextVideoId}`)} disabled={!nextVideoId}>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
                         <Avatar>
-                            <AvatarImage src={`https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
+                            <AvatarImage src={channel?.logoUrl || `https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
                             <AvatarFallback>{channel?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>

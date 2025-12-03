@@ -29,7 +29,7 @@ export interface Video {
   contentCategory: string;
   // compatibility with existing data
   youtubeId?: string;
-  createdAt?: Timestamp | Date | string;
+  createdAt: Timestamp | Date | string;
 }
 
 export interface Category {
@@ -54,5 +54,3 @@ export interface WatchHistory {
   videoId: string;
   watchedAt: Timestamp;
 }
-
-    

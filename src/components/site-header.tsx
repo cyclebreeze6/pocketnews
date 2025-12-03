@@ -84,7 +84,7 @@ export default function SiteHeader() {
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8 border-b border-border/40">
-          <div className="mr-4 hidden md:flex">
+          <div className="mr-4 flex">
             <Link href="/" className="flex items-center space-x-2">
                <svg
                   role="img"
@@ -97,7 +97,7 @@ export default function SiteHeader() {
                   <title>Pocketnews TV</title>
                   <path d="M512 368.5V213.25h-59.5V368.5zM294.5 368.5v-274H235V368.5zM452.5 368.5V273h-59.5v95.5zM353 368.5V153.5h-58.5V368.5zM175.5 368.5V243h-59V368.5zM116.5 368.5V123h-59v245.5zM57.5 368.5V183h-59v185.5zM0 368.5V308h57.5v60.5zm195.1-322.25L175.5 67.5V0h119v67.5l-19.6-21.25-40.15-43.5z" />
                 </svg>
-              <span className="hidden font-bold sm:inline-block font-headline">
+              <span className="font-bold sm:inline-block font-headline">
                 Pocketnews TV
               </span>
             </Link>
