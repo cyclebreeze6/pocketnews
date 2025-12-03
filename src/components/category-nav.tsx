@@ -7,7 +7,7 @@ import { cn } from '../lib/utils';
 import type { Category } from '../lib/types';
 import { useCollection, useFirebase, useMemoFirebase } from '../firebase';
 import { collection } from 'firebase/firestore';
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,63 +16,16 @@ import {
 } from './ui/dropdown-menu';
 import { Button } from './ui/button';
 import { ChevronDown } from 'lucide-react';
+import { useIsMobile } from '../hooks/use-mobile';
+import { ScrollArea } from './ui/scroll-area';
 
 export function CategoryNav() {
   const pathname = usePathname();
   const { firestore } = useFirebase();
+  const isMobile = useIsMobile();
 
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories, isLoading } = useCollection<Category>(categoriesQuery);
-
-  const [visibleCount, setVisibleCount] = useState<number | null>(null);
-  const navRef = useRef<HTMLUListElement>(null);
-  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
-
-  useEffect(() => {
-    const calculateVisibleItems = () => {
-      if (!navRef.current || !categories) return;
-
-      const navWidth = navRef.current.offsetWidth;
-      const moreButtonWidth = 80; // Estimated width for the "More" button
-      let totalWidth = 0;
-      let count = 0;
-
-      for (let i = 0; i < itemRefs.current.length; i++) {
-        const item = itemRefs.current[i];
-        if (item) {
-          totalWidth += item.offsetWidth;
-          if (totalWidth < navWidth - moreButtonWidth) {
-            count++;
-          } else {
-            break;
-          }
-        }
-      }
-      
-      // If all items fit, we don't need the 'More' button
-      if (totalWidth < navWidth) {
-          setVisibleCount(categories.length);
-      } else {
-          setVisibleCount(count);
-      }
-    };
-
-    // Initial calculation
-    calculateVisibleItems();
-
-    // Recalculate on resize
-    const resizeObserver = new ResizeObserver(calculateVisibleItems);
-    if (navRef.current) {
-      resizeObserver.observe(navRef.current);
-    }
-
-    return () => {
-      if (navRef.current) {
-        resizeObserver.unobserve(navRef.current);
-      }
-    };
-  }, [categories, isLoading]);
-
 
   if (isLoading || !categories) {
     return (
@@ -81,48 +34,61 @@ export function CategoryNav() {
         </div>
     );
   }
-  
+
   const isHomeActive = pathname === '/';
   
-  const visibleCategories = visibleCount !== null ? categories.slice(0, visibleCount) : categories;
-  const hiddenCategories = visibleCount !== null && visibleCount < categories.length ? categories.slice(visibleCount) : [];
+  const MAX_VISIBLE_DESKTOP = 6;
+  const visibleCategories = !isMobile ? categories.slice(0, MAX_VISIBLE_DESKTOP) : categories;
+  const hiddenCategories = !isMobile && categories.length > MAX_VISIBLE_DESKTOP ? categories.slice(MAX_VISIBLE_DESKTOP) : [];
 
+  const CategoryLink = ({ href, children, isActive }: { href: string, children: React.ReactNode, isActive: boolean }) => (
+    <Link
+      href={href}
+      className={cn(
+        'relative inline-block px-2 py-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap',
+        isActive ? 'text-primary' : 'text-muted-foreground'
+      )}
+    >
+      {children}
+      {isActive && (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+      )}
+    </Link>
+  );
+
+  if (isMobile) {
+    return (
+        <nav className="border-b border-border/40 overflow-hidden">
+            <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex items-center h-12 px-4 space-x-4">
+                    <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
+                    {categories.map((category) => {
+                        const href = `/category/${encodeURIComponent(category.name)}`;
+                        const isActive = pathname === href;
+                        return (
+                            <CategoryLink key={category.id} href={href} isActive={isActive}>{category.name}</CategoryLink>
+                        );
+                    })}
+                </div>
+                <div className="h-px w-full border-b border-border/40 -translate-y-px"></div>
+            </ScrollArea>
+        </nav>
+    )
+  }
 
   return (
     <nav className="border-b border-border/40 overflow-hidden">
       <div className="container px-4 sm:px-6 md:px-8">
-        <ul ref={navRef} className="flex items-center h-12 space-x-4 sm:space-x-6">
-           <li ref={el => itemRefs.current[0] = el} className="flex-shrink-0">
-                <Link
-                  href="/"
-                  className={cn(
-                    'relative inline-block px-1 py-3 text-sm font-medium transition-colors hover:text-primary',
-                    isHomeActive ? 'text-primary' : 'text-muted-foreground'
-                  )}
-                >
-                  My Headlines
-                  {isHomeActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-destructive" />
-                  )}
-                </Link>
-              </li>
-          {visibleCategories.map((category, index) => {
+        <ul className="flex items-center h-12 space-x-4 sm:space-x-6">
+            <li>
+                <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
+            </li>
+          {visibleCategories.map((category) => {
             const href = `/category/${encodeURIComponent(category.name)}`;
             const isActive = pathname === href;
             return (
-              <li key={category.id} ref={el => itemRefs.current[index + 1] = el} className="flex-shrink-0">
-                <Link
-                  href={href}
-                  className={cn(
-                    'relative inline-block px-1 py-3 text-sm font-medium transition-colors hover:text-primary',
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  )}
-                >
-                  {category.name}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-destructive" />
-                  )}
-                </Link>
+              <li key={category.id}>
+                <CategoryLink href={href} isActive={isActive}>{category.name}</CategoryLink>
               </li>
             );
           })}
