@@ -3,10 +3,10 @@
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { PlusCircle, MoreHorizontal, Trash2 } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avat
 
 export default function AdminChannelsPage() {
   const { firestore } = useFirebase();
+  const storage = useStorage();
   const { toast } = useToast();
 
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
@@ -37,20 +38,39 @@ export default function AdminChannelsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetDialogState = () => {
+    setChannelName('');
+    setChannelDescription('');
+    setLogoFile(null);
+    setLogoPreview(null);
+    setEditingChannel(null);
+    setIsDialogOpen(false);
+  };
 
   const handleOpenDialog = (channel: Channel | null = null) => {
     setEditingChannel(channel);
     setChannelName(channel ? channel.name : '');
     setChannelDescription(channel ? channel.description : '');
+    setLogoPreview(channel?.logoUrl || null);
+    setLogoFile(null);
     setIsDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingChannel(null);
-    setChannelName('');
-    setChannelDescription('');
   };
 
   const handleSaveChanges = async () => {
@@ -59,28 +79,48 @@ export default function AdminChannelsPage() {
       return;
     }
 
-    if (editingChannel) {
-      // Update existing channel
-      const channelRef = doc(firestore, 'channels', editingChannel.id);
-      setDocumentNonBlocking(channelRef, { name: channelName, description: channelDescription }, { merge: true });
-      toast({ title: 'Channel updated!' });
-    } else {
-      // Create new channel
-      const newChannelRef = doc(collection(firestore, 'channels'));
-      setDocumentNonBlocking(newChannelRef, {
-        id: newChannelRef.id,
-        name: channelName,
-        description: channelDescription,
-        createdAt: serverTimestamp(),
-      }, {});
-      toast({ title: 'Channel created!' });
-    }
+    setIsSaving(true);
+    
+    let logoUrl = editingChannel?.logoUrl || '';
 
-    handleCloseDialog();
+    try {
+        if (logoFile) {
+            const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
+            logoUrl = await uploadFile(storage, logoFile, filePath);
+        }
+
+        if (editingChannel) {
+        // Update existing channel
+        const channelRef = doc(firestore, 'channels', editingChannel.id);
+        const updatedData: Partial<Channel> = { name: channelName, description: channelDescription };
+        if (logoUrl) updatedData.logoUrl = logoUrl;
+        
+        setDocumentNonBlocking(channelRef, updatedData, { merge: true });
+        toast({ title: 'Channel updated!' });
+        } else {
+        // Create new channel
+        const newChannelRef = doc(collection(firestore, 'channels'));
+        setDocumentNonBlocking(newChannelRef, {
+            id: newChannelRef.id,
+            name: channelName,
+            description: channelDescription,
+            logoUrl: logoUrl,
+            createdAt: serverTimestamp(),
+        }, {});
+        toast({ title: 'Channel created!' });
+        }
+
+        resetDialogState();
+    } catch (error) {
+        console.error("Failed to save channel:", error);
+        toast({ variant: 'destructive', title: 'Save failed', description: 'Could not upload the logo or save channel data.' });
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const handleDelete = (channelId: string) => {
-    if (confirm('Are you sure you want to delete this channel?')) {
+    if (confirm('Are you sure you want to delete this channel? This will not delete the videos in it.')) {
       const channelRef = doc(firestore, 'channels', channelId);
       deleteDocumentNonBlocking(channelRef);
     }
@@ -143,7 +183,7 @@ export default function AdminChannelsPage() {
           </Table>
         </CardContent>
       </Card>
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialogState()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingChannel ? 'Edit Channel' : 'Add New Channel'}</DialogTitle>
@@ -157,15 +197,19 @@ export default function AdminChannelsPage() {
               <Label htmlFor="description">Description</Label>
               <Input id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
             </div>
-             <div className="grid gap-2">
+            <div className="grid gap-2">
                 <Label htmlFor="logo">Channel Logo</Label>
-                <Input id="logo" type="file" />
+                {logoPreview && <Image src={logoPreview} alt="Logo preview" width={80} height={80} className="rounded-md" />}
+                <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
                 <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 1MB.</p>
-              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
+            <Button variant="outline" onClick={resetDialogState}>Cancel</Button>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
