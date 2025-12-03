@@ -11,6 +11,7 @@ import {
   Settings,
   User,
   LogOut,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,15 +32,18 @@ import {
 } from './ui/dropdown-menu';
 import { useState } from 'react';
 import { AuthDialog } from './auth-dialog';
-import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import type { Video, Channel, UserFollow } from '@/lib/types';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import type { Video, Channel, UserFollow, UserProfile } from '@/lib/types';
+import { collection, query, where, limit, doc } from 'firebase/firestore';
 
 export default function SiteHeader() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const followsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'follows') : null, [firestore, user]);
   const { data: followedChannels } = useCollection<UserFollow>(followsQuery);
@@ -185,13 +189,18 @@ export default function SiteHeader() {
                     <DropdownMenuContent className="w-56" align="end" forceMount>
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{user.displayName || 'Anonymous User'}</p>
+                          <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'Anonymous User'}</p>
                           <p className="text-xs leading-none text-muted-foreground">
                             {user.email}
                           </p>
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                        {userProfile?.isAdmin && (
+                            <DropdownMenuItem asChild>
+                                <Link href="/admin"><Shield className="mr-2 h-4 w-4" /><span>Admin</span></Link>
+                            </DropdownMenuItem>
+                        )}
                       <DropdownMenuItem asChild>
                         <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
                       </DropdownMenuItem>
