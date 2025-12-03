@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import Link from 'next/link';
-import { useCollection, useFirebase, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Share, Star } from 'lucide-react';
+import { Share, Star, PlayCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Video, Channel } from '@/lib/types';
@@ -150,7 +151,12 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
                                 </div>
                             </div>
                             <div className="flex-grow">
-                                {index === 0 && <Badge variant="default" className="mb-1 text-xs">Now Playing</Badge>}
+                                {index === 0 && (
+                                    <Badge variant="default" className="mb-1 text-xs animate-pulse">
+                                        <PlayCircle className="mr-1 h-3 w-3" />
+                                        Now Playing
+                                    </Badge>
+                                )}
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                             </div>

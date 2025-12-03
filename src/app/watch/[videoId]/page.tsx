@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { notFound } from 'next/navigation';
@@ -6,7 +7,7 @@ import SiteHeader from '@/components/site-header';
 import { VideoPlayer } from '@/components/video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Share, Star, Check } from 'lucide-react';
+import { Share, Star, Check, PlayCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -157,7 +158,12 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                                 </div>
                             </div>
                             <div className="flex-grow">
-                                {isPlaying && <Badge variant="default" className="mb-1 text-xs">Now Playing</Badge>}
+                                {isPlaying && (
+                                    <Badge variant="default" className="mb-1 text-xs animate-pulse">
+                                        <PlayCircle className="mr-1 h-3 w-3" />
+                                        Now Playing
+                                    </Badge>
+                                )}
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{videoItem.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(videoItem.createdAt))} ago</p>
                             </div>
