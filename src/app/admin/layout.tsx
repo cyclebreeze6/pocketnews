@@ -22,13 +22,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     // Wait until all loading is complete before checking permissions.
     if (!isLoading) {
-      // Allow access to the seed page for initial setup if the user is logged in.
-      if (pathname === '/admin/seed' && user) {
+       // If no user is logged in at all, redirect to home.
+      if (!user) {
+        router.push('/');
+        return;
+      }
+
+      // Allow access to the seed page for initial setup.
+      if (pathname === '/admin/seed') {
         return;
       }
       
       // If profile is loaded and the user is not an admin, redirect.
-      if (!userProfile?.isAdmin) {
+      // We check for `userProfile` being explicitly loaded and `isAdmin` being false.
+      if (userProfile && !userProfile.isAdmin) {
         router.push('/');
       }
     }
@@ -41,8 +48,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // After loading, if the user is confirmed not to be an admin (and not on the seed page),
   // they will be redirected by the useEffect. Return null to prevent content flash.
-  if (!userProfile?.isAdmin && pathname !== '/admin/seed') {
-    return null; 
+   if (pathname !== '/admin/seed' && !userProfile?.isAdmin) {
+    return null;
   }
   
   // If all checks pass, render the admin layout.
