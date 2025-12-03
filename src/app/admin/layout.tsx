@@ -14,7 +14,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const { firestore } = useFirebase();
 
-  // If we're on the seed page, don't run any of the auth checks.
+  // Memoize the document reference to the user's profile.
+  // All hooks must be called at the top level and in the same order.
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  
+  // Fetch the user's profile data.
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const isLoading = isUserLoading || (user && isProfileLoading);
+  
+  // If we're on the seed page, don't run any of the auth checks and return early.
+  // This check now happens *after* all hooks have been called.
   if (pathname === '/admin/seed') {
     return (
        <div className="flex min-h-screen w-full flex-col">
@@ -27,16 +40,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // Memoize the document reference to the user's profile.
-  const userProfileRef = useMemoFirebase(
-    () => (user ? doc(firestore, 'users', user.uid) : null),
-    [firestore, user]
-  );
-  
-  // Fetch the user's profile data.
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-  const isLoading = isUserLoading || (user && isProfileLoading);
 
   useEffect(() => {
     // Wait until loading is complete.
