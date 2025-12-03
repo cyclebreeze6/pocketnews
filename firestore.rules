@@ -131,7 +131,9 @@ service cloud.firestore {
        * @allow (read, write, delete) The user to manage their own follows.
        */
       match /follows/{channelId} {
-        allow read, write, delete: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow write, delete: if isOwner(userId);
       }
 
       /**
