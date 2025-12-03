@@ -28,14 +28,16 @@ export default function AdminUsersPage() {
     const userRef = doc(firestore, 'users', user.id);
     const newAdminStatus = !user.isAdmin;
 
-    // Update the isAdmin flag on the user document itself
+    // Update the isAdmin flag on the user document itself for UI purposes
     setDocumentNonBlocking(userRef, { isAdmin: newAdminStatus }, { merge: true });
 
     // This is the critical part: manage the DBAC collection.
     // The security rules depend on the existence of a document in `roles_admin`.
     const adminRoleRef = doc(firestore, 'roles_admin', user.id);
+    
     if (newAdminStatus) {
       // Create the document in /roles_admin to grant admin role
+      // We can set an empty object or some metadata. The existence of the doc is what matters.
       setDocumentNonBlocking(adminRoleRef, { grantedAt: new Date() }, {});
     } else {
       // Delete the document from /roles_admin to revoke admin role
@@ -101,6 +103,7 @@ export default function AdminUsersPage() {
                     <Switch
                       checked={!!user.isAdmin}
                       onCheckedChange={() => handleAdminToggle(user)}
+                      aria-label={`Toggle admin status for ${user.displayName}`}
                     />
                   </TableCell>
                   <TableCell>
