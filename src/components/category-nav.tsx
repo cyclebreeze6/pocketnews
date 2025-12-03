@@ -79,7 +79,7 @@ export function CategoryNav() {
   return (
     <nav className="border-b border-border/40 overflow-hidden">
       <div className="container px-4 sm:px-6 md:px-8">
-        <ul className="flex items-center h-12 space-x-4 sm:space-x-6">
+        <ul className="flex items-center justify-center h-12 space-x-4 sm:space-x-6">
             <li>
                 <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
             </li>
