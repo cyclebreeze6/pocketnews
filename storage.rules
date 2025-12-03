@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow read access to everyone for all files.
+    // This is useful for public assets like channel logos or video thumbnails.
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Allow write access only to authenticated users.
+    // This prevents anonymous users from uploading files.
+    // For more granular control, you could check for an admin role
+    // by reading from Firestore here.
+    match /{allPaths=**} {
+      allow write: if request.auth != null;
+    }
+  }
+}
