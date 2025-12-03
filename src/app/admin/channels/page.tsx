@@ -90,24 +90,25 @@ export default function AdminChannelsPage() {
         }
 
         if (editingChannel) {
-        // Update existing channel
-        const channelRef = doc(firestore, 'channels', editingChannel.id);
-        const updatedData: Partial<Channel> = { name: channelName, description: channelDescription };
-        if (logoUrl) updatedData.logoUrl = logoUrl;
-        
-        setDocumentNonBlocking(channelRef, updatedData, { merge: true });
-        toast({ title: 'Channel updated!' });
+            // Update existing channel
+            const channelRef = doc(firestore, 'channels', editingChannel.id);
+            const updatedData: Partial<Channel> = { name: channelName, description: channelDescription };
+            if (logoUrl) updatedData.logoUrl = logoUrl;
+            
+            setDocumentNonBlocking(channelRef, updatedData, { merge: true });
+            toast({ title: 'Channel updated!' });
         } else {
-        // Create new channel
-        const newChannelRef = doc(collection(firestore, 'channels'));
-        setDocumentNonBlocking(newChannelRef, {
-            id: newChannelRef.id,
-            name: channelName,
-            description: channelDescription,
-            logoUrl: logoUrl,
-            createdAt: serverTimestamp(),
-        }, {});
-        toast({ title: 'Channel created!' });
+            // Create new channel
+            const newChannelRef = doc(collection(firestore, 'channels'));
+            const newChannelData = {
+                id: newChannelRef.id,
+                name: channelName,
+                description: channelDescription,
+                logoUrl: logoUrl,
+                createdAt: serverTimestamp(),
+            };
+            setDocumentNonBlocking(newChannelRef, newChannelData, {});
+            toast({ title: 'Channel created!' });
         }
 
         resetDialogState();
