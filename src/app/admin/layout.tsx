@@ -21,26 +21,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isSeedPage = pathname === '/admin/seed';
 
   useEffect(() => {
-    // If it's the seed page, we don't need to check for admin status
-    if (isSeedPage) return;
-
+    // Wait until loading is complete before running checks
     if (!isLoading) {
-      if (!user || !userProfile?.isAdmin) {
+      // Allow access to seed page for any logged-in user for initial setup
+      if (pathname === '/admin/seed' && user) {
+        return;
+      }
+      
+      // For all other admin pages, require admin status
+      if (!userProfile?.isAdmin) {
         router.push('/');
       }
     }
-  }, [user, userProfile, isLoading, router, isSeedPage]);
+  }, [user, userProfile, isLoading, router, pathname]);
   
-  if (isLoading && !isSeedPage) {
+  // While loading, show a loading indicator for all admin pages
+  if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading Admin...</div>;
   }
 
-  if (!isSeedPage && !userProfile?.isAdmin) {
-    // Don't render anything while redirecting for non-admins on protected pages
+  // After loading, if user is not an admin and it's not the (now accessible) seed page, they will be redirected.
+  // We can return null to prevent a flash of content.
+  if (!userProfile?.isAdmin && pathname !== '/admin/seed') {
     return null; 
   }
-
-  // Allow rendering for the seed page or for authenticated admins
+  
+  // Render the admin layout for admins, or for any user on the seed page.
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
