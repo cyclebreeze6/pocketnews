@@ -13,6 +13,7 @@ export interface Channel {
   name:string;
   description: string;
   createdAt?: Timestamp | Date | string;
+  logoUrl?: string;
 }
 
 export interface Video {

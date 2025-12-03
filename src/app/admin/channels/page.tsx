@@ -24,6 +24,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function AdminChannelsPage() {
   const { firestore } = useFirebase();
@@ -99,6 +101,7 @@ export default function AdminChannelsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Logo</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>
@@ -109,6 +112,12 @@ export default function AdminChannelsPage() {
             <TableBody>
               {channels?.map((channel) => (
                 <TableRow key={channel.id}>
+                  <TableCell>
+                     <Avatar>
+                        <AvatarImage src={channel.logoUrl || `https://picsum.photos/seed/${channel.id}/40/40`} alt={channel.name} />
+                        <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </TableCell>
                   <TableCell className="font-medium">{channel.name}</TableCell>
                   <TableCell>{channel.description}</TableCell>
                   <TableCell>
@@ -148,6 +157,11 @@ export default function AdminChannelsPage() {
               <Label htmlFor="description">Description</Label>
               <Input id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
             </div>
+             <div className="grid gap-2">
+                <Label htmlFor="logo">Channel Logo</Label>
+                <Input id="logo" type="file" />
+                <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 1MB.</p>
+              </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseDialog}>Cancel</Button>
