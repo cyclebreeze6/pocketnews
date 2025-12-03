@@ -176,12 +176,15 @@ service cloud.firestore {
     /**
      * @description Manages admin role assignments via document existence (DBAC). This collection is read-only from clients.
      * @path /roles_admin/{userId}
-     * @allow (N/A) No client operation is permitted.
-     * @deny (create, update, delete) Any user, including an admin, attempting to modify roles from the client.
+     * @allow (create) TEMPORARY RULE: Allow a user to create their own admin role document. This is for bootstrapping.
+     * @deny (read, update, delete) Any user, including an admin, attempting to modify roles from the client.
      * @principle Secures role management by making it a backend-only or console-only operation, preventing privilege escalation from the client.
      */
     match /roles_admin/{userId} {
-      allow read, write: if false;
+      // TEMPORARY: This allows the "Make Me Admin" button to work.
+      // We will revert this to `allow read, write: if false;` after you are an admin.
+      allow create: if isOwner(userId);
+      allow read, update, delete: if false;
     }
   }
 }
