@@ -52,8 +52,38 @@ export default function Home() {
     });
   };
 
-  if (videosLoading || channelsLoading || !featuredVideo || !channel || !otherVideos) {
-    return <div>Loading...</div>; // Or a more sophisticated loading skeleton
+  if (videosLoading || channelsLoading) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <SiteHeader />
+        <main className="flex-1 flex items-center justify-center">
+          <p>Loading...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (!videos || videos.length === 0) {
+    return (
+      <div className="flex min-h-screen w-full flex-col">
+        <SiteHeader />
+        <main className="flex-1 flex flex-col items-center justify-center text-center">
+            <h2 className="text-2xl font-bold mb-4">No videos found</h2>
+            <p className="text-muted-foreground">Check back later for new content!</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (!featuredVideo || !channel || !otherVideos) {
+     return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center">
+        <SiteHeader />
+        <main className="flex-1 flex items-center justify-center">
+          <p>Loading video details...</p>
+        </main>
+      </div>
+    );
   }
 
   return (
