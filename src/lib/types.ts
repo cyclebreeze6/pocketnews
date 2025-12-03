@@ -17,15 +17,18 @@ export interface Channel {
 
 export interface Video {
   id: string;
-  youtubeId: string;
+  youtubeVideoId: string;
   title: string;
   description: string;
   views: number;
   watchTime: number; // in hours
   channelId: string;
-  createdAt: Timestamp | Date | string;
+  uploadDate: Timestamp | Date | string;
   thumbnailUrl: string;
   contentCategory: string;
+  // compatibility with existing data
+  youtubeId?: string;
+  createdAt?: Timestamp | Date | string;
 }
 
 export interface UserProfile extends User {

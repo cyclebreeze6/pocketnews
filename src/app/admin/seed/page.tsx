@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, writeBatch, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 // Sample Data
 const sampleChannels = [
@@ -26,6 +26,36 @@ export default function SeedDataPage() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isGrantingAdmin, setIsGrantingAdmin] = useState(false);
+
+  const handleGrantAdmin = async () => {
+    setIsGrantingAdmin(true);
+    // This is your specific user ID from the error logs.
+    const adminId = 'Kmjzk20TQ9fJSK24tnxoP9C1jg83';
+    
+    try {
+      const adminRoleRef = doc(firestore, 'roles_admin', adminId);
+      await setDoc(adminRoleRef, { grantedAt: serverTimestamp() });
+      
+      // Also ensure the user doc has isAdmin: true
+      const userRef = doc(firestore, 'users', adminId);
+      await setDoc(userRef, { isAdmin: true }, { merge: true });
+
+      toast({
+        title: 'Admin Role Granted!',
+        description: `User ${adminId} has been granted full administrator privileges. Please refresh the page.`,
+      });
+    } catch (error: any) {
+      console.error('Error granting admin role:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error Granting Admin Role',
+        description: error.message || 'An unexpected error occurred.',
+      });
+    } finally {
+      setIsGrantingAdmin(false);
+    }
+  };
 
   const handleSeedData = async () => {
     setIsSeeding(true);
@@ -42,11 +72,12 @@ export default function SeedDataPage() {
       // Seed Videos
       const videosCollection = collection(firestore, 'videos');
       sampleVideos.forEach(videoData => {
-        const docRef = doc(videosCollection); // Auto-generate ID
-        batch.set(docRef, {
+        const newVideoRef = doc(videosCollection); // Auto-generate ID
+        batch.set(newVideoRef, {
             ...videoData,
-            id: docRef.id,
-            createdAt: serverTimestamp()
+            id: newVideoRef.id,
+            youtubeVideoId: videoData.youtubeId,
+            uploadDate: serverTimestamp(),
         });
       });
 
@@ -70,18 +101,34 @@ export default function SeedDataPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">Seed Database</h1>
+      <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">Seed & Fix Permissions</h1>
+      
+      <Card className="max-w-2xl mb-8">
+        <CardHeader>
+          <CardTitle>Fix Admin Permissions</CardTitle>
+          <CardDescription>
+            If you are unable to access admin pages, click this button to grant your user account
+            (valentinoboss18@gmail.com) full administrator privileges. This is a one-time setup.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleGrantAdmin} disabled={isGrantingAdmin}>
+            {isGrantingAdmin ? 'Granting...' : 'Make Me Admin'}
+          </Button>
+        </CardContent>
+      </Card>
+      
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Populate with Sample Data</CardTitle>
           <CardDescription>
             Click the button below to add sample channels and videos to your Firestore database.
-            This is useful for development and testing purposes. This action will overwrite existing documents if they share the same ID.
+            This is useful for development and testing. This action will overwrite existing documents if they share the same ID.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleSeedData} disabled={isSeeding}>
-            {isSeeding ? 'Seeding...' : 'Seed Data'}
+            {isSeeding ? 'Seeding...' : 'Seed Sample Data'}
           </Button>
            <p className="text-xs text-muted-foreground mt-4">
               Note: This will create {sampleChannels.length} channels and {sampleVideos.length} videos.
