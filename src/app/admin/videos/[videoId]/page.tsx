@@ -1,9 +1,10 @@
+
 'use client';
 
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
 import { useDoc, useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '../../../../firebase';
-import type { Video, Channel } from '../../../../lib/types';
+import type { Video, Channel, Category } from '../../../../lib/types';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { Loader2, PlusCircle, ArrowLeft } from 'lucide-react';
 import { Input } from '../../../../components/ui/input';
@@ -37,15 +38,21 @@ export default function VideoEditPage() {
   
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels } = useCollection<Channel>(channelsQuery);
+  
+  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
+  const { data: categories } = useCollection<Category>(categoriesQuery);
 
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [videoDetails, setVideoDetails] = useState<Partial<Video> | null>(null);
   
-  // Channel Dialog State
+  // Dialog States
   const [isChannelDialogOpen, setIsChannelDialogOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
 
   useEffect(() => {
     if (existingVideo) {
@@ -87,6 +94,14 @@ export default function VideoEditPage() {
         setVideoDetails(prev => ({...prev, channelId: channelId}));
     }
   }
+  
+  const handleCategorySelect = (categoryName: string) => {
+    if (categoryName === 'add_new') {
+        setIsCategoryDialogOpen(true);
+    } else {
+        setVideoDetails(prev => ({...prev, contentCategory: categoryName}));
+    }
+  }
 
   const handleAddChannel = async () => {
     if (!newChannelName) {
@@ -108,9 +123,28 @@ export default function VideoEditPage() {
     setIsChannelDialogOpen(false);
   }
 
+  const handleAddCategory = async () => {
+    if (!newCategoryName) {
+        toast({ variant: 'destructive', title: 'Please enter a category name.' });
+        return;
+    }
+    const newCategoryData = {
+        name: newCategoryName,
+        createdAt: serverTimestamp(),
+    }
+    const newDocRef = await addDocumentNonBlocking(collection(firestore, 'categories'), newCategoryData);
+    if(newDocRef) {
+        updateDocumentNonBlocking(newDocRef, {id: newDocRef.id});
+        setVideoDetails(prev => ({...prev, contentCategory: newCategoryName}));
+    }
+    toast({title: 'Category Added!', description: `${newCategoryName} has been created.`});
+    setNewCategoryName('');
+    setIsCategoryDialogOpen(false);
+  }
+
   const handleSaveChanges = async () => {
-    if (!videoDetails?.title || !videoDetails?.channelId) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please ensure a title and channel are set.' });
+    if (!videoDetails?.title || !videoDetails?.channelId || !videoDetails?.contentCategory) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please ensure a title, channel, and category are set.' });
       return;
     }
     
@@ -194,23 +228,43 @@ export default function VideoEditPage() {
                             <Label htmlFor="description">Description</Label>
                             <Textarea id="description" value={videoDetails.description || ''} onChange={e => setVideoDetails(prev => ({...prev, description: e.target.value}))} className="h-24" />
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="channel-select">Assign to Channel</Label>
-                            <Select onValueChange={handleChannelSelect} value={videoDetails.channelId || ''}>
-                                <SelectTrigger id="channel-select">
-                                    <SelectValue placeholder="Select a channel..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {channels?.map((channel) => (
-                                    <SelectItem key={channel.id} value={channel.id}>
-                                        {channel.name}
-                                    </SelectItem>
-                                    ))}
-                                    <SelectItem value="add_new" className="text-primary">
-                                        <PlusCircle className="inline-block mr-2 h-4 w-4" /> Add New Channel
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="channel-select">Assign to Channel</Label>
+                                <Select onValueChange={handleChannelSelect} value={videoDetails.channelId || ''}>
+                                    <SelectTrigger id="channel-select">
+                                        <SelectValue placeholder="Select a channel..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {channels?.map((channel) => (
+                                        <SelectItem key={channel.id} value={channel.id}>
+                                            {channel.name}
+                                        </SelectItem>
+                                        ))}
+                                        <SelectItem value="add_new" className="text-primary">
+                                            <PlusCircle className="inline-block mr-2 h-4 w-4" /> Add New Channel
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="category-select">Assign to Category</Label>
+                                <Select onValueChange={handleCategorySelect} value={videoDetails.contentCategory || ''}>
+                                    <SelectTrigger id="category-select">
+                                        <SelectValue placeholder="Select a category..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {categories?.map((category) => (
+                                        <SelectItem key={category.id} value={category.name}>
+                                            {category.name}
+                                        </SelectItem>
+                                        ))}
+                                        <SelectItem value="add_new" className="text-primary">
+                                            <PlusCircle className="inline-block mr-2 h-4 w-4" /> Add New Category
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,6 +296,27 @@ export default function VideoEditPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Category</DialogTitle>
+                    <DialogDescription>Create a new category to assign this video to.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="new-category-name">Category Name</Label>
+                        <Input id="new-category-name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleAddCategory}>Add Category</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
+
+    
