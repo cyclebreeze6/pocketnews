@@ -16,16 +16,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
+  const isLoading = isUserLoading || isProfileLoading;
+
   useEffect(() => {
-    const isLoading = isUserLoading || isProfileLoading;
     if (!isLoading) {
       if (!user || !userProfile?.isAdmin) {
         router.push('/');
       }
     }
-  }, [user, userProfile, isLoading, router, isProfileLoading, isUserLoading]);
-
-  const isLoading = isUserLoading || isProfileLoading;
+  }, [user, userProfile, isLoading, router]);
+  
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading Admin...</div>;
   }
