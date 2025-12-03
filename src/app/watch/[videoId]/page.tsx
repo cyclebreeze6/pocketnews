@@ -97,46 +97,48 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
-      <main className="flex-1 py-6 md:py-8">
-        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 sm:px-6 md:px-8">
+      <main className="flex-1 md:py-8">
+        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-4 sm:px-6 md:px-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div className="aspect-video mb-4">
+            <div className="aspect-video mb-4 md:rounded-lg overflow-hidden">
               <VideoPlayer youtubeId={video.youtubeId} />
             </div>
             
-            <h1 className="text-2xl md:text-3xl font-bold font-headline mb-4">{video.title}</h1>
+            <div className="px-4 md:px-0">
+                <h1 className="text-2xl md:text-3xl font-bold font-headline mb-4">{video.title}</h1>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={`https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
-                        <AvatarFallback>{channel?.name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <p className="font-semibold">{channel?.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(video.createdAt))} ago</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                        <Avatar>
+                            <AvatarImage src={`https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
+                            <AvatarFallback>{channel?.name?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{channel?.name}</p>
+                            <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(video.createdAt))} ago</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant={isFollowing ? 'secondary': 'outline'} onClick={handleFollowToggle}>
+                        {isFollowing ? <Check className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
+                        {isFollowing ? 'Following' : 'Follow'}
+                        </Button>
+                        <Button variant="secondary" onClick={copyToClipboard}><Share className="mr-2 h-4 w-4" /> Share</Button>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant={isFollowing ? 'secondary': 'outline'} onClick={handleFollowToggle}>
-                      {isFollowing ? <Check className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </Button>
-                    <Button variant="secondary" onClick={copyToClipboard}><Share className="mr-2 h-4 w-4" /> Share</Button>
+                
+                <div className="flex items-center gap-2 mt-4">
+                    <p className="text-sm font-medium">Related topics</p>
+                    <Link href="/category/News"><Badge variant="outline">#news</Badge></Link>
+                    <Link href="/category/Technology"><Badge variant="outline">#technology</Badge></Link>
+                    <Link href="/category/Sports"><Badge variant="outline">#sports</Badge></Link>
                 </div>
-            </div>
-            
-            <div className="flex items-center gap-2 mt-4">
-                <p className="text-sm font-medium">Related topics</p>
-                <Link href="/category/News"><Badge variant="outline">#news</Badge></Link>
-                <Link href="/category/Technology"><Badge variant="outline">#technology</Badge></Link>
-                <Link href="/category/Sports"><Badge variant="outline">#sports</Badge></Link>
             </div>
           </div>
           
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 px-4 md:px-0">
             <h3 className="text-lg font-semibold mb-2 text-muted-foreground">My Headlines</h3>
 
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
