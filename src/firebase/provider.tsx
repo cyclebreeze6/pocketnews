@@ -2,7 +2,7 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { setDocumentNonBlocking } from './non-blocking-updates';
@@ -55,6 +55,7 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 
 /**
  * Ensures a user document exists in Firestore. Creates it if it doesn't.
+ * Includes special logic to grant admin rights to the first user.
  * @param firestore - The Firestore instance.
  * @param user - The Firebase Auth user object.
  */
@@ -63,16 +64,26 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
   const docSnap = await getDoc(userRef);
 
   if (!docSnap.exists()) {
+    // Logic to make a specific user an admin automatically.
+    const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com';
+
     // Document doesn't exist, so create it.
     const newUserProfile = {
       id: user.uid,
       email: user.email || '',
       displayName: user.displayName || 'Anonymous User',
-      isAdmin: false, // Default to not admin
+      isAdmin: isDesignatedAdmin, // Set admin status based on email match
       avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
     };
+    
     // Use the non-blocking write to create the user document
     setDocumentNonBlocking(userRef, newUserProfile, {});
+
+    // If they are the designated admin, also add them to the DBAC collection
+    if (isDesignatedAdmin) {
+      const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
+      setDocumentNonBlocking(adminRoleRef, { grantedAt: serverTimestamp() }, {});
+    }
   }
 };
 
