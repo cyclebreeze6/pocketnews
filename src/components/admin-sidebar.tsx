@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Video, Users, Tv, Settings, DatabaseZap, FolderKanban } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../lib/utils';
 
 const AdminSidebar = () => {
   const pathname = usePathname();
@@ -40,5 +40,3 @@ const AdminSidebar = () => {
 };
 
 export default AdminSidebar;
-
-    

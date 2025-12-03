@@ -1,21 +1,21 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import type { UserProfile } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase';
+import type { UserProfile } from '../../../lib/types';
 import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
+import { Switch } from '../../../components/ui/switch';
+import { useToast } from '../../../hooks/use-toast';
+import { Badge } from '../../../components/ui/badge';
 import { MoreHorizontal, Trash2, Loader2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
+import { Button } from '../../../components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../../components/ui/alert-dialog';
 import { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
 
 export default function AdminUsersPage() {
   const { firestore } = useFirebase();

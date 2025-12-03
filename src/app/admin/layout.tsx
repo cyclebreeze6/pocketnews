@@ -1,13 +1,13 @@
 'use client';
 
-import { useUser, useDoc, useFirebase, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useFirebase, useMemoFirebase } from '../../firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import SiteHeader from '@/components/site-header';
-import AdminSidebar from '@/components/admin-sidebar';
+import SiteHeader from '../../components/site-header';
+import AdminSidebar from '../../components/admin-sidebar';
 import { doc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import type { UserProfile } from '../../lib/types';
+import { Skeleton } from '../../components/ui/skeleton';
 
 
 function AdminLoadingSkeleton() {

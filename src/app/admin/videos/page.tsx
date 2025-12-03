@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import type { Video, Channel } from '@/lib/types';
+import { Button } from '../../../components/ui/button';
+import { Card, CardContent } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '../../../firebase';
+import type { Video, Channel } from '../../../lib/types';
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { PlusCircle, MoreHorizontal, Trash2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
@@ -13,15 +13,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '../../../components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../../components/ui/dialog';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { fetchYouTubeVideoInfo, type YouTubeVideoInfo } from '@/ai/flows/youtube-info-flow';
-import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '../../../hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { fetchYouTubeVideoInfo, type YouTubeVideoInfo } from '../../../ai/flows/youtube-info-flow';
+import { Textarea } from '../../../components/ui/textarea';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
   if (timestamp instanceof Timestamp) {

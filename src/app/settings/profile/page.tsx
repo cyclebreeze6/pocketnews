@@ -1,17 +1,17 @@
 
 'use client';
 
-import SiteHeader from '@/components/site-header';
-import { useDoc, useFirebase, useUser, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import SiteHeader from '../../../components/site-header';
+import { useDoc, useFirebase, useUser, setDocumentNonBlocking, useMemoFirebase } from '../../../firebase';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
+import { Button } from '../../../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
 import { doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import type { UserProfile } from '@/lib/types';
+import { useToast } from '../../../hooks/use-toast';
+import type { UserProfile } from '../../../lib/types';
 
 export default function ProfileSettingsPage() {
     const { firestore } = useFirebase();

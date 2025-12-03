@@ -7,14 +7,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from './ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useState } from 'react';
-import { useAuth, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth, initiateEmailSignIn, initiateEmailSignUp } from '../firebase';
+import { useToast } from '../hooks/use-toast';
 
 interface AuthDialogProps {
   open: boolean;

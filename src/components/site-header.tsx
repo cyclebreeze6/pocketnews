@@ -15,13 +15,13 @@ import {
   Video as VideoIcon,
   Menu,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from './ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 import {
@@ -34,8 +34,8 @@ import {
 } from './ui/dropdown-menu';
 import { useState } from 'react';
 import { AuthDialog } from './auth-dialog';
-import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import type { Video, Channel, UserFollow, UserProfile } from '@/lib/types';
+import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '../firebase';
+import type { Video, Channel, UserFollow, UserProfile } from '../lib/types';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
@@ -241,5 +241,3 @@ export default function SiteHeader() {
     </>
   );
 }
-
-    

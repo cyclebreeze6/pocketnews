@@ -3,9 +3,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import type { Category } from '@/lib/types';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { cn } from '../lib/utils';
+import type { Category } from '../lib/types';
+import { useCollection, useFirebase, useMemoFirebase } from '../firebase';
 import { collection } from 'firebase/firestore';
 
 export function CategoryNav() {

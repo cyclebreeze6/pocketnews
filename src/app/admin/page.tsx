@@ -1,8 +1,8 @@
 'use client';
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import type { User, Video, Channel } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import { useCollection, useFirebase, useMemoFirebase } from '../../firebase';
+import type { User, Video, Channel } from '../../lib/types';
 import { collection } from 'firebase/firestore';
 
 export default function AdminDashboard() {

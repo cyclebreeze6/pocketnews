@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import type { Video } from '@/lib/types';
-import { Card, CardContent } from '@/components/ui/card';
+import type { Video } from '../lib/types';
+import { Card, CardContent } from './ui/card';
 import { Eye, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
