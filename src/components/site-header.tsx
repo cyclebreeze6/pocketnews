@@ -13,6 +13,7 @@ import {
   LogOut,
   Shield,
   Video as VideoIcon,
+  Menu,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc }
 import type { Video, Channel, UserFollow, UserProfile } from '@/lib/types';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { CategoryNav } from './category-nav';
 
 
 export default function SiteHeader() {
@@ -44,7 +46,7 @@ export default function SiteHeader() {
   const auth = useAuth();
   const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
-  const router = useRouter(); // Use useRouter for navigation
+  const router = useRouter(); 
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
@@ -58,8 +60,7 @@ export default function SiteHeader() {
     return query(
       collection(firestore, 'videos'),
       where('channelId', 'in', followedChannelIds),
-      // where('createdAt', '>', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)), // Last 7 days
-      limit(5) // Limit notifications
+      limit(5)
     );
   }, [firestore, followedChannels]);
 
@@ -74,7 +75,6 @@ export default function SiteHeader() {
     auth.signOut();
   };
 
-  // Function to navigate to the Add Video page
   const goToAddVideo = () => {
     router.push('/admin/videos');
   };
@@ -83,11 +83,10 @@ export default function SiteHeader() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container px-4 sm:px-6 md:px-8">
-          <div className="flex h-16 items-center">
-            <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-2">
-                <svg
+        <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8">
+          <div className="mr-4 hidden md:flex">
+            <Link href="/" className="flex items-center space-x-2">
+               <svg
                   role="img"
                   width="24"
                   height="24"
@@ -95,31 +94,27 @@ export default function SiteHeader() {
                   fill="hsl(var(--foreground))"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <title>Haystack News</title>
+                  <title>Pocketnews TV</title>
                   <path d="M512 368.5V213.25h-59.5V368.5zM294.5 368.5v-274H235V368.5zM452.5 368.5V273h-59.5v95.5zM353 368.5V153.5h-58.5V368.5zM175.5 368.5V243h-59V368.5zM116.5 368.5V123h-59v245.5zM57.5 368.5V183h-59v185.5zM0 368.5V308h57.5v60.5zm195.1-322.25L175.5 67.5V0h119v67.5l-19.6-21.25-40.15-43.5z" />
                 </svg>
-                <span className="font-bold font-headline ml-2 text-lg">
-                  Pocketnews TV
-                </span>
-              </Link>
-            </div>
-            
-            <div className="flex-1 flex justify-center items-center">
-                <div className="relative w-full max-w-sm hidden sm:block">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search" className="pl-9 bg-input" />
-                </div>
-            </div>
+              <span className="hidden font-bold sm:inline-block font-headline">
+                Pocketnews TV
+              </span>
+            </Link>
+          </div>
 
-            <div className="flex items-center justify-end space-x-2">
-              <nav className="hidden md:flex items-center space-x-2">
-                <Link href="/channels">
-                  <Button variant="ghost" size="sm">
-                    <MonitorPlay className="h-4 w-4 mr-2" /> All channels
-                  </Button>
-                </Link>
-
-                <Popover>
+          <div className="flex-1 flex justify-center items-center">
+              <div className="relative w-full max-w-sm hidden sm:block">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search news, topics, and channels" className="pl-9 bg-input" />
+              </div>
+          </div>
+          
+           <div className="flex items-center justify-end space-x-2">
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Search className="h-5 w-5" />
+              </Button>
+              <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative" disabled={!user}>
                       <Bell className="h-5 w-5" />
@@ -185,7 +180,7 @@ export default function SiteHeader() {
                   </PopoverContent>
                 </Popover>
 
-                {!isUserLoading && (
+              {!isUserLoading && (
                    user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -238,13 +233,9 @@ export default function SiteHeader() {
                   <Button size="sm" onClick={() => setIsAuthDialogOpen(true)}>Get Started</Button>
                 )
                 )}
-              </nav>
-              <Button variant="ghost" size="icon" className="sm:hidden">
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
         </div>
+        <CategoryNav />
       </header>
       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={handleLoginSuccess} />
     </>
