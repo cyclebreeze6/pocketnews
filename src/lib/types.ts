@@ -12,6 +12,7 @@ export interface Channel {
   id: string;
   name:string;
   description: string;
+  createdAt?: Timestamp | Date | string;
 }
 
 export interface Video {
