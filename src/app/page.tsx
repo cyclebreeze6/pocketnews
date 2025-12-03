@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -15,7 +14,7 @@ import { Share, Star, PlayCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel } from '../lib/types';
-import { collection, doc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, Timestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState } from 'react';
 import {
@@ -41,7 +40,7 @@ export default function Home() {
   const { toast } = useToast();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
 
-  const videosQuery = useMemoFirebase(() => collection(firestore, 'videos'), [firestore]);
+  const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), orderBy('createdAt', 'desc')), [firestore]);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
@@ -113,11 +112,11 @@ export default function Home() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={featuredVideo.youtubeId} />
+              <VideoPlayer youtubeId={featuredVideo.youtubeVideoId} />
             </div>
             
             <div className="px-4 md:px-0">
-                <h2 className="text-2xl font-bold font-headline mb-4">{featuredVideo.title}</h2>
+                <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{featuredVideo.title}</h2>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
@@ -209,3 +208,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
