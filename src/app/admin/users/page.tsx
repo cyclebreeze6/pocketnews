@@ -28,14 +28,17 @@ export default function AdminUsersPage() {
     const userRef = doc(firestore, 'users', user.id);
     const newAdminStatus = !user.isAdmin;
 
+    // Update the isAdmin flag on the user document itself
     setDocumentNonBlocking(userRef, { isAdmin: newAdminStatus }, { merge: true });
 
-    // Additionally, manage the roles_admin collection for DBAC
+    // This is the critical part: manage the DBAC collection.
+    // The security rules depend on the existence of a document in `roles_admin`.
     const adminRoleRef = doc(firestore, 'roles_admin', user.id);
     if (newAdminStatus) {
-      // Use a dummy field because empty documents can be tricky
-      setDocumentNonBlocking(adminRoleRef, { isAdmin: true }, {});
+      // Create the document in /roles_admin to grant admin role
+      setDocumentNonBlocking(adminRoleRef, { grantedAt: new Date() }, {});
     } else {
+      // Delete the document from /roles_admin to revoke admin role
       deleteDocumentNonBlocking(adminRoleRef);
     }
 
