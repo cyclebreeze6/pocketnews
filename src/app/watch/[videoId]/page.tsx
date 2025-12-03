@@ -139,7 +139,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
             
             <div className="px-4 md:px-0">
                 <div className="flex justify-between items-center mb-4">
-                  <h1 className="text-2xl md:text-3xl font-bold font-headline">{video.title}</h1>
+                  <h2 className="text-2xl font-bold font-headline">{video.title}</h2>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={() => previousVideoId && router.push(`/watch/${previousVideoId}`)} disabled={!previousVideoId}>
                       <ArrowLeft className="h-4 w-4" />

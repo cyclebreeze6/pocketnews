@@ -117,7 +117,7 @@ export default function Home() {
             </div>
             
             <div className="px-4 md:px-0">
-                <h1 className="text-2xl md:text-3xl font-bold font-headline mb-4">{featuredVideo.title}</h1>
+                <h2 className="text-2xl font-bold font-headline mb-4">{featuredVideo.title}</h2>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
