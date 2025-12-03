@@ -7,7 +7,7 @@
  * - YouTubeVideoInfo - The output type for the flow.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '../genkit';
 import { z } from 'genkit';
 
 const YouTubeVideoInfoInputSchema = z.object({

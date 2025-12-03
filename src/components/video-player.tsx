@@ -77,7 +77,7 @@ export function VideoPlayer({ youtubeId }: VideoPlayerProps) {
       showControls();
     } else {
       setIsPlaying(false);
-      if (controlsTimeoutRef.current) clearTimeout(controls_timeout_ref.current);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       setIsShowingControls(true);
     }
   };

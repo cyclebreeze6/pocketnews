@@ -84,7 +84,7 @@ export default function AdminVideosPage() {
 
     const videosCollection = collection(firestore, 'videos');
     addDocumentNonBlocking(videosCollection, {
-        youtubeId: videoDetails.videoId,
+        youtubeVideoId: videoDetails.videoId,
         title: videoDetails.title,
         description: videoDetails.description,
         thumbnailUrl: videoDetails.thumbnailUrl,

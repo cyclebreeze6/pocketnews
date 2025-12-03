@@ -3,22 +3,22 @@
 'use client';
 
 import { notFound, useRouter } from 'next/navigation';
-import SiteHeader from '@/components/site-header';
-import { VideoPlayer } from '@/components/video-player';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import SiteHeader from '../../../components/site-header';
+import { VideoPlayer } from '../../../components/video-player';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
 import { Share, Star, Check, PlayCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../../../hooks/use-toast';
 import { useEffect, useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
-import { useCollection, useDoc, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
+import { ScrollArea } from '../../../components/ui/scroll-area';
+import { Card, CardContent } from '../../../components/ui/card';
+import { useCollection, useDoc, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase';
 import { collection, doc, query, where, limit, serverTimestamp, Timestamp, orderBy } from 'firebase/firestore';
-import type { Video, Channel, UserFollow } from '@/lib/types';
+import type { Video, Channel, UserFollow } from '../../../lib/types';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '../../../components/ui/dialog';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -133,7 +133,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div className="aspect-video mb-4 md:rounded-lg overflow-hidden">
+            <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
               <VideoPlayer youtubeId={video.youtubeVideoId} />
             </div>
             
