@@ -132,9 +132,7 @@ service cloud.firestore {
        * @allow (read, write, delete) The user to manage their own follows.
        */
       match /follows/{channelId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow write, delete: if isOwner(userId);
+        allow get, list, write, delete: if isOwner(userId);
       }
 
       /**
@@ -155,11 +153,8 @@ service cloud.firestore {
      * @principle Enforces public read access for content while restricting all write operations to administrators.
      */
     match /channels/{channelId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isExistingAdmin();
-      allow delete: if isExistingAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
     }
 
      /**
@@ -170,9 +165,8 @@ service cloud.firestore {
      * @principle Enforces public read access for content while restricting all write operations to administrators.
      */
     match /videos/{videoId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
+      allow get, list: if true;
+      allow create: if isAdmin();
       allow update: if isExistingAdmin() && videoChannelIsImmutable();
       allow delete: if isExistingAdmin();
     }
@@ -186,11 +180,7 @@ service cloud.firestore {
      * @principle Secures role management by making it a backend-only or console-only operation, preventing privilege escalation from the client.
      */
     match /roles_admin/{userId} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow read, write: if false;
     }
   }
 }
