@@ -32,6 +32,12 @@ export interface Video {
   createdAt?: Timestamp | Date | string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  createdAt?: Timestamp | Date | string;
+}
+
 export interface UserProfile extends User {
   // You can add more user-specific fields here
 }
@@ -48,3 +54,5 @@ export interface WatchHistory {
   videoId: string;
   watchedAt: Timestamp;
 }
+
+    

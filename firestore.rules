@@ -15,6 +15,7 @@ rules_version = '2';
  * - /users/{userId}: Stores private user data. Each user has exclusive control over their own document.
  * - /channels/{channelId}: A top-level collection for TV channels. This data is public.
  * - /videos/{videoId}: A top-level collection for videos. This data is also public.
+ * - /categories/{categoryId}: A top-level collection for content categories. Publicly readable.
  * - /roles_admin/{userId}: A dedicated collection for Database-Based Access Control (DBAC). The existence
  *   of a document here grants a user global administrator privileges. This collection is not
  *   client-writable.
@@ -24,7 +25,7 @@ rules_version = '2';
  *   `/roles_admin/{userId}` collection. This is more secure than a boolean field on a user document,
  *   as it cannot be manipulated by users.
  * - Public Content vs. Private Data: A clear structural segregation exists between public-read collections
- *   (`/channels`, `/videos`) and private-read/write collections (`/users`).
+ *   (`/channels`, `/videos`, `/categories`) and private-read/write collections (`/users`).
  * - No User Listing for Non-Admins: To protect user privacy and prevent data scraping, listing documents
  *   from the `/users` and `/roles_admin` collections is explicitly disallowed for non-admin clients.
  * - Immutable Ownership: Critical relational identifiers (e.g., a User's `id`) are
@@ -157,6 +158,18 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
+    
+     /**
+     * @description Defines the collection of content categories.
+     * @path /categories/{categoryId}
+     * @allow (get, list) Any user, including unauthenticated visitors, reading category data.
+     * @deny (create, update, delete) A non-administrative user attempting to modify categories.
+     * @principle Enforces public read access for content while restricting all write operations to administrators.
+     */
+    match /categories/{categoryId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
 
      /**
      * @description Defines the collection of videos.
@@ -188,3 +201,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

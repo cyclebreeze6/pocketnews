@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Video, Users, Tv, Settings, DatabaseZap } from 'lucide-react';
+import { Home, Video, Users, Tv, Settings, DatabaseZap, FolderKanban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const AdminSidebar = () => {
@@ -12,6 +12,7 @@ const AdminSidebar = () => {
     { href: '/admin', label: 'Dashboard', icon: Home },
     { href: '/admin/videos', label: 'Videos', icon: Video },
     { href: '/admin/channels', label: 'Channels', icon: Tv },
+    { href: '/admin/categories', label: 'Categories', icon: FolderKanban },
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
     { href: '/admin/seed', label: 'Seed Data', icon: DatabaseZap },
@@ -39,3 +40,5 @@ const AdminSidebar = () => {
 };
 
 export default AdminSidebar;
+
+    
