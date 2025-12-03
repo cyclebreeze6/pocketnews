@@ -3,7 +3,7 @@
 
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
-import { useDoc, useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '../../../../firebase';
+import { useDoc, useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, uploadFile, useStorage } from '../../../../firebase';
 import type { Video, Channel, Category } from '../../../../lib/types';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { Loader2, PlusCircle, ArrowLeft } from 'lucide-react';
@@ -27,6 +27,7 @@ import {
 
 export default function VideoEditPage() {
   const { firestore } = useFirebase();
+  const storage = useStorage();
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
@@ -50,6 +51,9 @@ export default function VideoEditPage() {
   // Dialog States
   const [isChannelDialogOpen, setIsChannelDialogOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelLogoFile, setNewChannelLogoFile] = useState<File | null>(null);
+  const [newChannelLogoPreview, setNewChannelLogoPreview] = useState<string | null>(null);
+
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -89,6 +93,9 @@ export default function VideoEditPage() {
   
   const handleChannelSelect = (channelId: string) => {
     if (channelId === 'add_new') {
+        setNewChannelName('');
+        setNewChannelLogoFile(null);
+        setNewChannelLogoPreview(null);
         setIsChannelDialogOpen(true);
     } else {
         setVideoDetails(prev => ({...prev, channelId: channelId}));
@@ -97,21 +104,48 @@ export default function VideoEditPage() {
   
   const handleCategorySelect = (categoryName: string) => {
     if (categoryName === 'add_new') {
+        setNewCategoryName('');
         setIsCategoryDialogOpen(true);
     } else {
         setVideoDetails(prev => ({...prev, contentCategory: categoryName}));
     }
   }
 
+  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setNewChannelLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewChannelLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddChannel = async () => {
     if (!newChannelName) {
         toast({ variant: 'destructive', title: 'Please enter a channel name.' });
         return;
     }
+
+    let logoUrl = '';
+    if (newChannelLogoFile) {
+        try {
+            const filePath = `channel-logos/${Date.now()}_${newChannelLogoFile.name}`;
+            logoUrl = await uploadFile(storage, newChannelLogoFile, filePath);
+        } catch (error) {
+            console.error("Failed to upload logo:", error);
+            toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not upload the logo.' });
+            return;
+        }
+    }
+
     const newChannelData = {
         name: newChannelName,
         description: 'Newly added channel',
         createdAt: serverTimestamp(),
+        logoUrl: logoUrl,
     }
     const newDocRef = await addDocumentNonBlocking(collection(firestore, 'channels'), newChannelData);
     if(newDocRef) {
@@ -119,7 +153,10 @@ export default function VideoEditPage() {
         setVideoDetails(prev => ({...prev, channelId: newDocRef.id}));
     }
     toast({title: 'Channel Added!', description: `${newChannelName} has been created.`});
+    
     setNewChannelName('');
+    setNewChannelLogoFile(null);
+    setNewChannelLogoPreview(null);
     setIsChannelDialogOpen(false);
   }
 
@@ -289,6 +326,17 @@ export default function VideoEditPage() {
                         <Label htmlFor="new-channel-name">Channel Name</Label>
                         <Input id="new-channel-name" value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} />
                     </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="logo">Channel Logo</Label>
+                        <div className="relative w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+                            {newChannelLogoPreview ? (
+                                <Image src={newChannelLogoPreview} alt="Logo preview" layout="fill" className="object-cover rounded-lg" />
+                            ) : (
+                                <span>Logo</span>
+                            )}
+                        </div>
+                        <Input id="logo" type="file" accept="image/*" onChange={handleLogoFileChange} className="text-sm"/>
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsChannelDialogOpen(false)}>Cancel</Button>
@@ -318,5 +366,3 @@ export default function VideoEditPage() {
     </div>
   );
 }
-
-    
