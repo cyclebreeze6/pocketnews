@@ -36,17 +36,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const { firestore } = useFirebase();
 
-  // Memoize the document reference to the user's profile.
+  // ALL hooks must be called at the top-level, before any conditional returns.
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [firestore, user]
   );
   
-  // Fetch the user's profile data.
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  // If we're on the seed page, don't run any of the auth checks and return early.
-  if (pathname === '/admin/seed') {
+  const isSeedPage = pathname === '/admin/seed';
+  
+  // Combined loading state: still loading if the initial user check is running,
+  // or if we have a user but are still waiting for their specific profile to load.
+  const isLoading = isUserLoading || (!!user && isProfileLoading);
+
+  useEffect(() => {
+    // This effect runs when loading states or user data change.
+    // If we are on the seed page, we don't need to do any auth checks.
+    if (isSeedPage || isLoading) {
+      return;
+    }
+
+    // If loading is finished and we are NOT on the seed page:
+    // 1. If there's no user object, or
+    // 2. If there IS a user, but they don't have an admin profile,
+    // then redirect to the homepage.
+    if (!user || !userProfile?.isAdmin) {
+      router.push('/');
+    }
+
+  }, [user, userProfile, isLoading, router, isSeedPage]);
+
+  // If we're on the seed page, render it directly without further auth checks.
+  if (isSeedPage) {
     return (
        <div className="flex min-h-screen w-full flex-col">
         <SiteHeader />
@@ -58,33 +80,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // Combined loading state: still loading if the initial user check is running,
-  // or if we have a user but are still waiting for their specific profile to load.
-  const isLoading = isUserLoading || (!!user && isProfileLoading);
-
-  useEffect(() => {
-    // This effect runs when loading states or user data change.
-    // If it's still loading, we don't need to do anything yet.
-    if (isLoading) {
-      return;
-    }
-
-    // If loading is finished:
-    // 1. If there's no user object, or
-    // 2. If there IS a user, but they don't have an admin profile,
-    // then redirect to the homepage.
-    if (!user || !userProfile?.isAdmin) {
-      router.push('/');
-    }
-
-  }, [user, userProfile, isLoading, router]);
-
-  // While we are checking for the user and their profile, show a loading screen or skeleton.
+  // For any other admin page, while we are checking for the user and their profile, show a loading skeleton.
   if (isLoading) {
     return <AdminLoadingSkeleton />;
   }
 
-  // If loading is complete and the user is an admin, render the admin layout.
+  // If loading is complete and the user is a confirmed admin, render the admin layout.
   // The useEffect above will handle redirection for non-admins.
   if (user && userProfile?.isAdmin) {
     return (
@@ -98,6 +99,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // This fallback will show briefly while the redirection is happening for non-admins.
+  // This fallback will show briefly for non-admins while the redirection from useEffect is happening.
   return <AdminLoadingSkeleton />;
 }
