@@ -156,7 +156,7 @@ service cloud.firestore {
     match /channels/{channelId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isAdmin();
+      allow create: if isSignedIn();
       allow update: if isExistingAdmin();
       allow delete: if isExistingAdmin();
     }
@@ -171,7 +171,7 @@ service cloud.firestore {
     match /videos/{videoId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isAdmin();
+      allow create: if isSignedIn();
       allow update: if isExistingAdmin() && videoChannelIsImmutable();
       allow delete: if isExistingAdmin();
     }
