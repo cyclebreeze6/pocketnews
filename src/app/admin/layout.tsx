@@ -15,7 +15,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { firestore } = useFirebase();
 
   // Memoize the document reference to the user's profile.
-  // All hooks must be called at the top level and in the same order.
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [firestore, user]
@@ -24,10 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Fetch the user's profile data.
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const isLoading = isUserLoading || (user && isProfileLoading);
-  
   // If we're on the seed page, don't run any of the auth checks and return early.
-  // This check now happens *after* all hooks have been called.
   if (pathname === '/admin/seed') {
     return (
        <div className="flex min-h-screen w-full flex-col">
@@ -40,52 +36,49 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  // Combined loading state
+  const isLoading = isUserLoading || (user && isProfileLoading);
 
   useEffect(() => {
-    // Wait until loading is complete.
-    if (!isLoading) {
-      // If there's no logged-in user at all, redirect to home.
-      if (!user) {
-        router.push('/');
-        return;
-      }
-      
-      // If the user profile is loaded and the user is NOT an admin, redirect.
-      // This check is now safe because it only runs after isProfileLoading is false.
-      if (userProfile && !userProfile.isAdmin) {
-        router.push('/');
-      }
-      
-      // Also handle the case where the profile might not exist for some reason,
-      // but we have a user object. This is a fallback to prevent access.
-      if (user && !userProfile) {
-         // If we are still loading the profile, don't redirect yet.
-        if (isProfileLoading) return;
-        // If loading is finished and there's no profile, they can't be an admin.
-        router.push('/');
-      }
+    // This effect runs when loading states or user data change.
+    // If it's still loading, we don't need to do anything yet.
+    if (isLoading) {
+      return;
     }
-  }, [user, userProfile, isLoading, isProfileLoading, router]);
 
-  // Show a loading screen while we verify the user and their admin status.
+    // If loading is finished:
+    // 1. If there's no user object, redirect to home.
+    if (!user) {
+      router.push('/');
+      return;
+    }
+
+    // 2. If there IS a user, but their profile hasn't loaded or they are not an admin, redirect.
+    if (!userProfile || !userProfile.isAdmin) {
+      router.push('/');
+    }
+
+  }, [user, userProfile, isLoading, router]);
+
+  // While we are checking for the user and their profile, show a loading screen.
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Verifying Admin Access...</div>;
   }
 
-  // If after loading, the user is still not confirmed as an admin, they will have been
-  // redirected by the useEffect. Return null to prevent any flash of admin content.
-  if (!userProfile?.isAdmin) {
-    return null;
-  }
-  
-  // If all checks pass, render the admin layout.
-  return (
-    <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
-      <div className="flex flex-1">
-        <AdminSidebar />
-        <main className="flex-1 p-6 md:p-8">{children}</main>
+  // If loading is complete and the user has been verified as an admin, render the layout.
+  // The useEffect above will have handled the redirection for non-admins.
+  if (user && userProfile?.isAdmin) {
+    return (
+      <div className="flex min-h-screen w-full flex-col">
+        <SiteHeader />
+        <div className="flex flex-1">
+          <AdminSidebar />
+          <main className="flex-1 p-6 md:p-8">{children}</main>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Fallback: if not loading and not an admin, render nothing while redirecting.
+  return null;
 }

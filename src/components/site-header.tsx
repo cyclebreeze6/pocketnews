@@ -12,6 +12,7 @@ import {
   User,
   LogOut,
   Shield,
+  Video as VideoIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,12 +36,15 @@ import { AuthDialog } from './auth-dialog';
 import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import type { Video, Channel, UserFollow, UserProfile } from '@/lib/types';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+
 
 export default function SiteHeader() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const router = useRouter(); // Use useRouter for navigation
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
@@ -69,6 +73,12 @@ export default function SiteHeader() {
   const handleLogout = () => {
     auth.signOut();
   };
+
+  // Function to navigate to the Add Video page
+  const goToAddVideo = () => {
+    router.push('/admin/videos');
+  };
+
 
   return (
     <>
@@ -197,9 +207,16 @@ export default function SiteHeader() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                         {userProfile?.isAdmin && (
-                            <DropdownMenuItem asChild>
-                                <Link href="/admin"><Shield className="mr-2 h-4 w-4" /><span>Admin</span></Link>
+                          <>
+                            <DropdownMenuItem onSelect={() => router.push('/admin')}>
+                                <Shield className="mr-2 h-4 w-4" />
+                                <span>Admin Panel</span>
                             </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={goToAddVideo}>
+                                <VideoIcon className="mr-2 h-4 w-4" />
+                                <span>Add Video</span>
+                            </DropdownMenuItem>
+                          </>
                         )}
                       <DropdownMenuItem asChild>
                         <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
