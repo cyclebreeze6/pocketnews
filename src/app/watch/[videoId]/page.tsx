@@ -19,6 +19,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useCollection, useDoc, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, limit, serverTimestamp, Timestamp, orderBy } from 'firebase/firestore';
 import type { Video, Channel, UserFollow } from '@/lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -32,6 +40,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+  const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
 
   // Fetch the current video
   const videoRef = useMemoFirebase(() => doc(firestore, 'videos', params.videoId), [firestore, params.videoId]);
@@ -211,7 +220,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
              <Card className="mt-8 bg-card/50">
                 <CardContent className="p-4 flex items-center justify-between">
                     <p className="text-sm max-w-[200px]">Enjoy ad-free news from 400+ local, national, and global channels</p>
-                    <Button variant="secondary">Go ad-free</Button>
+                    <Button variant="secondary" onClick={() => setIsPremiumDialogOpen(true)}>Go ad-free</Button>
                 </CardContent>
             </Card>
           </div>
@@ -220,6 +229,20 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
       <footer className="py-4 text-center text-sm text-muted-foreground">
         Meet the #1 App to Stream News. Watch Free!
       </footer>
+
+      <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Coming Soon!</DialogTitle>
+            <DialogDescription>
+              Premium membership access with ad-free viewing is on its way. Stay tuned!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

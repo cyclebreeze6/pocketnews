@@ -17,6 +17,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { Video, Channel } from '@/lib/types';
 import { collection, doc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -29,6 +39,7 @@ export default function Home() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
+  const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
 
   const videosQuery = useMemoFirebase(() => collection(firestore, 'videos'), [firestore]);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
@@ -98,7 +109,7 @@ export default function Home() {
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
       <main className="flex-1 md:py-8">
-        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-4 sm:px-6 md:px-8">
+        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden">
@@ -173,7 +184,7 @@ export default function Home() {
              <Card className="mt-8 bg-card/50">
                 <CardContent className="p-4 flex items-center justify-between">
                     <p className="text-sm max-w-[200px]">Enjoy ad-free news from 400+ local, national, and global channels</p>
-                    <Button variant="secondary">Go ad-free</Button>
+                    <Button variant="secondary" onClick={() => setIsPremiumDialogOpen(true)}>Go ad-free</Button>
                 </CardContent>
             </Card>
           </div>
@@ -182,6 +193,19 @@ export default function Home() {
       <footer className="py-4 text-center text-sm text-muted-foreground">
         Meet the #1 App to Stream News. Watch Free!
       </footer>
+      <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Coming Soon!</DialogTitle>
+            <DialogDescription>
+              Premium membership access with ad-free viewing is on its way. Stay tuned!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
