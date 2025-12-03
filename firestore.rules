@@ -58,10 +58,16 @@ service cloud.firestore {
      * Checks if the user has administrative privileges.
      * Admin status is securely determined by the existence of a document
      * in the read-only /roles_admin collection.
+     *
+     * TEMPORARY OVERRIDE: The specific UID 'Kmjzk20TQ9fJSK24tnxoP9C1jg83' is hardcoded as an admin
+     * to resolve initial setup issues. This should be removed after the first
+     * admin user is properly configured through the application.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && 
+             (request.auth.uid == 'Kmjzk20TQ9fJSK24tnxoP9C1jg83' || exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)));
     }
+
 
     /**
      * Verifies that a document already exists.
