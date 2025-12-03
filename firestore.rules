@@ -25,8 +25,8 @@ rules_version = '2';
  *   as it cannot be manipulated by users.
  * - Public Content vs. Private Data: A clear structural segregation exists between public-read collections
  *   (`/channels`, `/videos`) and private-read/write collections (`/users`).
- * - No User Listing: To protect user privacy and prevent data scraping, listing documents from the `/users`
- *   and `/roles_admin` collections is explicitly disallowed for all clients.
+ * - No User Listing for Non-Admins: To protect user privacy and prevent data scraping, listing documents
+ *   from the `/users` and `/roles_admin` collections is explicitly disallowed for non-admin clients.
  * - Immutable Ownership: Critical relational identifiers (e.g., a User's `id`) are
  *   enforced to be immutable after creation to maintain data integrity.
  *
@@ -115,15 +115,16 @@ service cloud.firestore {
      * @description Manages user profile data and their subcollections.
      * @path /users/{userId}
      * @allow (create) An authenticated user creating their own user document for the first time.
-     * @deny (list) Any user, including an admin, attempting to list all user documents.
+     * @allow (list) An admin user listing all user documents for the management panel.
+     * @deny (list) Any non-admin user attempting to list all user documents.
      * @principle Restricts access to a user's own data tree and prevents user data enumeration.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if false;
+      allow list: if isAdmin();
       allow create: if isOwner(userId) && userHasConsistentId(userId);
-      allow update: if isExistingOwner(userId) && userCanUpdateSelf();
-      allow delete: if isExistingOwner(userId);
+      allow update: if isExistingOwner(userId) && userCanUpdateSelf() || isExistingAdmin();
+      allow delete: if isExistingOwner(userId) || isExistingAdmin();
 
       /**
        * @description Manages a user's followed channels.
