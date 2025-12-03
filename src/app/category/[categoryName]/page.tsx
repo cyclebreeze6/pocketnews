@@ -14,9 +14,16 @@ import { Share, Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Video, Channel } from '@/lib/types';
-import { collection, query, where, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { notFound } from 'next/navigation';
+
+function toDate(timestamp: Timestamp | Date | string): Date {
+    if (timestamp instanceof Timestamp) {
+        return timestamp.toDate();
+    }
+    return new Date(timestamp);
+}
 
 export default function CategoryPage({ params }: { params: { categoryName: string } }) {
   const { firestore } = useFirebase();
@@ -104,7 +111,7 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
                     </Avatar>
                     <div>
                         <p className="font-semibold">{channel?.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(featuredVideo.createdAt as string))} ago</p>
+                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(featuredVideo.createdAt))} ago</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -145,7 +152,7 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
                             <div className="flex-grow">
                                 {index === 0 && <Badge variant="default" className="mb-1 text-xs">Now Playing</Badge>}
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(new Date(video.createdAt as string))} ago</p>
+                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                             </div>
                         </Link>
                         )

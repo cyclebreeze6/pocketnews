@@ -16,9 +16,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCollection, useDoc, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, limit, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, query, where, limit, serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { Video, Channel, UserFollow } from '@/lib/types';
 
+function toDate(timestamp: Timestamp | Date | string): Date {
+    if (timestamp instanceof Timestamp) {
+        return timestamp.toDate();
+    }
+    return new Date(timestamp);
+}
 
 export default function WatchPage({ params }: { params: { videoId: string } }) {
   const { firestore } = useFirebase();
@@ -108,7 +114,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                     </Avatar>
                     <div>
                         <p className="font-semibold">{channel?.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(video.createdAt as string))} ago</p>
+                        <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(video.createdAt))} ago</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -153,7 +159,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                             <div className="flex-grow">
                                 {isPlaying && <Badge variant="default" className="mb-1 text-xs">Now Playing</Badge>}
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{videoItem.title}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(new Date(videoItem.createdAt as string))} ago</p>
+                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(videoItem.createdAt))} ago</p>
                             </div>
                         </Link>
                         )

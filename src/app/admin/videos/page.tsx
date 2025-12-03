@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import type { Video } from '@/lib/types';
-import { collection } from 'firebase/firestore';
+import { collection, Timestamp } from 'firebase/firestore';
 import { PlusCircle, MoreHorizontal, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import {
@@ -15,6 +15,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { doc } from 'firebase/firestore';
+
+function toDate(timestamp: Timestamp | Date | string): Date {
+    if (timestamp instanceof Timestamp) {
+        return timestamp.toDate();
+    }
+    return new Date(timestamp);
+}
 
 export default function AdminVideosPage() {
     const { firestore } = useFirebase();
@@ -69,7 +76,7 @@ export default function AdminVideosPage() {
                                 <TableCell className="font-medium">{video.title}</TableCell>
                                 <TableCell>{video.channelId}</TableCell>
                                 <TableCell className="hidden md:table-cell">
-                                    {new Date(video.createdAt as string).toLocaleDateString()}
+                                    {toDate(video.createdAt).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell>
                                     <DropdownMenu>
