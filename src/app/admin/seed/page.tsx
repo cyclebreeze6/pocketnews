@@ -34,16 +34,21 @@ export default function SeedDataPage() {
     const adminId = 'Kmjzk20TQ9fJSK24tnxoP9C1jg83';
     
     try {
+      const batch = writeBatch(firestore);
+
+      // 1. Create the document in /roles_admin to grant the role via security rules.
       const adminRoleRef = doc(firestore, 'roles_admin', adminId);
-      await setDoc(adminRoleRef, { grantedAt: serverTimestamp() });
+      batch.set(adminRoleRef, { grantedAt: serverTimestamp() });
       
-      // Also ensure the user doc has isAdmin: true
+      // 2. Also set the isAdmin flag on the user document itself for UI purposes.
       const userRef = doc(firestore, 'users', adminId);
-      await setDoc(userRef, { isAdmin: true }, { merge: true });
+      batch.set(userRef, { isAdmin: true }, { merge: true });
+
+      await batch.commit();
 
       toast({
         title: 'Admin Role Granted!',
-        description: `User ${adminId} has been granted full administrator privileges. Please refresh the page.`,
+        description: `User ${adminId} has been granted full administrator privileges. Please refresh the page to access the admin panel.`,
       });
     } catch (error: any) {
       console.error('Error granting admin role:', error);
@@ -108,7 +113,7 @@ export default function SeedDataPage() {
           <CardTitle>Fix Admin Permissions</CardTitle>
           <CardDescription>
             If you are unable to access admin pages, click this button to grant your user account
-            (valentinoboss18@gmail.com) full administrator privileges. This is a one-time setup.
+            (`valentinoboss18@gmail.com`) full administrator privileges. This is a one-time setup.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,7 +128,7 @@ export default function SeedDataPage() {
           <CardTitle>Populate with Sample Data</CardTitle>
           <CardDescription>
             Click the button below to add sample channels and videos to your Firestore database.
-            This is useful for development and testing. This action will overwrite existing documents if they share the same ID.
+            This is useful for development and testing. This action may overwrite existing documents.
           </CardDescription>
         </CardHeader>
         <CardContent>

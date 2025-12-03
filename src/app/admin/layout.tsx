@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useDoc, useFirebase, useMemoFirebase } from '@/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import SiteHeader from '@/components/site-header';
 import AdminSidebar from '@/components/admin-sidebar';
@@ -11,7 +11,21 @@ import type { UserProfile } from '@/lib/types';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
   const { firestore } = useFirebase();
+
+  // If we're on the seed page, don't run any of the auth checks.
+  if (pathname === '/admin/seed') {
+    return (
+       <div className="flex min-h-screen w-full flex-col">
+        <SiteHeader />
+        <div className="flex flex-1">
+          <AdminSidebar />
+          <main className="flex-1 p-6 md:p-8">{children}</main>
+        </div>
+      </div>
+    );
+  }
 
   // Memoize the document reference to the user's profile.
   const userProfileRef = useMemoFirebase(
