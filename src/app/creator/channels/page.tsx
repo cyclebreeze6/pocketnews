@@ -20,6 +20,7 @@ import { useToast } from '../../../hooks/use-toast';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
+import { fetchYouTubeChannelInfo } from '../../../ai/flows/youtube-channel-info-flow';
 
 export default function CreatorChannelsPage() {
   const { firestore } = useFirebase();
@@ -34,13 +35,16 @@ export default function CreatorChannelsPage() {
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [fetchedLogoUrl, setFetchedLogoUrl] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setLogoFile(file);
+      setFetchedLogoUrl(null); // User upload takes precedence
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
@@ -55,6 +59,7 @@ export default function CreatorChannelsPage() {
     setYoutubeChannelUrl('');
     setLogoFile(null);
     setLogoPreview(null);
+    setFetchedLogoUrl(null);
     setEditingChannel(null);
   };
 
@@ -65,10 +70,30 @@ export default function CreatorChannelsPage() {
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
       setLogoPreview(channel.logoUrl || null);
+      setFetchedLogoUrl(channel.logoUrl || null);
       setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       resetForm();
+    }
+  };
+  
+  const handleUrlBlur = async () => {
+    if (!youtubeChannelUrl || editingChannel) return; // Don't auto-fetch on edit or if empty
+    setIsFetchingInfo(true);
+    try {
+        const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
+        if (info) {
+            if (!channelName) setChannelName(info.name); // Only set if name is empty
+            setLogoPreview(info.logoUrl);
+            setFetchedLogoUrl(info.logoUrl);
+            toast({ title: "Channel info fetched!", description: `Found logo for ${info.name}.` });
+        }
+    } catch (error) {
+        console.error("Failed to fetch channel info:", error);
+        toast({ variant: 'destructive', title: 'Could not fetch info', description: 'Please check the URL and try again.' });
+    } finally {
+        setIsFetchingInfo(false);
     }
   };
 
@@ -81,18 +106,22 @@ export default function CreatorChannelsPage() {
     setIsSaving(true);
     
     try {
-        let logoUrl = editingChannel?.logoUrl || '';
+        let finalLogoUrl = editingChannel?.logoUrl || '';
 
+        // If a new file is explicitly uploaded, use it.
         if (logoFile) {
             const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
-            logoUrl = await uploadFile(storage, logoFile, filePath);
+            finalLogoUrl = await uploadFile(storage, logoFile, filePath);
+        } else if (fetchedLogoUrl) {
+            // Otherwise, if we have a fetched logo, use that.
+            finalLogoUrl = fetchedLogoUrl;
         }
 
         const channelData = {
           name: channelName,
           description: channelDescription,
           youtubeChannelUrl: youtubeChannelUrl,
-          logoUrl: logoUrl,
+          logoUrl: finalLogoUrl,
         };
 
         if (editingChannel) {
@@ -152,9 +181,16 @@ export default function CreatorChannelsPage() {
                   <Textarea id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
                 </div>
                  <div className="grid gap-2">
-                  <Label htmlFor="youtube-url">YouTube Channel URL (for Sync)</Label>
-                  <Input id="youtube-url" placeholder="https://www.youtube.com/channel/..." value={youtubeChannelUrl} onChange={(e) => setYoutubeChannelUrl(e.target.value)} />
-                   <p className="text-xs text-muted-foreground">Optional. Used for the one-click "Sync Videos" feature.</p>
+                  <Label htmlFor="youtube-url">YouTube Channel URL (for Sync & Logo)</Label>
+                  <Input 
+                    id="youtube-url" 
+                    placeholder="https://www.youtube.com/channel/..." 
+                    value={youtubeChannelUrl} 
+                    onChange={(e) => setYoutubeChannelUrl(e.target.value)} 
+                    onBlur={handleUrlBlur}
+                    disabled={isFetchingInfo}
+                  />
+                   <p className="text-xs text-muted-foreground">Optional. Used for syncing videos and auto-fetching the logo.</p>
                 </div>
             </div>
             <div className="grid gap-2 content-start">
@@ -164,6 +200,11 @@ export default function CreatorChannelsPage() {
                         <Image src={logoPreview} alt="Logo preview" layout="fill" className="object-cover rounded-lg" />
                     ) : (
                         <Tv className="w-16 h-16" />
+                    )}
+                    {isFetchingInfo && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                            <Loader2 className="w-8 h-8 animate-spin text-white" />
+                        </div>
                     )}
                 </div>
                 <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
@@ -180,7 +221,7 @@ export default function CreatorChannelsPage() {
                 </Button>
               )}
             </div>
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
+            <Button onClick={handleSaveChanges} disabled={isSaving || isFetchingInfo}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSaving ? 'Saving...' : (editingChannel ? 'Update Channel' : 'Add Channel')}
             </Button>
