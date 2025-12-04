@@ -46,25 +46,6 @@ async function getChannelIdFromUrl(url: string): Promise<string | null> {
     }
 }
 
-// Helper to get the custom handle or legacy username from the URL
-function getChannelHandleFromUrl(url: string): string | null {
-  try {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/').filter(p => p); // e.g., ['@handle'], ['user', 'username'], ['c', 'channelname']
-    
-    if (pathParts[0]?.startsWith('@')) {
-      return pathParts[0];
-    }
-    if (['user', 'c'].includes(pathParts[0]) && pathParts[1]) {
-      return `@${pathParts[1]}`;
-    }
-    return null;
-  } catch (error) {
-    console.error('Invalid URL:', error);
-    return null;
-  }
-}
-
 const fetchChannelVideosFlow = ai.defineFlow(
   {
     name: 'fetchChannelVideosFlow',
@@ -73,26 +54,14 @@ const fetchChannelVideosFlow = ai.defineFlow(
   },
   async (input) => {
     
-    const channelHandle = getChannelHandleFromUrl(input.channelUrl);
+    const channelId = await getChannelIdFromUrl(input.channelUrl);
 
-    if (!channelHandle) {
-        // Fallback to trying to get the channel ID if handle parsing fails
-        const channelId = await getChannelIdFromUrl(input.channelUrl);
-        if (!channelId) {
-            throw new Error('Could not determine the YouTube Channel ID or handle from the URL.');
-        }
-        
-        // This part is less reliable and is now a fallback
-        const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-        const response = await fetch(feedUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch YouTube channel feed by ID. Status: ${response.status}`);
-        }
-        // Continue with XML parsing...
+    if (!channelId) {
+        throw new Error('Could not determine the YouTube Channel ID from the URL. Please make sure the URL is correct.');
     }
     
-    // Using a public RSS feed with the channel handle. This is more reliable.
-    const feedUrl = `https://www.youtube.com/feeds/videos.xml?user=${channelHandle.substring(1)}`;
+    // This is the most reliable way to get the RSS feed.
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
 
     const response = await fetch(feedUrl);
     if (!response.ok) {
