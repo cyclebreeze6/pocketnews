@@ -41,28 +41,35 @@ const fetchYouTubeChannelInfoFlow = ai.defineFlow(
         }
         const html = await response.text();
         
-        const logoMatch = html.match(/"(https:\/\/yt3\.ggpht\.com\/.*?)"/);
-        const nameMatch = html.match(/"title":"(.*?)"/);
-        // This regex looks for the description in the page metadata
-        const descriptionMatch = html.match(/"description":{"simpleText":"(.*?)"}/);
+        // Find the script tag containing the JSON with channel metadata
+        const jsonScriptMatch = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/);
+        if (!jsonScriptMatch || !jsonScriptMatch[1]) {
+            throw new Error("Could not find channel metadata JSON in page source.");
+        }
 
+        const metadata = JSON.parse(jsonScriptMatch[1]);
+        
+        const name = metadata.name;
+        const logoUrl = metadata.image?.url;
+        const description = metadata.description;
 
-        const logoUrl = logoMatch ? logoMatch[1].split('"')[0] : null;
-        const name = nameMatch ? nameMatch[1] : null;
-        const description = descriptionMatch ? descriptionMatch[1] : '';
 
         if (!logoUrl || !name) {
-            throw new Error('Could not parse channel logo or name from the page.');
+            throw new Error('Could not parse channel logo or name from the page metadata.');
         }
 
         return {
             name: name,
             logoUrl: logoUrl,
-            description: description,
+            description: description || '',
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching channel page:', error);
+        // Pass a more specific error up if possible
+        if (error.message.includes('metadata')) {
+            throw error;
+        }
         throw new Error('Could not extract channel information from the URL.');
     }
   }
