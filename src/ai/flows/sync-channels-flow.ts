@@ -9,10 +9,9 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
 import { fetchChannelVideos, type YouTubeVideoDetails } from './youtube-channel-videos-flow';
-import { getFirestore, collection, getDocs, addDoc, query, where } from 'firebase/firestore';
-import { initializeFirebase } from '../../firebase'; // Need to init admin for server-side
+import { getFirestore, collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { initializeFirebase } from '../../firebase'; // Can now be called from server
 import { Channel } from '@/lib/types';
-import { serverTimestamp } from 'firebase/firestore';
 
 
 const SyncResultSchema = z.object({
@@ -29,7 +28,6 @@ export async function syncYouTubeChannels(): Promise<SyncResult> {
 
 // We need a server-side instance of Firestore
 // Note: This assumes server-side Firebase initialization is configured.
-// For Firebase Studio, this happens behind the scenes.
 const { firestore } = initializeFirebase();
 
 const syncChannelsFlow = ai.defineFlow(
