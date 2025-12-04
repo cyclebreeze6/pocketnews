@@ -3,7 +3,7 @@
 
 import { useUser, useDoc, useFirebase, useMemoFirebase } from '../../firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import SiteHeader from '../../components/site-header';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '../../lib/types';
@@ -36,8 +36,17 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   );
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const [isLongLoading, setIsLongLoading] = useState(true);
 
-  const isLoading = isUserLoading || isProfileLoading;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        setIsLongLoading(false);
+    }, 20000); // 20 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isLoading = isUserLoading || isProfileLoading || isLongLoading;
 
   useEffect(() => {
     // Wait until all loading is done.
