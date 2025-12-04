@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, DownloadCloud } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,16 +78,20 @@ export default function CreatorChannelsPage() {
     }
   };
   
-  const handleUrlBlur = async () => {
-    if (!youtubeChannelUrl || editingChannel) return; // Don't auto-fetch on edit or if empty
+  const handleFetchChannelInfo = async () => {
+    if (!youtubeChannelUrl) {
+        toast({ variant: 'destructive', title: 'URL is empty', description: 'Please paste a YouTube channel URL first.' });
+        return;
+    }
     setIsFetchingInfo(true);
     try {
         const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
         if (info) {
-            if (!channelName) setChannelName(info.name); // Only set if name is empty
+            setChannelName(info.name);
+            setChannelDescription(info.description || '');
             setLogoPreview(info.logoUrl);
             setFetchedLogoUrl(info.logoUrl);
-            toast({ title: "Channel info fetched!", description: `Found logo for ${info.name}.` });
+            toast({ title: "Channel info fetched!", description: `Found info for ${info.name}.` });
         }
     } catch (error) {
         console.error("Failed to fetch channel info:", error);
@@ -96,6 +100,7 @@ export default function CreatorChannelsPage() {
         setIsFetchingInfo(false);
     }
   };
+
 
   const handleSaveChanges = async () => {
     if (!channelName || !channelDescription) {
@@ -173,24 +178,29 @@ export default function CreatorChannelsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 grid gap-4">
                <div className="grid gap-2">
+                 <Label htmlFor="youtube-url">YouTube Channel URL</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                        id="youtube-url" 
+                        placeholder="https://www.youtube.com/channel/..." 
+                        value={youtubeChannelUrl} 
+                        onChange={(e) => setYoutubeChannelUrl(e.target.value)}
+                        disabled={isFetchingInfo}
+                    />
+                    <Button variant="outline" onClick={handleFetchChannelInfo} disabled={isFetchingInfo || !youtubeChannelUrl}>
+                        {isFetchingInfo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
+                        Fetch Info
+                    </Button>
+                  </div>
+                   <p className="text-xs text-muted-foreground">Optional. Used for syncing videos and auto-fetching info.</p>
+                </div>
+               <div className="grid gap-2">
                   <Label htmlFor="name">Channel Name</Label>
                   <Input id="name" value={channelName} onChange={(e) => setChannelName(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
-                </div>
-                 <div className="grid gap-2">
-                  <Label htmlFor="youtube-url">YouTube Channel URL (for Sync & Logo)</Label>
-                  <Input 
-                    id="youtube-url" 
-                    placeholder="https://www.youtube.com/channel/..." 
-                    value={youtubeChannelUrl} 
-                    onChange={(e) => setYoutubeChannelUrl(e.target.value)} 
-                    onBlur={handleUrlBlur}
-                    disabled={isFetchingInfo}
-                  />
-                   <p className="text-xs text-muted-foreground">Optional. Used for syncing videos and auto-fetching the logo.</p>
                 </div>
             </div>
             <div className="grid gap-2 content-start">
