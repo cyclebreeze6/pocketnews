@@ -16,7 +16,7 @@ import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserFollow } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../components/ui/dialog';
-import { useRouter } from 'next/navigation';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -34,11 +33,19 @@ function toDate(timestamp: Timestamp | Date | string): Date {
     return new Date(timestamp);
 }
 
+const getVideoIdFromPath = () => {
+  if (typeof window === 'undefined') return null;
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  if (pathParts[0] === 'watch' && pathParts[1]) {
+    return pathParts[1];
+  }
+  return null;
+};
+
 export default function Home() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
-  const router = useRouter();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   
   const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), orderBy('createdAt', 'desc')), [firestore]);
@@ -47,7 +54,34 @@ export default function Home() {
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  const currentVideo = videos?.[0];
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+
+  useEffect(() => {
+    if (videos && videos.length > 0) {
+      const videoIdFromUrl = getVideoIdFromPath();
+      const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
+      setCurrentVideo(videoToPlay || videos[0]);
+    }
+  }, [videos]);
+
+  const handleSetCurrentVideo = useCallback((video: Video) => {
+    setCurrentVideo(video);
+    window.history.pushState({}, '', `/watch/${video.id}`);
+  }, []);
+  
+  useEffect(() => {
+    const handlePopState = () => {
+       if (videos) {
+         const videoIdFromUrl = getVideoIdFromPath();
+         const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
+         setCurrentVideo(videoToPlay || videos[0]);
+       }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [videos]);
+
+
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
   const otherVideos = videos?.slice(0, 10);
   
@@ -87,6 +121,14 @@ export default function Home() {
       toast({ title: `Followed ${currentChannel.name}!` });
     }
   };
+
+  const handleVideoEnd = () => {
+    if (!videos || !currentVideo) return;
+    const currentIndex = videos.findIndex(v => v.id === currentVideo.id);
+    if (currentIndex > -1 && currentIndex < videos.length - 1) {
+      handleSetCurrentVideo(videos[currentIndex + 1]);
+    }
+  }
 
 
   if (videosLoading || channelsLoading) {
@@ -131,10 +173,7 @@ export default function Home() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={() => {
-                  const nextVideo = videos[1];
-                  if(nextVideo) router.push(`/watch/${nextVideo.id}`);
-              }} />
+              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
             </div>
             
             <div className="px-4 md:px-0">
@@ -179,7 +218,7 @@ export default function Home() {
                         const videoChannel = channels.find(c => c.id === video.channelId);
                         const isPlaying = video.id === currentVideo.id;
                         return (
-                        <Link href={`/watch/${video.id}`} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                        <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
                             <div className="relative w-32 h-20 flex-shrink-0">
                                 <Image
                                 src={video.thumbnailUrl}
@@ -201,7 +240,7 @@ export default function Home() {
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                             </div>
-                        </Link>
+                        </div>
                         )
                     })}
                 </div>

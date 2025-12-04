@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '../../../firebase';
@@ -231,3 +232,4 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
     </div>
   );
 }
+
