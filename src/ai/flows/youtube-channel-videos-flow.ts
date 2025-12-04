@@ -9,8 +9,7 @@
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
-import { google } from 'googleapis';
-import 'dotenv/config';
+import { getYoutubeClient } from '../../lib/youtube-client';
 
 const YouTubeChannelVideosInputSchema = z.object({
   channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
@@ -34,10 +33,7 @@ export async function fetchChannelVideos(input: YouTubeChannelVideosInput): Prom
   return fetchChannelVideosFlow(input);
 }
 
-const youtube = google.youtube({
-  version: 'v3',
-  auth: process.env.YOUTUBE_API_KEY,
-});
+const youtube = getYoutubeClient();
 
 
 async function getChannelIdFromUrl(url: string): Promise<string | null> {
