@@ -1,7 +1,7 @@
 
 'use client';
 
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import SiteHeader from '../../../components/site-header';
 import { VideoPlayer } from '../../../components/video-player';
 import { Badge } from '../../../components/ui/badge';
@@ -34,16 +34,18 @@ function toDate(timestamp: Timestamp | Date | string): Date {
     return new Date(timestamp);
 }
 
-export default function WatchPage({ params }: { params: { videoId: string } }) {
+export default function WatchPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+  const params = useParams();
+  const videoId = params.videoId as string;
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
   // Fetch the video from URL param
-  const videoRef = useMemoFirebase(() => doc(firestore, 'videos', params.videoId), [firestore, params.videoId]);
+  const videoRef = useMemoFirebase(() => doc(firestore, 'videos', videoId), [firestore, videoId]);
   const { data: initialVideo, isLoading: videoLoading } = useDoc<Video>(videoRef);
   
   // Set current video initially
@@ -271,4 +273,3 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
   );
 }
 
-    
