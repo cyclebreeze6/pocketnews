@@ -60,7 +60,6 @@ const fetchChannelVideosFlow = ai.defineFlow(
         throw new Error('Could not determine the YouTube Channel ID from the URL. Please make sure the URL is correct.');
     }
     
-    // This is the most reliable way to get the RSS feed.
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
 
     const response = await fetch(feedUrl);
@@ -69,7 +68,6 @@ const fetchChannelVideosFlow = ai.defineFlow(
     }
     const xmlText = await response.text();
 
-    // Basic XML parsing with regex. A more robust solution would use an XML parser library.
     const entries = xmlText.split('<entry>').slice(1);
     const videos: YouTubeVideoList = [];
 
