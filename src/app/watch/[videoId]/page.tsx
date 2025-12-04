@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { notFound, useRouter } from 'next/navigation';
@@ -41,13 +40,34 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
   const { toast } = useToast();
   const router = useRouter();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
-  // Fetch the current video
+  // Fetch the video from URL param
   const videoRef = useMemoFirebase(() => doc(firestore, 'videos', params.videoId), [firestore, params.videoId]);
-  const { data: video, isLoading: videoLoading } = useDoc<Video>(videoRef);
+  const { data: initialVideo, isLoading: videoLoading } = useDoc<Video>(videoRef);
+  
+  // Set current video initially
+  useEffect(() => {
+    if (initialVideo && !currentVideo) {
+      setCurrentVideo(initialVideo);
+    }
+  }, [initialVideo, currentVideo]);
+
+  useEffect(() => {
+    if (currentVideo) {
+      window.history.pushState({}, '', `/watch/${currentVideo.id}`);
+      if (user) {
+        const historyRef = doc(firestore, 'users', user.uid, 'history', currentVideo.id);
+        setDocumentNonBlocking(historyRef, {
+          videoId: currentVideo.id,
+          watchedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+  }, [currentVideo, user, firestore]);
   
   // Fetch the associated channel
-  const channelRef = useMemoFirebase(() => video ? doc(firestore, 'channels', video.channelId) : null, [firestore, video]);
+  const channelRef = useMemoFirebase(() => currentVideo ? doc(firestore, 'channels', currentVideo.channelId) : null, [firestore, currentVideo]);
   const { data: channel, isLoading: channelLoading } = useDoc<Channel>(channelRef);
 
   // Fetch all videos for next/previous navigation
@@ -56,48 +76,40 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
 
   // Determine next and previous videos
   const { previousVideoId, nextVideoId } = useMemo(() => {
-    if (!allVideos || allVideos.length === 0) {
+    if (!allVideos || allVideos.length === 0 || !currentVideo) {
       return { previousVideoId: null, nextVideoId: null };
     }
-    const currentIndex = allVideos.findIndex(v => v.id === params.videoId);
+    const currentIndex = allVideos.findIndex(v => v.id === currentVideo.id);
     if (currentIndex === -1) {
       return { previousVideoId: null, nextVideoId: null };
     }
     const previousVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
     const nextVideo = currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
     return { previousVideoId: previousVideo?.id, nextVideoId: nextVideo?.id };
-  }, [allVideos, params.videoId]);
+  }, [allVideos, currentVideo]);
 
   // Fetch a list of other videos for the sidebar
-  const otherVideosQuery = useMemoFirebase(() => video ? query(collection(firestore, 'videos'), where('id', '!=', video.id), limit(7)) : null, [firestore, video]);
+  const otherVideosQuery = useMemoFirebase(() => currentVideo ? query(collection(firestore, 'videos'), where('id', '!=', currentVideo.id), limit(10)) : null, [firestore, currentVideo]);
   const { data: otherVideos, isLoading: otherVideosLoading } = useCollection<Video>(otherVideosQuery);
+  const { data: channels } = useCollection<Channel>(useMemoFirebase(() => collection(firestore, 'channels'), [firestore]));
 
   // Check if user is following the channel
   const followRef = useMemoFirebase(() => user && channel ? doc(firestore, 'users', user.uid, 'follows', channel.id) : null, [user, channel]);
   const { data: userFollow } = useDoc<UserFollow>(followRef);
 
-  const [videoUrl, setVideoUrl] = useState('');
   const isFollowing = !!userFollow;
 
-  useEffect(() => {
-    setVideoUrl(window.location.href);
-     if (user && video) {
-      const historyRef = doc(firestore, 'users', user.uid, 'history', video.id);
-      setDocumentNonBlocking(historyRef, {
-        videoId: video.id,
-        watchedAt: serverTimestamp(),
-        videoTitle: video.title,
-        channelId: video.channelId,
-      }, { merge: true });
+  const handleVideoSelect = (video: Video) => {
+    setCurrentVideo(video);
+  };
+  
+  const navigateToVideo = (videoId: string | null) => {
+    if (videoId) {
+      const videoToPlay = allVideos?.find(v => v.id === videoId);
+      if (videoToPlay) {
+        setCurrentVideo(videoToPlay);
+      }
     }
-  }, [params.videoId, user, video, firestore]);
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(videoUrl);
-    toast({
-      title: 'Copied to clipboard!',
-      description: 'The video link has been copied.',
-    });
   };
 
   const handleFollowToggle = () => {
@@ -120,7 +132,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
 
   const handleVideoEnd = () => {
     if (nextVideoId) {
-      router.push(`/watch/${nextVideoId}`);
+      navigateToVideo(nextVideoId);
     }
   };
   
@@ -128,8 +140,12 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
     return <div>Loading...</div>;
   }
 
-  if (!video) {
+  if (!initialVideo && !videoLoading) {
     notFound();
+  }
+
+  if (!currentVideo) {
+    return <div>Loading player...</div>;
   }
 
   return (
@@ -140,22 +156,21 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={video.youtubeVideoId} onEnd={handleVideoEnd} />
+              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
             </div>
             
             <div className="px-4 md:px-0">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold font-headline">{video.title}</h2>
+                  <h2 className="text-2xl font-bold font-headline">{currentVideo.title}</h2>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => previousVideoId && router.push(`/watch/${previousVideoId}`)} disabled={!previousVideoId}>
+                    <Button variant="outline" size="icon" onClick={() => navigateToVideo(previousVideoId)} disabled={!previousVideoId}>
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
-                     <Button variant="outline" size="icon" onClick={() => nextVideoId && router.push(`/watch/${nextVideoId}`)} disabled={!nextVideoId}>
+                     <Button variant="outline" size="icon" onClick={() => navigateToVideo(nextVideoId)} disabled={!nextVideoId}>
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
@@ -165,7 +180,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                         </Avatar>
                         <div>
                             <p className="font-semibold">{channel?.name}</p>
-                            <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(video.createdAt))} ago</p>
+                            <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -173,7 +188,10 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                         {isFollowing ? <Check className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
                         {isFollowing ? 'Following' : 'Follow'}
                         </Button>
-                        <Button variant="secondary" onClick={copyToClipboard}><Share className="mr-2 h-4 w-4" /> Share</Button>
+                        <Button variant="secondary" onClick={() => {
+                          navigator.clipboard.writeText(window.location.href);
+                          toast({ title: 'Copied to clipboard!' });
+                        }}><Share className="mr-2 h-4 w-4" /> Share</Button>
                     </div>
                 </div>
                 
@@ -193,10 +211,10 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
                     {otherVideos?.map((videoItem) => {
-                        const videoChannel = channel; // Simplified for this context
-                        const isPlaying = videoItem.id === video.id;
+                        const videoChannel = channels?.find(c => c.id === videoItem.channelId);
+                        const isPlaying = videoItem.id === currentVideo.id;
                         return (
-                        <Link key={videoItem.id} href={`/watch/${videoItem.id}`} className="group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                        <div key={videoItem.id} onClick={() => handleVideoSelect(videoItem)} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
                             <div className="relative w-32 h-20 flex-shrink-0">
                                 <Image
                                 src={videoItem.thumbnailUrl}
@@ -218,7 +236,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{videoItem.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(videoItem.createdAt))} ago</p>
                             </div>
-                        </Link>
+                        </div>
                         )
                     })}
                 </div>
@@ -252,3 +270,5 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
     </div>
   );
 }
+
+    

@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking } from '../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, useDoc } from '../firebase';
 import SiteHeader from '../components/site-header';
 import { VideoPlayer } from '../components/video-player';
 import { Badge } from '../components/ui/badge';
@@ -10,20 +10,19 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Star, PlayCircle } from 'lucide-react';
+import { Share, Star, PlayCircle, Check } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel } from '../lib/types';
-import { collection, doc, serverTimestamp, setDoc, Timestamp, query, orderBy } from 'firebase/firestore';
+import type { Video, Channel, UserFollow } from '../lib/types';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from '../components/ui/dialog';
 
@@ -39,6 +38,7 @@ export default function Home() {
   const { user } = useUser();
   const { toast } = useToast();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
   const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), orderBy('createdAt', 'desc')), [firestore]);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
@@ -46,29 +46,59 @@ export default function Home() {
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  const featuredVideo = videos?.[0];
-  const otherVideos = videos?.slice(0, 7);
-  const channel = channels?.find((c) => c.id === featuredVideo?.channelId);
+  const followRef = useMemoFirebase(() => user && currentVideo ? doc(firestore, 'users', user.uid, 'follows', currentVideo.channelId) : null, [user, currentVideo, firestore]);
+  const { data: userFollow } = useDoc<UserFollow>(followRef);
+  const isFollowing = !!userFollow;
 
-  const handleFollow = () => {
-    if (!user || !channel) {
+  useEffect(() => {
+    if (videos && videos.length > 0 && !currentVideo) {
+      setCurrentVideo(videos[0]);
+    }
+  }, [videos, currentVideo]);
+
+  useEffect(() => {
+     if (currentVideo) {
+      window.history.pushState({}, '', `/watch/${currentVideo.id}`);
+      if (user) {
+        const historyRef = doc(firestore, 'users', user.uid, 'history', currentVideo.id);
+        setDocumentNonBlocking(historyRef, {
+          videoId: currentVideo.id,
+          watchedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+  }, [currentVideo, user, firestore]);
+
+
+  const handleVideoSelect = (video: Video) => {
+    setCurrentVideo(video);
+  };
+
+  const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
+  const otherVideos = videos?.slice(0, 10);
+
+  const handleFollowToggle = () => {
+    if (!user || !currentChannel) {
       toast({
         variant: 'destructive',
         title: 'Please log in to follow channels.',
       });
       return;
     }
-    const followRef = doc(firestore, 'users', user.uid, 'follows', channel.id);
-    setDocumentNonBlocking(followRef, {
-      channelId: channel.id,
-      userId: user.uid,
-      followedAt: serverTimestamp(),
-    }, { merge: true });
-    toast({
-      title: `Followed ${channel?.name}!`,
-      description: 'You will now be notified of new videos.',
-    });
+    const followDocRef = doc(firestore, 'users', user.uid, 'follows', currentChannel.id);
+    if (isFollowing) {
+      deleteDocumentNonBlocking(followDocRef);
+      toast({ title: `Unfollowed ${currentChannel.name}` });
+    } else {
+      setDocumentNonBlocking(followDocRef, {
+        channelId: currentChannel.id,
+        userId: user.uid,
+        followedAt: serverTimestamp(),
+      }, { merge: true });
+      toast({ title: `Followed ${currentChannel.name}!` });
+    }
   };
+
 
   if (videosLoading || channelsLoading) {
     return (
@@ -93,7 +123,7 @@ export default function Home() {
     );
   }
 
-  if (!featuredVideo || !channel || !otherVideos) {
+  if (!currentVideo || !currentChannel || !otherVideos) {
      return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <SiteHeader />
@@ -112,25 +142,28 @@ export default function Home() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={featuredVideo.youtubeVideoId} />
+              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} key={currentVideo.id} />
             </div>
             
             <div className="px-4 md:px-0">
-                <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{featuredVideo.title}</h2>
+                <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
                         <Avatar>
-                            <AvatarImage src={`https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
-                            <AvatarFallback>{channel?.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={currentChannel?.logoUrl || `https://picsum.photos/seed/${currentChannel?.id}/40/40`} alt={currentChannel?.name} />
+                            <AvatarFallback>{currentChannel?.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="font-semibold">{channel?.name}</p>
-                            <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(featuredVideo.createdAt))} ago</p>
+                            <p className="font-semibold">{currentChannel?.name}</p>
+                            <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={handleFollow}><Star className="mr-2 h-4 w-4" /> Follow</Button>
+                        <Button variant={isFollowing ? 'secondary': 'outline'} onClick={handleFollowToggle}>
+                            {isFollowing ? <Check className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
+                            {isFollowing ? 'Following' : 'Follow'}
+                        </Button>
                         <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
                     </div>
                 </div>
@@ -150,10 +183,11 @@ export default function Home() {
 
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
-                    {otherVideos.map((video, index) => {
+                    {otherVideos.map((video) => {
                         const videoChannel = channels.find(c => c.id === video.channelId);
+                        const isPlaying = video.id === currentVideo.id;
                         return (
-                        <Link key={video.id} href={`/watch/${video.id}`} className="group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                        <div key={video.id} onClick={() => handleVideoSelect(video)} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
                             <div className="relative w-32 h-20 flex-shrink-0">
                                 <Image
                                 src={video.thumbnailUrl}
@@ -166,7 +200,7 @@ export default function Home() {
                                 </div>
                             </div>
                             <div className="flex-grow">
-                                {index === 0 && (
+                                {isPlaying && (
                                     <Badge variant="default" className="mb-1 text-xs animate-pulse">
                                         <PlayCircle className="mr-1 h-3 w-3" />
                                         Now Playing
@@ -175,7 +209,7 @@ export default function Home() {
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                             </div>
-                        </Link>
+                        </div>
                         )
                     })}
                 </div>
