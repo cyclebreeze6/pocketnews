@@ -3,10 +3,10 @@
 import { useUser, useDoc, useFirebase, useMemoFirebase } from '../firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import SiteHeader from '../components/site-header';
+import SiteHeader from '../../components/site-header';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '../lib/types';
-import { Skeleton } from '../components/ui/skeleton';
+import { Skeleton } from '../../components/ui/skeleton';
 
 function CreatorLoadingSkeleton() {
     return (
