@@ -9,7 +9,7 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
 import { fetchChannelVideos, type YouTubeVideoDetails } from './youtube-channel-videos-flow';
-import { getFirestore, collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { initializeFirebase } from '../../firebase'; // Can now be called from server
 import { Channel } from '@/lib/types';
 
@@ -26,9 +26,10 @@ export async function syncYouTubeChannels(): Promise<SyncResult> {
   return syncChannelsFlow();
 }
 
-// We need a server-side instance of Firestore
-// Note: This assumes server-side Firebase initialization is configured.
-const { firestore } = initializeFirebase();
+// We need a server-side instance of Firestore. initializeFirebase() will now provide
+// the Admin SDK instance when called from the server.
+const { firestore } = initializeFirebase() as { firestore: import('firebase-admin/firestore').Firestore };
+
 
 const syncChannelsFlow = ai.defineFlow(
   {
@@ -41,9 +42,9 @@ const syncChannelsFlow = ai.defineFlow(
     const errors: string[] = [];
 
     // 1. Get all internal channels that have a youtubeChannelUrl
-    const channelsRef = collection(firestore, 'channels');
-    const q = query(channelsRef, where('youtubeChannelUrl', '!=', ''));
-    const channelSnapshot = await getDocs(q);
+    const channelsRef = firestore.collection('channels');
+    const q = channelsRef.where('youtubeChannelUrl', '!=', '');
+    const channelSnapshot = await q.get();
     const channelsToSync = channelSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Channel));
     
     if (channelsToSync.length === 0) {
@@ -51,8 +52,8 @@ const syncChannelsFlow = ai.defineFlow(
     }
 
     // 2. Get all existing video YouTube IDs from our database to avoid duplicates
-    const videosRef = collection(firestore, 'videos');
-    const existingVideosSnapshot = await getDocs(videosRef);
+    const videosRef = firestore.collection('videos');
+    const existingVideosSnapshot = await videosRef.get();
     const existingYoutubeIds = new Set(existingVideosSnapshot.docs.map(doc => doc.data().youtubeVideoId));
 
     // 3. Loop through each channel and sync videos
@@ -68,7 +69,8 @@ const syncChannelsFlow = ai.defineFlow(
             const newVideos = fetchedVideos.filter(video => !existingYoutubeIds.has(video.videoId));
 
             if (newVideos.length === 0) continue;
-
+            
+            const videosCollectionRef = firestore.collection('videos');
             // 3c. Add new videos to the database
             for (const videoData of newVideos) {
                 const videoDoc = {
@@ -84,8 +86,9 @@ const syncChannelsFlow = ai.defineFlow(
                     watchTime: Math.floor(Math.random() * 100),
                 };
 
-                const newDocRef = await addDoc(collection(firestore, 'videos'), videoDoc);
-                // We're not setting the ID back on the doc here for performance, but could if needed.
+                const newDocRef = await videosCollectionRef.add(videoDoc);
+                // We set the ID back on the doc so it's available in Firestore
+                await newDocRef.update({ id: newDocRef.id });
                 newVideosAdded++;
                 existingYoutubeIds.add(videoData.videoId); // Add to set to prevent re-adding in same run
             }
