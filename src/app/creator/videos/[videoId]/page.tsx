@@ -206,7 +206,7 @@ export default function VideoEditPage() {
       toast({ title: 'Video Updated!', description: `${dataToSave.title} has been updated.` });
     }
     setIsSaving(false);
-    router.push('/admin/videos');
+    router.push('/creator/videos');
   };
   
   if (videoLoading) {

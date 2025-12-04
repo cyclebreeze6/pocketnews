@@ -21,7 +21,7 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
 
-export default function AdminChannelsPage() {
+export default function CreatorChannelsPage() {
   const { firestore } = useFirebase();
   const storage = useStorage();
   const { toast } = useToast();

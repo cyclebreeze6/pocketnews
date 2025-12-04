@@ -4,7 +4,6 @@
 import Link from 'next/link';
 import {
   Search,
-  MonitorPlay,
   Bell,
   Check,
   History,
@@ -13,7 +12,7 @@ import {
   LogOut,
   Shield,
   Video as VideoIcon,
-  Menu,
+  PlusSquare,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -74,11 +73,6 @@ export default function SiteHeader() {
   const handleLogout = () => {
     auth.signOut();
   };
-
-  const goToAddVideo = () => {
-    router.push('/admin/videos');
-  };
-
 
   return (
     <>
@@ -203,13 +197,13 @@ export default function SiteHeader() {
                       <DropdownMenuSeparator />
                         {userProfile?.isAdmin && (
                           <>
+                            <DropdownMenuItem onSelect={() => router.push('/creator')}>
+                                <PlusSquare className="mr-2 h-4 w-4" />
+                                <span>Creator Hub</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => router.push('/admin')}>
                                 <Shield className="mr-2 h-4 w-4" />
                                 <span>Admin Panel</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={goToAddVideo}>
-                                <VideoIcon className="mr-2 h-4 w-4" />
-                                <span>Add Video</span>
                             </DropdownMenuItem>
                           </>
                         )}

@@ -21,7 +21,7 @@ interface VideoImportSelection {
   categoryId?: string;
 }
 
-export default function ImportVideosPage() {
+export default function CreatorImportVideosPage() {
   const [channelUrl, setChannelUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -87,9 +87,9 @@ export default function ImportVideosPage() {
     // Validation
     for (const videoId of videosToImport) {
         const selection = videoSelections[videoId];
-        if (!selection?.channelId || !selection?.categoryId) {
-            const videoTitle = fetchedVideos.find(v => v.videoId === videoId)?.title;
-            toast({variant: 'destructive', title: 'Missing Details', description: `Please select a channel and category for "${videoTitle}".`});
+        const videoTitle = fetchedVideos.find(v => v.videoId === videoId)?.title;
+        if (!selection?.channelId) {
+            toast({variant: 'destructive', title: 'Missing Channel', description: `Please select a channel for "${videoTitle}".`});
             return;
         }
     }
@@ -102,14 +102,14 @@ export default function ImportVideosPage() {
       const selection = videoSelections[videoId];
       const category = categories?.find(c => c.id === selection.categoryId);
 
-      if (videoData && selection && category) {
+      if (videoData && selection) {
           const videoDoc = {
             youtubeVideoId: videoData.videoId,
             title: videoData.title,
             description: videoData.description,
             thumbnailUrl: videoData.thumbnailUrl,
             channelId: selection.channelId!,
-            contentCategory: category.name,
+            contentCategory: category?.name || 'Uncategorized',
             createdAt: serverTimestamp(),
             uploadDate: new Date().toISOString(),
             views: Math.floor(Math.random() * 10000),
@@ -204,7 +204,7 @@ export default function ImportVideosPage() {
                                 </Select>
                             </div>
                             <div className="grid gap-1.5">
-                                <Label htmlFor={`category-${video.videoId}`}>Category</Label>
+                                <Label htmlFor={`category-${video.videoId}`}>Category (Optional)</Label>
                                 <Select onValueChange={(value) => handleDetailChange(video.videoId, 'categoryId', value)}>
                                     <SelectTrigger id={`category-${video.videoId}`}>
                                         <SelectValue placeholder="Select category" />
