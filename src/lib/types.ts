@@ -1,3 +1,4 @@
+
 import { Timestamp } from 'firebase/firestore';
 
 export interface User {
@@ -6,6 +7,7 @@ export interface User {
   email: string;
   avatar?: string;
   isAdmin?: boolean;
+  isCreator?: boolean;
 }
 
 export interface Channel {
@@ -54,3 +56,5 @@ export interface WatchHistory {
   videoId: string;
   watchedAt: Timestamp;
 }
+
+    

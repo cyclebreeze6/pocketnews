@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
@@ -9,7 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avat
 import { Switch } from '../../../components/ui/switch';
 import { useToast } from '../../../hooks/use-toast';
 import { Badge } from '../../../components/ui/badge';
-import { MoreHorizontal, Trash2, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, UserCheck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
 import { Button } from '../../../components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../../components/ui/alert-dialog';
@@ -28,32 +29,37 @@ export default function AdminUsersPage() {
   const [promoteEmail, setPromoteEmail] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
 
-  const handleAdminToggle = (user: UserProfile) => {
-    const newAdminStatus = !user.isAdmin;
-    const batch = writeBatch(firestore);
-    
-    // 1. Update the user document
+  const handleRoleToggle = (user: UserProfile, role: 'isAdmin' | 'isCreator') => {
     const userRef = doc(firestore, 'users', user.id);
-    batch.set(userRef, { isAdmin: newAdminStatus }, { merge: true });
+    const newStatus = !user[role];
 
-    // 2. Update the roles_admin collection
-    const adminRoleRef = doc(firestore, 'roles_admin', user.id);
-    if (newAdminStatus) {
-      batch.set(adminRoleRef, { grantedAt: new Date() });
-    } else {
-      batch.delete(adminRoleRef);
+    if (role === 'isAdmin') {
+        const batch = writeBatch(firestore);
+        batch.set(userRef, { isAdmin: newStatus }, { merge: true });
+        const adminRoleRef = doc(firestore, 'roles_admin', user.id);
+        if (newStatus) {
+            batch.set(adminRoleRef, { grantedAt: new Date() });
+        } else {
+            batch.delete(adminRoleRef);
+        }
+        batch.commit().then(() => {
+            toast({
+                title: `Admin role updated`,
+                description: `${user.displayName} is now ${newStatus ? 'an admin' : 'not an admin'}.`,
+            });
+        }).catch(err => {
+            console.error("Error updating admin status:", err);
+            toast({ variant: 'destructive', title: 'Error updating role' });
+        });
+    } else { // isCreator
+        setDocumentNonBlocking(userRef, { isCreator: newStatus }, { merge: true });
+        toast({
+            title: `Creator role updated`,
+            description: `${user.displayName} is now ${newStatus ? 'a creator' : 'not a creator'}.`,
+        });
     }
-
-    batch.commit().then(() => {
-      toast({
-        title: `User role updated`,
-        description: `${user.displayName} is now ${newAdminStatus ? 'an admin' : 'not an admin'}.`,
-      });
-    }).catch(err => {
-      console.error("Error updating admin status:", err);
-      toast({ variant: 'destructive', title: 'Error updating role' });
-    });
   };
+
 
   const handleDeleteUser = () => {
     if (userToDelete) {
@@ -165,7 +171,8 @@ export default function AdminUsersPage() {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
+                <TableHead>Roles</TableHead>
+                <TableHead>Make Creator</TableHead>
                 <TableHead>Make Admin</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -173,7 +180,7 @@ export default function AdminUsersPage() {
             <TableBody>
               {usersLoading && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
+                  <TableCell colSpan={6} className="text-center">Loading users...</TableCell>
                 </TableRow>
               )}
               {users?.map((user) => (
@@ -189,14 +196,23 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                      <Badge variant={user.isAdmin ? 'default' : 'outline'}>
-                        {user.isAdmin ? 'Admin' : 'User'}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        {user.isAdmin && <Badge variant="default">Admin</Badge>}
+                        {user.isCreator && <Badge variant="secondary">Creator</Badge>}
+                        {!user.isAdmin && !user.isCreator && <Badge variant="outline">User</Badge>}
+                      </div>
+                  </TableCell>
+                   <TableCell>
+                    <Switch
+                      checked={!!user.isCreator}
+                      onCheckedChange={() => handleRoleToggle(user, 'isCreator')}
+                      aria-label={`Toggle creator status for ${user.displayName}`}
+                    />
                   </TableCell>
                   <TableCell>
                     <Switch
                       checked={!!user.isAdmin}
-                      onCheckedChange={() => handleAdminToggle(user)}
+                      onCheckedChange={() => handleRoleToggle(user, 'isAdmin')}
                       aria-label={`Toggle admin status for ${user.displayName}`}
                     />
                   </TableCell>
@@ -244,3 +260,5 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+
+    

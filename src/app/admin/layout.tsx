@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useDoc, useFirebase, useMemoFirebase } from '../../firebase';
@@ -74,3 +75,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 }
+
+    

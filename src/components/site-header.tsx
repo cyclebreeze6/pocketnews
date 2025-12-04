@@ -195,17 +195,17 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                        {userProfile?.isAdmin && (
-                          <>
+                        {(userProfile?.isAdmin || userProfile?.isCreator) && (
                             <DropdownMenuItem onSelect={() => router.push('/creator')}>
                                 <PlusSquare className="mr-2 h-4 w-4" />
                                 <span>Creator Hub</span>
                             </DropdownMenuItem>
+                        )}
+                        {userProfile?.isAdmin && (
                             <DropdownMenuItem onSelect={() => router.push('/admin')}>
                                 <Shield className="mr-2 h-4 w-4" />
                                 <span>Admin Panel</span>
                             </DropdownMenuItem>
-                          </>
                         )}
                       <DropdownMenuItem asChild>
                         <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
@@ -235,3 +235,5 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
     </>
   );
 }
+
+    

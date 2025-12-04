@@ -28,28 +28,37 @@ function CreatorLoadingSkeleton() {
 export default function CreatorLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  
-  const isLoading = isUserLoading;
+  const { firestore } = useFirebase();
+
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const isLoading = isUserLoading || isProfileLoading;
 
   useEffect(() => {
-    // Wait until loading is done.
+    // Wait until all loading is done.
     if (isLoading) {
       return; 
     }
 
-    // After loading, if there's no user, redirect.
-    if (!user) {
+    // After loading, if there's no user, or the user is not a creator, redirect.
+    if (!user || !userProfile?.isCreator) {
       router.replace('/');
     }
 
-  }, [user, isLoading, router]);
+  }, [user, userProfile, isLoading, router]);
 
-  // If we are still loading, or if there is no user yet, show the loading skeleton.
-  if (isLoading || !user) {
+  // If we are still loading, or if the user is not a confirmed creator yet,
+  // show the loading skeleton. This prevents rendering the creator content prematurely.
+  if (isLoading || !userProfile?.isCreator) {
     return <CreatorLoadingSkeleton />;
   }
 
-  // Only if loading is complete AND the user is logged in, render the layout.
+  // Only if loading is complete AND the user is a confirmed creator, render the layout.
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader hideCategoryNav={true} />
@@ -57,3 +66,5 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
     </div>
   );
 }
+
+    
