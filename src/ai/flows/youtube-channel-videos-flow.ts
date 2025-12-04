@@ -46,6 +46,25 @@ async function getChannelIdFromUrl(url: string): Promise<string | null> {
     }
 }
 
+// Helper to get the custom handle or legacy username from the URL
+function getChannelHandleFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/').filter(p => p); // e.g., ['@handle'], ['user', 'username'], ['c', 'channelname']
+    
+    if (pathParts[0]?.startsWith('@')) {
+      return pathParts[0];
+    }
+    if (['user', 'c'].includes(pathParts[0]) && pathParts[1]) {
+      return `@${pathParts[1]}`;
+    }
+    return null;
+  } catch (error) {
+    console.error('Invalid URL:', error);
+    return null;
+  }
+}
+
 const fetchChannelVideosFlow = ai.defineFlow(
   {
     name: 'fetchChannelVideosFlow',
@@ -54,19 +73,30 @@ const fetchChannelVideosFlow = ai.defineFlow(
   },
   async (input) => {
     
-    const channelId = await getChannelIdFromUrl(input.channelUrl);
+    const channelHandle = getChannelHandleFromUrl(input.channelUrl);
 
-    if (!channelId) {
-        throw new Error('Could not automatically determine the YouTube Channel ID from the URL.');
+    if (!channelHandle) {
+        // Fallback to trying to get the channel ID if handle parsing fails
+        const channelId = await getChannelIdFromUrl(input.channelUrl);
+        if (!channelId) {
+            throw new Error('Could not determine the YouTube Channel ID or handle from the URL.');
+        }
+        
+        // This part is less reliable and is now a fallback
+        const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+        const response = await fetch(feedUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch YouTube channel feed by ID. Status: ${response.status}`);
+        }
+        // Continue with XML parsing...
     }
     
-    // Using a public RSS feed to avoid needing an API key.
-    // This is a workaround and might be less reliable than the official API.
-    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+    // Using a public RSS feed with the channel handle. This is more reliable.
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?user=${channelHandle.substring(1)}`;
 
     const response = await fetch(feedUrl);
     if (!response.ok) {
-        throw new Error(`Failed to fetch YouTube channel feed. Status: ${response.status}`);
+        throw new Error(`Failed to fetch YouTube channel feed. Status: ${response.statusText}`);
     }
     const xmlText = await response.text();
 
@@ -79,12 +109,13 @@ const fetchChannelVideosFlow = ai.defineFlow(
         const titleMatch = entry.match(/<title>(.*?)<\/title>/);
         const authorNameMatch = entry.match(/<author>.*?<name>(.*?)<\/name>.*?<\/author>/s);
         const thumbnailMatch = entry.match(/<media:thumbnail.*?url='(.*?)'/);
+        const descriptionMatch = entry.match(/<media:description>([\s\S]*?)<\/media:description>/);
 
         if (videoIdMatch && titleMatch && authorNameMatch && thumbnailMatch) {
             videos.push({
                 videoId: videoIdMatch[1],
-                title: titleMatch[1],
-                description: '', // RSS feed doesn't provide a good description
+                title: titleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"'),
+                description: descriptionMatch ? descriptionMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"') : '',
                 authorName: authorNameMatch[1],
                 thumbnailUrl: thumbnailMatch[1],
             });
