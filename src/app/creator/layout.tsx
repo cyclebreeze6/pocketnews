@@ -12,7 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 function CreatorLoadingSkeleton() {
     return (
         <div className="flex min-h-screen w-full flex-col">
-            <SiteHeader />
+            <SiteHeader hideCategoryNav={true} />
             <main className="flex-1 p-6 md:p-8 container">
                 <Skeleton className="h-8 w-1/3 mb-8" />
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -53,7 +53,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   }, [user, userProfile, isLoading, router]);
 
   // If we are still loading, or if the user is not a confirmed admin yet,
-  // show the loading skeleton. This prevents rendering the admin content prematurely.
+  // show the loading skeleton. This prevents rendering the creator content prematurely.
   if (isLoading || !userProfile?.isAdmin) {
     return <CreatorLoadingSkeleton />;
   }
@@ -61,7 +61,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   // Only if loading is complete AND the user is a confirmed admin, render the layout.
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
+      <SiteHeader hideCategoryNav={true} />
       <main className="flex-1 p-6 md:p-8 container">{children}</main>
     </div>
   );

@@ -40,7 +40,7 @@ import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
 
 
-export default function SiteHeader() {
+export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNav?: boolean }) {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const { firestore } = useFirebase();
@@ -229,7 +229,7 @@ export default function SiteHeader() {
                 )}
           </div>
         </div>
-        <CategoryNav />
+        {!hideCategoryNav && <CategoryNav />}
       </header>
       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={handleLoginSuccess} />
     </>
