@@ -16,6 +16,7 @@ export interface Channel {
   description: string;
   createdAt?: Timestamp | Date | string;
   logoUrl?: string;
+  youtubeChannelUrl?: string; // For auto-syncing
 }
 
 export interface Video {
@@ -56,5 +57,3 @@ export interface WatchHistory {
   videoId: string;
   watchedAt: Timestamp;
 }
-
-    

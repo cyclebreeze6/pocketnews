@@ -1,0 +1,103 @@
+'use server';
+/**
+ * @fileOverview A flow for syncing new videos from multiple YouTube channels.
+ * 
+ * - syncYouTubeChannels - The main function to trigger the sync process.
+ * - SyncResult - The output type detailing how many videos were synced.
+ */
+
+import { ai } from '../genkit';
+import { z } from 'genkit';
+import { fetchChannelVideos, type YouTubeVideoDetails } from './youtube-channel-videos-flow';
+import { getFirestore, collection, getDocs, addDoc, query, where } from 'firebase/firestore';
+import { initializeFirebase } from '../../firebase'; // Need to init admin for server-side
+import { Channel } from '@/lib/types';
+import { serverTimestamp } from 'firebase/firestore';
+
+
+const SyncResultSchema = z.object({
+  syncedChannels: z.number().describe('The number of channels that were checked for new content.'),
+  newVideosAdded: z.number().describe('The total number of new videos added across all channels.'),
+  errors: z.array(z.string()).describe('A list of errors encountered during the sync process.'),
+});
+export type SyncResult = z.infer<typeof SyncResultSchema>;
+
+
+export async function syncYouTubeChannels(): Promise<SyncResult> {
+  return syncChannelsFlow();
+}
+
+// We need a server-side instance of Firestore
+// Note: This assumes server-side Firebase initialization is configured.
+// For Firebase Studio, this happens behind the scenes.
+const { firestore } = initializeFirebase();
+
+const syncChannelsFlow = ai.defineFlow(
+  {
+    name: 'syncChannelsFlow',
+    outputSchema: SyncResultSchema,
+  },
+  async () => {
+    let syncedChannels = 0;
+    let newVideosAdded = 0;
+    const errors: string[] = [];
+
+    // 1. Get all internal channels that have a youtubeChannelUrl
+    const channelsRef = collection(firestore, 'channels');
+    const q = query(channelsRef, where('youtubeChannelUrl', '!=', ''));
+    const channelSnapshot = await getDocs(q);
+    const channelsToSync = channelSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Channel));
+    
+    if (channelsToSync.length === 0) {
+        return { syncedChannels: 0, newVideosAdded: 0, errors: ["No channels are configured for syncing. Please add a YouTube Channel URL to one or more channels."] };
+    }
+
+    // 2. Get all existing video YouTube IDs from our database to avoid duplicates
+    const videosRef = collection(firestore, 'videos');
+    const existingVideosSnapshot = await getDocs(videosRef);
+    const existingYoutubeIds = new Set(existingVideosSnapshot.docs.map(doc => doc.data().youtubeVideoId));
+
+    // 3. Loop through each channel and sync videos
+    for (const channel of channelsToSync) {
+        if (!channel.youtubeChannelUrl) continue;
+
+        try {
+            // 3a. Fetch latest videos from the YouTube channel RSS feed
+            const fetchedVideos = await fetchChannelVideos({ channelUrl: channel.youtubeChannelUrl });
+            syncedChannels++;
+
+            // 3b. Filter out videos that already exist in our database
+            const newVideos = fetchedVideos.filter(video => !existingYoutubeIds.has(video.videoId));
+
+            if (newVideos.length === 0) continue;
+
+            // 3c. Add new videos to the database
+            for (const videoData of newVideos) {
+                const videoDoc = {
+                    youtubeVideoId: videoData.videoId,
+                    title: videoData.title,
+                    description: videoData.description,
+                    thumbnailUrl: videoData.thumbnailUrl,
+                    channelId: channel.id, // Assign to the internal channel
+                    contentCategory: 'Uncategorized', // Default category
+                    createdAt: serverTimestamp(),
+                    uploadDate: new Date().toISOString(),
+                    views: Math.floor(Math.random() * 100), // Start with some random low views
+                    watchTime: Math.floor(Math.random() * 100),
+                };
+
+                const newDocRef = await addDoc(collection(firestore, 'videos'), videoDoc);
+                // We're not setting the ID back on the doc here for performance, but could if needed.
+                newVideosAdded++;
+                existingYoutubeIds.add(videoData.videoId); // Add to set to prevent re-adding in same run
+            }
+
+        } catch (error: any) {
+            console.error(`Failed to sync channel "${channel.name}":`, error);
+            errors.push(`Failed to sync ${channel.name}: ${error.message || 'Unknown error'}`);
+        }
+    }
+
+    return { syncedChannels, newVideosAdded, errors };
+  }
+);

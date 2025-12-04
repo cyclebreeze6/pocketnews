@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import Link from 'next/link';
-import { Video, Tv, Download } from 'lucide-react';
+import { Video, Tv, Download, RefreshCw } from 'lucide-react';
 
 export default function CreatorDashboardPage() {
   return (
@@ -38,11 +38,22 @@ export default function CreatorDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Download className="h-5 w-5" /> Import</CardTitle>
-            <CardDescription>Fetch and import videos from YouTube.</CardDescription>
+            <CardDescription>Fetch and import videos from a YouTube channel.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/creator/import">
               <Button>Import Videos</Button>
+            </Link>
+          </CardContent>
+        </Card>
+         <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" /> Sync Content</CardTitle>
+            <CardDescription>Fetch the latest videos from all linked channels.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/creator/sync">
+              <Button>Sync Videos</Button>
             </Link>
           </CardContent>
         </Card>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv } from 'lucide-react';
 import {
   DropdownMenu,
@@ -31,6 +31,7 @@ export default function CreatorChannelsPage() {
 
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
+  const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
@@ -51,6 +52,7 @@ export default function CreatorChannelsPage() {
   const resetForm = () => {
     setChannelName('');
     setChannelDescription('');
+    setYoutubeChannelUrl('');
     setLogoFile(null);
     setLogoPreview(null);
     setEditingChannel(null);
@@ -61,6 +63,7 @@ export default function CreatorChannelsPage() {
       setEditingChannel(channel);
       setChannelName(channel.name);
       setChannelDescription(channel.description);
+      setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
       setLogoPreview(channel.logoUrl || null);
       setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -71,7 +74,7 @@ export default function CreatorChannelsPage() {
 
   const handleSaveChanges = async () => {
     if (!channelName || !channelDescription) {
-      toast({ variant: 'destructive', title: 'Please fill out all fields.' });
+      toast({ variant: 'destructive', title: 'Please fill out name and description.' });
       return;
     }
 
@@ -85,21 +88,23 @@ export default function CreatorChannelsPage() {
             logoUrl = await uploadFile(storage, logoFile, filePath);
         }
 
+        const channelData = {
+          name: channelName,
+          description: channelDescription,
+          youtubeChannelUrl: youtubeChannelUrl,
+          logoUrl: logoUrl,
+        };
+
         if (editingChannel) {
             const channelRef = doc(firestore, 'channels', editingChannel.id);
-            const updatedData: Partial<Channel> = { name: channelName, description: channelDescription };
-            if (logoUrl) updatedData.logoUrl = logoUrl;
-            
-            await setDoc(channelRef, updatedData, { merge: true });
+            await setDoc(channelRef, channelData, { merge: true });
             toast({ title: 'Channel updated!' });
         } else {
             const channelsCollection = collection(firestore, 'channels');
             const newDocRef = doc(channelsCollection);
             const newChannelData = {
                 id: newDocRef.id,
-                name: channelName,
-                description: channelDescription,
-                logoUrl: logoUrl,
+                ...channelData,
                 createdAt: serverTimestamp(),
             };
             await setDoc(newDocRef, newChannelData);
@@ -146,6 +151,11 @@ export default function CreatorChannelsPage() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
                 </div>
+                 <div className="grid gap-2">
+                  <Label htmlFor="youtube-url">YouTube Channel URL (for Sync)</Label>
+                  <Input id="youtube-url" placeholder="https://www.youtube.com/channel/..." value={youtubeChannelUrl} onChange={(e) => setYoutubeChannelUrl(e.target.value)} />
+                   <p className="text-xs text-muted-foreground">Optional. Used for the one-click "Sync Videos" feature.</p>
+                </div>
             </div>
             <div className="grid gap-2 content-start">
                 <Label htmlFor="logo">Channel Logo</Label>
@@ -185,6 +195,7 @@ export default function CreatorChannelsPage() {
                 <TableHead>Logo</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>YouTube URL</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -200,7 +211,8 @@ export default function CreatorChannelsPage() {
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">{channel.name}</TableCell>
-                  <TableCell>{channel.description}</TableCell>
+                  <TableCell className="line-clamp-2">{channel.description}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground line-clamp-1">{channel.youtubeChannelUrl}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
