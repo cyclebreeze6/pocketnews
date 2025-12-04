@@ -42,29 +42,19 @@ export default function WatchPage() {
   const params = useParams();
   const videoId = params.videoId as string;
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
-  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-
+  
   // Fetch the video from URL param
   const videoRef = useMemoFirebase(() => doc(firestore, 'videos', videoId), [firestore, videoId]);
-  const { data: initialVideo, isLoading: videoLoading } = useDoc<Video>(videoRef);
+  const { data: currentVideo, isLoading: videoLoading } = useDoc<Video>(videoRef);
   
-  // Set current video initially
-  useEffect(() => {
-    if (initialVideo && !currentVideo) {
-      setCurrentVideo(initialVideo);
-    }
-  }, [initialVideo, currentVideo]);
 
   useEffect(() => {
-    if (currentVideo) {
-      window.history.pushState({}, '', `/watch/${currentVideo.id}`);
-      if (user) {
+    if (currentVideo && user) {
         const historyRef = doc(firestore, 'users', user.uid, 'history', currentVideo.id);
         setDocumentNonBlocking(historyRef, {
           videoId: currentVideo.id,
           watchedAt: serverTimestamp(),
         }, { merge: true });
-      }
     }
   }, [currentVideo, user, firestore]);
   
@@ -100,17 +90,10 @@ export default function WatchPage() {
   const { data: userFollow } = useDoc<UserFollow>(followRef);
 
   const isFollowing = !!userFollow;
-
-  const handleVideoSelect = (video: Video) => {
-    setCurrentVideo(video);
-  };
   
   const navigateToVideo = (videoId: string | null) => {
     if (videoId) {
-      const videoToPlay = allVideos?.find(v => v.id === videoId);
-      if (videoToPlay) {
-        setCurrentVideo(videoToPlay);
-      }
+        router.push(`/watch/${videoId}`);
     }
   };
 
@@ -142,7 +125,7 @@ export default function WatchPage() {
     return <div>Loading...</div>;
   }
 
-  if (!initialVideo && !videoLoading) {
+  if (!currentVideo && !videoLoading) {
     notFound();
   }
 
@@ -216,7 +199,7 @@ export default function WatchPage() {
                         const videoChannel = channels?.find(c => c.id === videoItem.channelId);
                         const isPlaying = videoItem.id === currentVideo.id;
                         return (
-                        <div key={videoItem.id} onClick={() => handleVideoSelect(videoItem)} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                        <Link href={`/watch/${videoItem.id}`} key={videoItem.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
                             <div className="relative w-32 h-20 flex-shrink-0">
                                 <Image
                                 src={videoItem.thumbnailUrl}
@@ -238,7 +221,7 @@ export default function WatchPage() {
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{videoItem.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(videoItem.createdAt))} ago</p>
                             </div>
-                        </div>
+                        </Link>
                         )
                     })}
                 </div>

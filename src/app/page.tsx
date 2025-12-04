@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, useDoc } from '../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '../firebase';
 import SiteHeader from '../components/site-header';
 import { VideoPlayer } from '../components/video-player';
 import { Badge } from '../components/ui/badge';
@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../components/ui/dialog';
+import { useRouter } from 'next/navigation';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -37,45 +38,33 @@ export default function Home() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
-  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-
+  
   const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), orderBy('createdAt', 'desc')), [firestore]);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
+  const currentVideo = videos?.[0];
+  const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
+  const otherVideos = videos?.slice(0, 10);
+  
   const followRef = useMemoFirebase(() => user && currentVideo ? doc(firestore, 'users', user.uid, 'follows', currentVideo.channelId) : null, [user, currentVideo, firestore]);
   const { data: userFollow } = useDoc<UserFollow>(followRef);
   const isFollowing = !!userFollow;
 
-  useEffect(() => {
-    if (videos && videos.length > 0 && !currentVideo) {
-      setCurrentVideo(videos[0]);
-    }
-  }, [videos, currentVideo]);
 
   useEffect(() => {
-     if (currentVideo) {
-      window.history.pushState({}, '', `/watch/${currentVideo.id}`);
-      if (user) {
+    if (currentVideo && user) {
         const historyRef = doc(firestore, 'users', user.uid, 'history', currentVideo.id);
         setDocumentNonBlocking(historyRef, {
           videoId: currentVideo.id,
           watchedAt: serverTimestamp(),
         }, { merge: true });
-      }
     }
   }, [currentVideo, user, firestore]);
-
-
-  const handleVideoSelect = (video: Video) => {
-    setCurrentVideo(video);
-  };
-
-  const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
-  const otherVideos = videos?.slice(0, 10);
 
   const handleFollowToggle = () => {
     if (!user || !currentChannel) {
@@ -142,7 +131,10 @@ export default function Home() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} key={currentVideo.id} />
+              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={() => {
+                  const nextVideo = videos[1];
+                  if(nextVideo) router.push(`/watch/${nextVideo.id}`);
+              }} />
             </div>
             
             <div className="px-4 md:px-0">
@@ -187,7 +179,7 @@ export default function Home() {
                         const videoChannel = channels.find(c => c.id === video.channelId);
                         const isPlaying = video.id === currentVideo.id;
                         return (
-                        <div key={video.id} onClick={() => handleVideoSelect(video)} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                        <Link href={`/watch/${video.id}`} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
                             <div className="relative w-32 h-20 flex-shrink-0">
                                 <Image
                                 src={video.thumbnailUrl}
@@ -209,7 +201,7 @@ export default function Home() {
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                             </div>
-                        </div>
+                        </Link>
                         )
                     })}
                 </div>
@@ -242,5 +234,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
