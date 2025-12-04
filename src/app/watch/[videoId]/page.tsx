@@ -215,7 +215,7 @@ export default function WatchPage({ params }: { params: { videoId: string } }) {
                                         Now Playing
                                     </Badge>
                                 )}
-                                <h3 className="text-base font-semibold line-clamp-3 leading-snug group-hover:text-primary">{videoItem.title}</h3>
+                                <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{videoItem.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(videoItem.createdAt))} ago</p>
                             </div>
                         </Link>
