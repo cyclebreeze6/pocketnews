@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { PlusCircle, MoreHorizontal, Trash2, Loader2, X } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,46 +77,39 @@ export default function CreatorChannelsPage() {
 
     setIsSaving(true);
     
-    let logoUrl = editingChannel?.logoUrl || '';
-
     try {
+        let logoUrl = editingChannel?.logoUrl || '';
+
         if (logoFile) {
             const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
             logoUrl = await uploadFile(storage, logoFile, filePath);
         }
 
         if (editingChannel) {
-            // Update existing channel
             const channelRef = doc(firestore, 'channels', editingChannel.id);
             const updatedData: Partial<Channel> = { name: channelName, description: channelDescription };
             if (logoUrl) updatedData.logoUrl = logoUrl;
             
-            setDocumentNonBlocking(channelRef, updatedData, { merge: true });
+            await setDoc(channelRef, updatedData, { merge: true });
             toast({ title: 'Channel updated!' });
         } else {
-            // Create new channel
             const channelsCollection = collection(firestore, 'channels');
+            const newDocRef = doc(channelsCollection);
             const newChannelData = {
+                id: newDocRef.id,
                 name: channelName,
                 description: channelDescription,
                 logoUrl: logoUrl,
                 createdAt: serverTimestamp(),
             };
-            const newDocRefPromise = addDocumentNonBlocking(channelsCollection, newChannelData);
-            
-            newDocRefPromise.then(newDocRef => {
-                if (newDocRef) {
-                    setDocumentNonBlocking(newDocRef, { id: newDocRef.id }, { merge: true });
-                }
-            });
-
+            await setDoc(newDocRef, newChannelData);
             toast({ title: 'Channel created!' });
         }
 
         resetForm();
     } catch (error) {
         console.error("Failed to save channel:", error);
-        toast({ variant: 'destructive', title: 'Save failed', description: 'Could not upload the logo or save channel data.' });
+        toast({ variant: 'destructive', title: 'Save failed', description: 'Could not save channel data.' });
     } finally {
         setIsSaving(false);
     }
@@ -160,7 +153,7 @@ export default function CreatorChannelsPage() {
                     {logoPreview ? (
                         <Image src={logoPreview} alt="Logo preview" layout="fill" className="object-cover rounded-lg" />
                     ) : (
-                        <span>Logo</span>
+                        <Tv className="w-16 h-16" />
                     )}
                 </div>
                 <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
@@ -202,7 +195,7 @@ export default function CreatorChannelsPage() {
                 <TableRow key={channel.id}>
                   <TableCell>
                      <Avatar>
-                        <AvatarImage src={channel.logoUrl || `https://picsum.photos/seed/${channel.id}/40/40`} alt={channel.name} />
+                        {channel.logoUrl ? <AvatarImage src={channel.logoUrl} alt={channel.name} /> : <Tv className="p-2"/>}
                         <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </TableCell>

@@ -7,6 +7,7 @@ import { VideoCard } from '../../../components/video-card';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { collection, doc, query, where } from 'firebase/firestore';
 import type { Channel, Video } from '../../../lib/types';
+import { Tv } from 'lucide-react';
 
 export default function ChannelPage({ params }: { params: { channelId: string } }) {
   const { firestore } = useFirebase();
@@ -33,7 +34,7 @@ export default function ChannelPage({ params }: { params: { channelId: string } 
             <div className="container px-4 md:px-6">
               <div className="flex flex-col items-center space-y-4 text-center">
                  <Avatar className="w-24 h-24 mb-4">
-                  <AvatarImage src={`https://picsum.photos/seed/${channel.id}/100/100`} alt={channel.name} />
+                  {channel.logoUrl ? <AvatarImage src={channel.logoUrl} alt={channel.name} /> : <Tv className="p-2 w-full h-full"/>}
                   <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none font-headline">

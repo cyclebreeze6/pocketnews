@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Card } from '../../components/ui/card';
 import type { Channel } from '../../lib/types';
 import { collection } from 'firebase/firestore';
+import { Tv } from 'lucide-react';
 
 export default function AllChannelsPage() {
   const { firestore } = useFirebase();
@@ -31,7 +32,7 @@ export default function AllChannelsPage() {
                 <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 h-full">
                     <div className="flex flex-col items-center justify-center p-6 text-center h-full">
                         <Avatar className="w-20 h-20 mb-4">
-                        <AvatarImage src={`https://picsum.photos/seed/${channel.id}/100/100`} alt={channel.name} />
+                        {channel.logoUrl ? <AvatarImage src={channel.logoUrl} alt={channel.name} /> : <Tv className="p-2 w-full h-full" />}
                         <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <h3 className="font-semibold text-lg group-hover:text-primary">{channel.name}</h3>
