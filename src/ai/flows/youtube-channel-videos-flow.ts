@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A flow for fetching recent videos from a YouTube channel.
+ * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube Data API.
  *
  * - fetchChannelVideos - Fetches a list of recent videos from a given channel URL.
  * - YouTubeChannelVideosInput - The input type for the flow.
@@ -9,6 +9,8 @@
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
+import { google } from 'googleapis';
+import 'dotenv/config';
 
 const YouTubeChannelVideosInputSchema = z.object({
   channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
@@ -32,19 +34,65 @@ export async function fetchChannelVideos(input: YouTubeChannelVideosInput): Prom
   return fetchChannelVideosFlow(input);
 }
 
+const youtube = google.youtube({
+  version: 'v3',
+  auth: process.env.YOUTUBE_API_KEY,
+});
+
 
 async function getChannelIdFromUrl(url: string): Promise<string | null> {
+    const urlParts = url.split('/').filter(p => p);
+    const lastPart = urlParts[urlParts.length - 1];
+
+    if (url.includes('/channel/')) {
+        return lastPart;
+    } 
+    
+    // For handles like /@MrBeast or legacy /c/MrBeast
+    if (url.includes('/@') || url.includes('/c/')) {
+       try {
+         const searchResponse = await youtube.search.list({
+             part: ['id'],
+             q: lastPart,
+             type: ['channel'],
+             maxResults: 1
+         });
+         // The search can be imprecise, so we need to be careful.
+         // A better approach would be a direct lookup if the API supported it for handles.
+         return searchResponse.data.items?.[0]?.id?.channelId || null;
+       } catch (e) {
+          console.error("Failed to resolve channel handle", e);
+          // Try a different method for handles starting with @
+          if(lastPart.startsWith('@')) {
+             try {
+                const searchResponse = await youtube.channels.list({
+                    part: ['id'],
+                    forUsername: lastPart.substring(1),
+                });
+                return searchResponse.data.items?.[0]?.id || null;
+             } catch (e2) {
+                console.error("Failed to resolve channel username", e2);
+                return null;
+             }
+          }
+          return null;
+       }
+    }
+    
+    // Fallback for user-provided vanity names like /user/MrBeast
     try {
-        const response = await fetch(url, { redirect: 'follow' });
-        if (!response.ok) return null;
-        const html = await response.text();
-        const channelIdMatch = html.match(/"channelId":"(UC[\w-]{22})"/);
-        return channelIdMatch ? channelIdMatch[1] : null;
-    } catch (error) {
-        console.error('Error fetching channel page:', error);
+        const username = lastPart;
+        const channelResponse = await youtube.channels.list({
+            part: ['id'],
+            forUsername: username
+        });
+        return channelResponse.data.items?.[0]?.id || null;
+    } catch (e) {
+        console.error('Failed to resolve username URL', e);
         return null;
     }
 }
+
 
 const fetchChannelVideosFlow = ai.defineFlow(
   {
@@ -57,38 +105,55 @@ const fetchChannelVideosFlow = ai.defineFlow(
     const channelId = await getChannelIdFromUrl(input.channelUrl);
 
     if (!channelId) {
-        throw new Error('Could not determine the YouTube Channel ID from the URL. Please make sure the URL is correct.');
+        throw new Error('Could not determine the YouTube Channel ID from the URL. Please make sure the URL is correct and points to a channel homepage.');
     }
     
-    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+    // 1. Get channel details to find the "uploads" playlist ID
+    const channelResponse = await youtube.channels.list({
+        part: ['contentDetails', 'snippet'],
+        id: [channelId],
+    });
 
-    const response = await fetch(feedUrl);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch YouTube channel feed. Status: ${response.statusText}`);
+    const channel = channelResponse.data.items?.[0];
+    if (!channel) {
+        throw new Error('Could not find channel details.');
     }
-    const xmlText = await response.text();
 
-    const entries = xmlText.split('<entry>').slice(1);
+    const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploadsPlaylistId) {
+        throw new Error('Could not find the uploads playlist for this channel.');
+    }
+    
+    const authorName = channel.snippet?.title || 'Unknown Channel';
+
+    // 2. Get the most recent videos from the "uploads" playlist
+    const playlistResponse = await youtube.playlistItems.list({
+        part: ['snippet'],
+        playlistId: uploadsPlaylistId,
+        maxResults: 15, // Get the 15 most recent videos
+    });
+
     const videos: YouTubeVideoList = [];
+    const videoItems = playlistResponse.data.items;
 
-    for (const entry of entries) {
-        const videoIdMatch = entry.match(/<yt:videoId>(.*?)<\/yt:videoId>/);
-        const titleMatch = entry.match(/<title>(.*?)<\/title>/);
-        const authorNameMatch = entry.match(/<author>.*?<name>(.*?)<\/name>.*?<\/author>/s);
-        const thumbnailMatch = entry.match(/<media:thumbnail.*?url='(.*?)'/);
-        const descriptionMatch = entry.match(/<media:description>([\s\S]*?)<\/media:description>/);
-
-        if (videoIdMatch && titleMatch && authorNameMatch && thumbnailMatch) {
-            videos.push({
-                videoId: videoIdMatch[1],
-                title: titleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"'),
-                description: descriptionMatch ? descriptionMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"') : '',
-                authorName: authorNameMatch[1],
-                thumbnailUrl: thumbnailMatch[1],
-            });
+    if (videoItems) {
+        for (const item of videoItems) {
+            const snippet = item.snippet;
+            const videoId = snippet?.resourceId?.videoId;
+            
+            if (videoId && snippet?.title && snippet?.thumbnails?.high?.url) {
+                videos.push({
+                    videoId: videoId,
+                    title: snippet.title,
+                    description: snippet.description || '',
+                    authorName: authorName,
+                    // Use high-quality thumbnail if available
+                    thumbnailUrl: snippet.thumbnails.high.url || snippet.thumbnails.default.url,
+                });
+            }
         }
     }
     
-    return videos.slice(0, 15); // Return up to 15 most recent videos
+    return videos;
   }
 );
