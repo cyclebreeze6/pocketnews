@@ -53,7 +53,14 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   
-  const currentVideo = videos?.[0];
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+
+  useEffect(() => {
+    if (videos && videos.length > 0) {
+      setCurrentVideo(videos[0]);
+    }
+  }, [videos]);
+  
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
   
   const followRef = useMemoFirebase(() => user && currentVideo ? doc(firestore, 'users', user.uid, 'follows', currentVideo.channelId) : null, [user, currentVideo, firestore]);
@@ -81,11 +88,12 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
       });
       return;
     }
+    const followDocRef = doc(firestore, 'users', user.uid, 'follows', currentChannel.id);
     if (isFollowing) {
-      deleteDocumentNonBlocking(followRef!);
+      deleteDocumentNonBlocking(followDocRef);
       toast({ title: `Unfollowed ${currentChannel.name}` });
     } else {
-      setDocumentNonBlocking(followRef!, {
+      setDocumentNonBlocking(followDocRef, {
         channelId: currentChannel.id,
         userId: user.uid,
         followedAt: serverTimestamp(),
@@ -93,6 +101,14 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
       toast({ title: `Followed ${currentChannel.name}!` });
     }
   };
+  
+    const handleVideoEnd = () => {
+    if (!videos || !currentVideo) return;
+    const currentIndex = videos.findIndex(v => v.id === currentVideo.id);
+    if (currentIndex > -1 && currentIndex < videos.length - 1) {
+      setCurrentVideo(videos[currentIndex + 1]);
+    }
+  }
 
   if (videosLoading || channelsLoading) {
     return <div>Loading...</div>;
@@ -129,10 +145,7 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
                 </h1>
             </div>
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} key={currentVideo.id} onEnd={() => {
-                  const nextVideo = videos[1];
-                  if(nextVideo) router.push(`/watch/${nextVideo.id}`);
-              }} />
+              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} key={currentVideo.id} onEnd={handleVideoEnd} />
             </div>
             
             <div className="px-4 md:px-0">
@@ -177,7 +190,7 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
                         const videoChannel = channels.find(c => c.id === video.channelId);
                         const isPlaying = video.id === currentVideo.id;
                         return (
-                        <Link href={`/watch/${video.id}`} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                        <div onClick={() => setCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
                             <div className="relative w-32 h-20 flex-shrink-0">
                                 <Image
                                 src={video.thumbnailUrl}
@@ -199,7 +212,7 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
                                 <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
                                 <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                             </div>
-                        </Link>
+                        </div>
                         )
                     })}
                 </div>
@@ -232,4 +245,3 @@ export default function CategoryPage({ params }: { params: { categoryName: strin
     </div>
   );
 }
-
