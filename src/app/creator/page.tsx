@@ -26,17 +26,6 @@ export default function CreatorDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Tv className="h-5 w-5" /> Channels</CardTitle>
-            <CardDescription>Create and organize your channels.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <Link href="/creator/channels">
-              <Button>Manage Channels</Button>
-            </Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
             <CardTitle className="flex items-center gap-2"><Download className="h-5 w-5" /> Import</CardTitle>
             <CardDescription>Fetch and import videos from a YouTube channel.</CardDescription>
           </CardHeader>

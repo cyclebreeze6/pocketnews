@@ -77,7 +77,8 @@ service cloud.firestore {
     match /channels/{channelId} {
       allow get, list: if true;
       // Only Admins or Creators can manage channels.
-      allow create, update, delete: if canCreateContent();
+      allow create, update: if canCreateContent();
+      allow delete: if isAdmin();
     }
     
     match /categories/{categoryId} {
@@ -101,5 +102,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
