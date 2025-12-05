@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, DownloadCloud } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, DownloadCloud, RefreshCw } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,7 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
+import { syncSingleYouTubeChannel } from '../../actions/sync-single-channel-flow';
 
 export default function AdminChannelsPage() {
   const { firestore } = useFirebase();
@@ -39,6 +40,8 @@ export default function AdminChannelsPage() {
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingInfo, setIsFetchingInfo] = useState(false);
+  const [syncingChannelId, setSyncingChannelId] = useState<string | null>(null);
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -161,6 +164,22 @@ export default function AdminChannelsPage() {
     }
   };
 
+  const handleSyncChannel = async (channelId: string, channelName: string) => {
+    setSyncingChannelId(channelId);
+    try {
+      const result = await syncSingleYouTubeChannel(channelId);
+      if (result.errors && result.errors.length > 0) {
+        toast({ variant: 'destructive', title: `Sync for ${channelName} failed`, description: result.errors[0] });
+      } else {
+        toast({ title: 'Sync complete!', description: `Added ${result.newVideosAdded} new videos to ${channelName}.` });
+      }
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'An error occurred', description: error.message || 'Could not sync channel.' });
+    } finally {
+      setSyncingChannelId(null);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -273,6 +292,16 @@ export default function AdminChannelsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                         <DropdownMenuItem 
+                            onClick={() => handleSyncChannel(channel.id, channel.name)} 
+                            disabled={!channel.youtubeChannelUrl || syncingChannelId === channel.id}>
+                          {syncingChannelId === channel.id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                          )}
+                          Sync
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetEditing(channel)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDelete(channel.id)} className="text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
