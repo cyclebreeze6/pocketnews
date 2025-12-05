@@ -1,14 +1,17 @@
+'use server';
+/**
+ * @fileOverview Flow to sync all YouTube channels and add new videos.
+ */
 import { ai } from '../genkit';
 import { z } from 'zod';
-import { fetchChannelVideosFlow, YouTubeVideoDetailsSchema } from './youtube-channel-videos-flow';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
-
-export const FetchedVideoSchema = YouTubeVideoDetailsSchema;
-export type FetchedVideo = z.infer<typeof FetchedVideoSchema>;
+import { fetchChannelVideosFlow, YouTubeVideoDetailsSchema } from './youtube-channel-videos-flow';
+import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 
 export const FetchResultSchema = z.object({
-  videos: z.array(FetchedVideoSchema).describe("A list of new videos found across all channels."),
-  errors: z.array(z.string()).describe('A list of errors encountered during the sync process.'),
+  newVideosAdded: z.number().describe("The total number of new videos that were successfully added across all channels."),
+  syncedChannels: z.number().describe("The number of channels that were successfully synced."),
+  errors: z.array(z.string()).optional().describe('A list of errors encountered during the sync process.'),
 });
 export type FetchResult = z.infer<typeof FetchResultSchema>;
 
@@ -18,37 +21,54 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     outputSchema: FetchResultSchema,
   },
   async () => {
-    const allNewVideos: FetchedVideo[] = [];
-    const errors: string[] = [];
-
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
-
-    if (channelsToSync.length === 0) {
-      return { videos: [], errors: ["No channels are configured for syncing. Please add a YouTube Channel URL to one or more channels."] };
-    }
     
+    if (channelsToSync.length === 0) {
+      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are configured for syncing."] };
+    }
+
     const existingIdsSet = new Set(existingYoutubeIds);
-    const addedVideoIds = new Set<string>();
+    let totalNewVideosAdded = 0;
+    let syncedChannels = 0;
+    const errors: string[] = [];
+    const allVideosToSave: any[] = [];
 
     for (const channel of channelsToSync) {
       if (!channel.youtubeChannelUrl) continue;
 
       try {
         const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl });
-        
-        const newVideos = fetchedVideos.filter(video => !existingIdsSet.has(video.videoId) && !addedVideoIds.has(video.videoId));
+        const newVideos = fetchedVideos.filter(video => !existingIdsSet.has(video.videoId));
 
-        for (const video of newVideos) {
-            allNewVideos.push(video);
-            addedVideoIds.add(video.videoId);
+        if (newVideos.length > 0) {
+           const videosToSave = newVideos.map(video => ({
+            youtubeVideoId: video.videoId,
+            title: video.title,
+            description: video.description,
+            thumbnailUrl: video.thumbnailUrl,
+            channelId: channel.id,
+            contentCategory: 'News', // Default category
+            views: Math.floor(Math.random() * 100), 
+            watchTime: Math.floor(Math.random() * 100), 
+          }));
+          allVideosToSave.push(...videosToSave);
         }
+        syncedChannels++;
       } catch (error: any) {
         console.error(`Failed to sync channel "${channel.name}":`, error);
         errors.push(`Failed to sync ${channel.name}: ${error.message || 'Unknown error'}`);
       }
     }
 
-    // Since we fetch 15 from each, we might have more than 10, so we slice.
-    return { videos: allNewVideos.slice(0, 10), errors };
+    if (allVideosToSave.length > 0) {
+        try {
+            await saveSyncedVideos(allVideosToSave);
+            totalNewVideosAdded = allVideosToSave.length;
+        } catch (saveError: any) {
+            errors.push(`Failed to save videos to database: ${saveError.message}`);
+        }
+    }
+    
+    return { newVideosAdded: totalNewVideosAdded, syncedChannels, errors };
   }
 );
