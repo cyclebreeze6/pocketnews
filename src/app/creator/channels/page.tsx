@@ -20,7 +20,7 @@ import { useToast } from '../../../hooks/use-toast';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
-import { fetchYouTubeChannelInfo } from '../../../ai/flows/youtube-channel-info-flow';
+import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
 
 export default function CreatorChannelsPage() {
   const { firestore } = useFirebase();

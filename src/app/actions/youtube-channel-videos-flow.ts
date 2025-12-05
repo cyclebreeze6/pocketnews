@@ -7,7 +7,7 @@
  * - YouTubeVideoDetails - The output type for a single video.
  */
 
-import { ai } from '../genkit';
+import { ai } from '../../ai/genkit';
 import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
 

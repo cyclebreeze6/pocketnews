@@ -7,7 +7,7 @@
  * - YouTubeChannelInfo - The output type for the flow.
  */
 
-import { ai } from '../genkit';
+import { ai } from '../../ai/genkit';
 import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
 

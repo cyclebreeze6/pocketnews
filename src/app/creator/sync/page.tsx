@@ -5,8 +5,8 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { useToast } from '../../../hooks/use-toast';
 import { Loader2, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
-import { syncYouTubeChannels } from '../../../ai/flows/sync-channels-flow';
-import type { SyncResult } from '../../../ai/flows/sync-channels-flow';
+import { syncYouTubeChannels } from '../../actions/sync-channels-flow';
+import type { SyncResult } from '../../actions/sync-channels-flow';
 
 export default function CreatorSyncPage() {
   const [isSyncing, setIsSyncing] = useState(false);

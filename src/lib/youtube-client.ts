@@ -5,7 +5,7 @@ import 'dotenv/config';
 
 let youtubeClient: any = null;
 
-export function getYoutubeClient() {
+export async function getYoutubeClient() {
     if (!process.env.YOUTUBE_API_KEY) {
         throw new Error('YOUTUBE_API_KEY is not set in the environment variables.');
     }
