@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview A flow for syncing new videos from multiple YouTube channels.
  *
