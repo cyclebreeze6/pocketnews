@@ -7,14 +7,12 @@
  */
 
 import { ai } from '../genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
-import { collection, getDocs } from 'firebase/firestore';
-import { initializeFirebase } from '../../firebase';
 
-const SyncResultSchema = z.object({
+export const SyncResultSchema = z.object({
   syncedChannels: z.number().describe('The number of channels that were checked for new content.'),
   newVideosAdded: z.number().describe('The total number of new videos added across all channels.'),
   errors: z.array(z.string()).describe('A list of errors encountered during the sync process.'),

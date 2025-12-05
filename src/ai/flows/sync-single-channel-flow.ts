@@ -7,15 +7,15 @@
  */
 import 'dotenv/config';
 import { ai } from '../genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
-import { initializeApp, getApps, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Channel } from '../../lib/types';
 import { SyncResultSchema } from './sync-channels-flow';
 
-if (!getApps().length) {
+if (getApps().length === 0) {
   initializeApp();
 }
 const firestore = getFirestore();
