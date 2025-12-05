@@ -15,8 +15,8 @@ export default function CreatorDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><PlusSquare className="h-5 w-5" /> Add Videos</CardTitle>
-            <CardDescription>Add new videos one by one from a YouTube link.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><PlusSquare className="h-5 w-5" /> Add Video</CardTitle>
+            <CardDescription>Add a new video one by one from a YouTube link.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/creator/videos/new">
@@ -37,12 +37,12 @@ export default function CreatorDashboardPage() {
         </Card>
          <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" /> Sync Content</CardTitle>
-            <CardDescription>Fetch the latest videos from all linked channels.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" /> Curate & Sync</CardTitle>
+            <CardDescription>Fetch and publish the latest videos from your channels.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/creator/sync">
-              <Button>Sync All Channels</Button>
+              <Button>Curate Content</Button>
             </Link>
           </CardContent>
         </Card>

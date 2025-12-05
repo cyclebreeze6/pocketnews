@@ -16,7 +16,7 @@ const YouTubeChannelVideosInputSchema = z.object({
 });
 export type YouTubeChannelVideosInput = z.infer<typeof YouTubeChannelVideosInputSchema>;
 
-const YouTubeVideoDetailsSchema = z.object({
+export const YouTubeVideoDetailsSchema = z.object({
   videoId: z.string().describe('The unique ID of the YouTube video.'),
   title: z.string().describe('The title of the video.'),
   description: z.string().describe('The description of the video.'),
@@ -37,7 +37,7 @@ export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 function getIdentifierFromUrl(url: string): string | null {
     try {
         const urlObj = new URL(url);
-        const pathParts = urlObj.pathname.split('/').filter(p => p);
+        const pathParts = urlObj.pathname.split('/').filter(p => p); 
 
         // Check for /channel/UC... format
         const channelIdIndex = pathParts.indexOf('channel');
@@ -138,7 +138,7 @@ export const fetchChannelVideosFlow = ai.defineFlow(
                     description: snippet.description || '',
                     authorName: authorName,
                     // Use high-quality thumbnail if available
-                    thumbnailUrl: snippet.thumbnails.high.url || snippet.thumbnails.default.url,
+                    thumbnailUrl: snippet.thumbnails.high.url || snippet.thumbnails.default?.url || '',
                 });
             }
         }
