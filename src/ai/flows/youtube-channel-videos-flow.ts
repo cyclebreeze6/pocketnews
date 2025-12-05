@@ -28,51 +28,30 @@ export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
 export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 
-async function getChannelIdFromUrl(url: string): Promise<string | null> {
-    const youtube = await getYoutubeClient();
-    const urlParts = url.split('/').filter(p => p);
-    const lastPart = urlParts[urlParts.length - 1];
 
-    if (!lastPart) return null;
-
-    // 1. Direct Channel ID URL
-    if (url.includes('/channel/')) {
-        return lastPart;
-    }
-
-    // 2. Handle or Username URL (e.g., /@handle or /user/username or /c/customname)
-    const identifier = lastPart.startsWith('@') ? lastPart.substring(1) : lastPart;
-    
+/**
+ * Extracts a potential channel identifier (handle, custom name, or ID) from a YouTube URL.
+ * @param url The full YouTube channel URL.
+ * @returns A string identifier or null if one cannot be found.
+ */
+function getIdentifierFromUrl(url: string): string | null {
     try {
-        // First, try searching by the handle/name which is often reliable for handles.
-        const searchResponse = await youtube.search.list({
-            part: ['id'],
-            q: identifier,
-            type: ['channel'],
-            maxResults: 1
-        });
-        const channelId = searchResponse.data.items?.[0]?.id?.channelId;
-        if (channelId) return channelId;
+        const urlObj = new URL(url);
+        const pathParts = urlObj.pathname.split('/').filter(p => p); // e.g., ['@handle'], ['channel', 'UC...'], ['user', 'name']
 
-    } catch (error) {
-        console.warn('YouTube search by handle failed, trying username fallback.', error);
+        if (pathParts.length === 0) return null;
+        
+        // Handle URLs like /@handle, /c/custom, /user/name, or just /name
+        // The last part of the path is usually the identifier.
+        const identifier = pathParts[pathParts.length - 1];
+
+        // If it starts with @, remove it for the search query
+        return identifier.startsWith('@') ? identifier.substring(1) : identifier;
+
+    } catch (e) {
+        console.error("Invalid URL provided to getIdentifierFromUrl", e);
+        return null;
     }
-    
-    try {
-        // Fallback for older /user/ or /c/ style URLs if search fails
-        const channelsResponse = await youtube.channels.list({
-            part: ['id'],
-            forUsername: identifier,
-            maxResults: 1
-        });
-        const channelId = channelsResponse.data.items?.[0]?.id;
-        if (channelId) return channelId;
-    }
-    catch (error) {
-         console.warn('YouTube forUsername lookup failed.', error);
-    }
-    
-    return null; // If all methods fail
 }
 
 
@@ -84,13 +63,27 @@ export const fetchChannelVideosFlow = ai.defineFlow(
   },
   async (input) => {
     const youtube = await getYoutubeClient();
-    const channelId = await getChannelIdFromUrl(input.channelUrl);
+    const identifier = getIdentifierFromUrl(input.channelUrl);
 
-    if (!channelId) {
-        throw new Error('Could not determine the YouTube Channel ID from the URL. Please make sure the URL is correct and points to a channel homepage.');
+    if (!identifier) {
+        throw new Error('Could not find a valid identifier in the YouTube URL.');
     }
     
-    // 1. Get channel details to find the "uploads" playlist ID
+    // Use the search API to reliably find the channel ID from the identifier
+    const searchResponse = await youtube.search.list({
+        part: ['id'],
+        q: identifier,
+        type: ['channel'],
+        maxResults: 1
+    });
+
+    const channelId = searchResponse.data.items?.[0]?.id?.channelId;
+    
+    if (!channelId) {
+        throw new Error(`Could not determine the YouTube Channel ID for "${identifier}". Please make sure the URL is correct.`);
+    }
+    
+    // 1. Get channel details to find the "uploads" playlist ID and author name
     const channelResponse = await youtube.channels.list({
         part: ['contentDetails', 'snippet'],
         id: [channelId],
@@ -98,7 +91,7 @@ export const fetchChannelVideosFlow = ai.defineFlow(
 
     const channel = channelResponse.data.items?.[0];
     if (!channel) {
-        throw new Error('Could not find channel details.');
+        throw new Error('Could not find channel details after finding ID.');
     }
 
     const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;

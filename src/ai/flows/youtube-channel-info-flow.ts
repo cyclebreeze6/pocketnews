@@ -23,52 +23,31 @@ const YouTubeChannelInfoSchema = z.object({
 });
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
-async function getChannelIdFromUrl(url: string): Promise<string | null> {
-    const youtube = await getYoutubeClient();
-    const urlParts = url.split('/').filter(p => p);
-    const lastPart = urlParts[urlParts.length - 1];
-
-    if (!lastPart) return null;
-
-    // 1. Direct Channel ID URL
-    if (url.includes('/channel/')) {
-        return lastPart;
-    }
-
-    // 2. Handle or Username URL (e.g., /@handle or /user/username or /c/customname)
-    const identifier = lastPart.startsWith('@') ? lastPart.substring(1) : lastPart;
-    
+/**
+ * Extracts a potential channel identifier (handle, custom name, or ID) from a YouTube URL.
+ * @param url The full YouTube channel URL.
+ * @returns A string identifier or null if one cannot be found.
+ */
+function getIdentifierFromUrl(url: string): string | null {
     try {
-        // First, try searching by the handle/name which is often reliable for handles.
-        const searchResponse = await youtube.search.list({
-            part: ['id'],
-            q: identifier,
-            type: ['channel'],
-            maxResults: 1
-        });
-        const channelId = searchResponse.data.items?.[0]?.id?.channelId;
-        if (channelId) return channelId;
+        const urlObj = new URL(url);
+        const pathParts = urlObj.pathname.split('/').filter(p => p); // e.g., ['@handle'], ['channel', 'UC...'], ['user', 'name']
 
-    } catch (error) {
-        console.warn('YouTube search by handle failed, trying username fallback.', error);
+        if (pathParts.length === 0) return null;
+        
+        // Handle URLs like /@handle, /c/custom, /user/name, or just /name
+        // The last part of the path is usually the identifier.
+        const identifier = pathParts[pathParts.length - 1];
+
+        // If it starts with @, remove it for the search query
+        return identifier.startsWith('@') ? identifier.substring(1) : identifier;
+
+    } catch (e) {
+        console.error("Invalid URL provided to getIdentifierFromUrl", e);
+        return null;
     }
-    
-    try {
-        // Fallback for older /user/ or /c/ style URLs if search fails
-        const channelsResponse = await youtube.channels.list({
-            part: ['id'],
-            forUsername: identifier,
-            maxResults: 1
-        });
-        const channelId = channelsResponse.data.items?.[0]?.id;
-        if (channelId) return channelId;
-    }
-    catch (error) {
-         console.warn('YouTube forUsername lookup failed.', error);
-    }
-    
-    return null; // If all methods fail
 }
+
 
 export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
   {
@@ -78,36 +57,53 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
   },
   async (input) => {
     const youtube = await getYoutubeClient();
+    const identifier = getIdentifierFromUrl(input.channelUrl);
+
+    if (!identifier) {
+        throw new Error('Could not find a valid identifier in the YouTube URL.');
+    }
+    
     try {
-        const channelId = await getChannelIdFromUrl(input.channelUrl);
+        // Use the search API as a robust way to find a channel by its handle, custom URL, or even name.
+        // It's more reliable than trying to guess the URL structure.
+        const searchResponse = await youtube.search.list({
+            part: ['id'],
+            q: identifier, // The search query is the identifier from the URL.
+            type: ['channel'],
+            maxResults: 1
+        });
+        
+        const channelId = searchResponse.data.items?.[0]?.id?.channelId;
+
         if (!channelId) {
-            throw new Error('Could not determine the YouTube Channel ID from the URL.');
+            throw new Error(`Could not find a YouTube channel matching "${identifier}". Please check the URL.`);
         }
 
+        // Now with a confirmed channelId, get the full details.
         const channelResponse = await youtube.channels.list({
             part: ['snippet'],
             id: [channelId]
         });
 
         const channel = channelResponse.data.items?.[0];
-        if (!channel) {
-            throw new Error('Channel not found using the provided URL.');
+        if (!channel?.snippet) {
+            throw new Error('Channel details not found after finding ID. The channel may be unavailable.');
         }
         
-        const snippet = channel.snippet;
+        const { snippet } = channel;
 
         return {
-            name: snippet?.title || 'Unknown Channel',
-            description: snippet?.description || '',
+            name: snippet.title || 'Unknown Channel',
+            description: snippet.description || '',
             // Prefer high quality thumbnail
-            logoUrl: snippet?.thumbnails?.high?.url || snippet?.thumbnails?.default?.url || '',
+            logoUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
         };
 
     } catch (error: any) {
-        console.error('Error fetching channel info from YouTube API:', error);
+        console.error('Error fetching channel info from YouTube API:', error.message);
         // Provide a more specific error message to the user
-        if (error.message.includes('ID')) {
-             throw new Error('Could not find a valid YouTube channel ID from the provided URL. Please check the link.');
+        if (error.response?.data?.error?.message) {
+             throw new Error(`YouTube API Error: ${error.response.data.error.message}`);
         }
         throw new Error('Could not extract channel information. The API may be unavailable or the URL is incorrect.');
     }
