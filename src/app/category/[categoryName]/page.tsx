@@ -26,7 +26,7 @@ import {
   DialogFooter,
 } from '../../../components/ui/dialog';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -35,14 +35,15 @@ function toDate(timestamp: Timestamp | Date | string): Date {
     return new Date(timestamp);
 }
 
-export default function CategoryPage({ params }: { params: { categoryName: string } }) {
+export default function CategoryPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+  const params = useParams();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   
-  const categoryName = decodeURIComponent(params.categoryName);
+  const categoryName = decodeURIComponent(params.categoryName as string);
 
   const videosQuery = useMemoFirebase(() => 
     query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName)),
