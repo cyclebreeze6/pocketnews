@@ -5,7 +5,6 @@
  * - syncSingleYouTubeChannelFlow - The main function to trigger the sync process for one channel.
  * - SyncResult - The output type detailing how many videos were synced.
  */
-import 'dotenv/config';
 import { ai } from '../genkit';
 import { z } from 'zod';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
