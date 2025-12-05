@@ -1,7 +1,19 @@
 'use server';
 
-import { collection, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
-import { initializeFirebase } from '../../firebase';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import 'dotenv/config';
+
+// Initialize firebase-admin
+if (getApps().length === 0) {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    initializeApp({
+      credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+    });
+  } else {
+    initializeApp();
+  }
+}
 
 // A leaner version of the Video type for this specific action
 type NewVideoData = {
@@ -25,16 +37,16 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
     return;
   }
 
-  const { firestore } = initializeFirebase();
-  const batch = writeBatch(firestore);
-  const videosCollectionRef = collection(firestore, 'videos');
+  const firestore = getFirestore();
+  const batch = firestore.batch();
+  const videosCollectionRef = firestore.collection('videos');
 
   videos.forEach(videoData => {
-    const newDocRef = doc(videosCollectionRef); // Auto-generate a new ID
+    const newDocRef = videosCollectionRef.doc(); // Auto-generate a new ID
     const videoDoc = {
       id: newDocRef.id,
       ...videoData,
-      createdAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
       uploadDate: new Date().toISOString(), // Set upload date to now
     };
     batch.set(newDocRef, videoDoc);

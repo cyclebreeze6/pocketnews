@@ -21,7 +21,7 @@ export type SyncResult = z.infer<typeof SyncResultSchema>;
 
 export const syncYouTubeChannelsFlow = ai.defineFlow(
   {
-    name: 'syncChannelsFlow',
+    name: 'syncYouTubeChannelsFlow',
     outputSchema: SyncResultSchema,
   },
   async () => {
@@ -31,7 +31,7 @@ export const syncYouTubeChannelsFlow = ai.defineFlow(
 
     // 1. Get channels and existing videos using a server action
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
-    
+
     if (channelsToSync.length === 0) {
       return { syncedChannels: 0, newVideosAdded: 0, errors: ["No channels are configured for syncing. Please add a YouTube Channel URL to one or more channels."] };
     }
