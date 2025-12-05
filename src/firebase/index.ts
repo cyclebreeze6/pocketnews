@@ -2,30 +2,22 @@
 
 import { firebaseConfig } from './config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
-export function initializeFirebase() {
-  // If we're on the client, use the client SDK
-  if (typeof window !== 'undefined') {
-    if (!getApps().length) {
-      let firebaseApp = initializeApp(firebaseConfig);
-      return getSdks(firebaseApp);
-    }
-    // If already initialized on client, return the SDKs
-    return getSdks(getApp());
+export function initializeFirebase(): {
+    firebaseApp: FirebaseApp;
+    auth: Auth;
+    firestore: Firestore;
+    storage: FirebaseStorage;
+} {
+  if (getApps().length === 0) {
+    const firebaseApp = initializeApp(firebaseConfig);
+    return getSdks(firebaseApp);
   }
-
-  // On the server, we return null for client SDKs.
-  // Server-specific flows will initialize the Admin SDK themselves.
-  return {
-    firebaseApp: null,
-    auth: null, 
-    firestore: null,
-    storage: null,
-  };
+  return getSdks(getApp());
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
