@@ -9,7 +9,6 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
-import type { YouTubeVideoDetails } from './youtube-channel-videos-flow';
 import { initializeApp as initializeAdminApp, getApps as getAdminApps, getApp as getAdminApp, type App } from 'firebase-admin/app';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 import type { Channel } from '@/lib/types';
@@ -34,7 +33,7 @@ const SyncResultSchema = z.object({
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 
 
-const syncChannelsFlow = ai.defineFlow(
+export const syncYouTubeChannelsFlow = ai.defineFlow(
   {
     name: 'syncChannelsFlow',
     outputSchema: SyncResultSchema,
@@ -112,7 +111,3 @@ const syncChannelsFlow = ai.defineFlow(
     return { syncedChannels, newVideosAdded, errors };
   }
 );
-
-export async function syncYouTubeChannels(): Promise<SyncResult> {
-  return syncChannelsFlow();
-}
