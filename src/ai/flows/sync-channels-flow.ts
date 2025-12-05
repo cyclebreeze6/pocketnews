@@ -1,11 +1,10 @@
-'use server';
 /**
  * @fileOverview Flow to sync all YouTube channels and add new videos.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
-import { fetchChannelVideosFlow, YouTubeVideoDetailsSchema } from './youtube-channel-videos-flow';
+import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 
 export const FetchResultSchema = z.object({

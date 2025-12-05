@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview Flow to sync a single YouTube channel.
  */
