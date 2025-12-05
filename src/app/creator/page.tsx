@@ -3,35 +3,35 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import Link from 'next/link';
-import { Video, Tv, Download, RefreshCw } from 'lucide-react';
+import { Video, Tv, RefreshCw, PlusSquare } from 'lucide-react';
 
 export default function CreatorDashboardPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">Creator Hub</h1>
       <p className="mb-8 text-muted-foreground">
-        Manage your content from one central place. Upload new videos, organize channels, and import content from YouTube.
+        Manage your content from one central place. Upload new videos, organize channels, and sync content from YouTube.
       </p>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5" /> Videos</CardTitle>
-            <CardDescription>Add, edit, and manage your video library.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><PlusSquare className="h-5 w-5" /> Add Videos</CardTitle>
+            <CardDescription>Add new videos one by one from a YouTube link.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/creator/videos">
-              <Button>Manage Videos</Button>
+            <Link href="/creator/videos/new">
+              <Button>Add a Video</Button>
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Download className="h-5 w-5" /> Import</CardTitle>
-            <CardDescription>Fetch and import videos from a YouTube channel.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5" /> Manage Videos</CardTitle>
+            <CardDescription>View, edit, and manage your entire video library.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/creator/import">
-              <Button>Import Videos</Button>
+            <Link href="/creator/videos">
+              <Button variant="secondary">Manage Library</Button>
             </Link>
           </CardContent>
         </Card>
@@ -42,7 +42,7 @@ export default function CreatorDashboardPage() {
           </CardHeader>
           <CardContent>
             <Link href="/creator/sync">
-              <Button>Sync Videos</Button>
+              <Button>Sync All Channels</Button>
             </Link>
           </CardContent>
         </Card>
