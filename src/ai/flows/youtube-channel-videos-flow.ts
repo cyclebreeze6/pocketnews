@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube Data API.
  *
