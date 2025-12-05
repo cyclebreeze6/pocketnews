@@ -33,53 +33,46 @@ async function getChannelIdFromUrl(url: string): Promise<string | null> {
     const urlParts = url.split('/').filter(p => p);
     const lastPart = urlParts[urlParts.length - 1];
 
+    if (!lastPart) return null;
+
+    // 1. Direct Channel ID URL
     if (url.includes('/channel/')) {
         return lastPart;
-    } 
-    
-    // For handles like /@MrBeast or legacy /c/MrBeast
-    if (url.includes('/@') || url.includes('/c/')) {
-       try {
-         const searchResponse = await youtube.search.list({
-             part: ['id'],
-             q: lastPart,
-             type: ['channel'],
-             maxResults: 1
-         });
-         // The search can be imprecise, so we need to be careful.
-         // A better approach would be a direct lookup if the API supported it for handles.
-         return searchResponse.data.items?.[0]?.id?.channelId || null;
-       } catch (e) {
-          console.error("Failed to resolve channel handle", e);
-          // Try a different method for handles starting with @
-          if(lastPart.startsWith('@')) {
-             try {
-                const searchResponse = await youtube.channels.list({
-                    part: ['id'],
-                    forUsername: lastPart.substring(1),
-                });
-                return searchResponse.data.items?.[0]?.id || null;
-             } catch (e2) {
-                console.error("Failed to resolve channel username", e2);
-                return null;
-             }
-          }
-          return null;
-       }
     }
+
+    // 2. Handle or Username URL (e.g., /@handle or /user/username or /c/customname)
+    const identifier = lastPart.startsWith('@') ? lastPart.substring(1) : lastPart;
     
-    // Fallback for user-provided vanity names like /user/MrBeast
     try {
-        const username = lastPart;
-        const channelResponse = await youtube.channels.list({
+        // First, try searching by the handle/name which is often reliable for handles.
+        const searchResponse = await youtube.search.list({
             part: ['id'],
-            forUsername: username
+            q: identifier,
+            type: ['channel'],
+            maxResults: 1
         });
-        return channelResponse.data.items?.[0]?.id || null;
-    } catch (e) {
-        console.error('Failed to resolve username URL', e);
-        return null;
+        const channelId = searchResponse.data.items?.[0]?.id?.channelId;
+        if (channelId) return channelId;
+
+    } catch (error) {
+        console.warn('YouTube search by handle failed, trying username fallback.', error);
     }
+    
+    try {
+        // Fallback for older /user/ or /c/ style URLs if search fails
+        const channelsResponse = await youtube.channels.list({
+            part: ['id'],
+            forUsername: identifier,
+            maxResults: 1
+        });
+        const channelId = channelsResponse.data.items?.[0]?.id;
+        if (channelId) return channelId;
+    }
+    catch (error) {
+         console.warn('YouTube forUsername lookup failed.', error);
+    }
+    
+    return null; // If all methods fail
 }
 
 

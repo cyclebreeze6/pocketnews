@@ -25,23 +25,49 @@ export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
 async function getChannelIdFromUrl(url: string): Promise<string | null> {
     const youtube = await getYoutubeClient();
-    const urlParts = url.split('/');
-    const lastPart = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
-    
+    const urlParts = url.split('/').filter(p => p);
+    const lastPart = urlParts[urlParts.length - 1];
+
+    if (!lastPart) return null;
+
+    // 1. Direct Channel ID URL
     if (url.includes('/channel/')) {
-        // Standard channel URL
         return lastPart;
-    } else if (url.includes('/@') || url.includes('/c/')) {
-        // Custom handle or legacy username URL
+    }
+
+    // 2. Handle or Username URL (e.g., /@handle or /user/username or /c/customname)
+    const identifier = lastPart.startsWith('@') ? lastPart.substring(1) : lastPart;
+    
+    try {
+        // First, try searching by the handle/name which is often reliable for handles.
         const searchResponse = await youtube.search.list({
             part: ['id'],
-            q: lastPart,
+            q: identifier,
             type: ['channel'],
             maxResults: 1
         });
-        return searchResponse.data.items?.[0]?.id?.channelId || null;
+        const channelId = searchResponse.data.items?.[0]?.id?.channelId;
+        if (channelId) return channelId;
+
+    } catch (error) {
+        console.warn('YouTube search by handle failed, trying username fallback.', error);
     }
-    return null; // Could not determine ID
+    
+    try {
+        // Fallback for older /user/ or /c/ style URLs if search fails
+        const channelsResponse = await youtube.channels.list({
+            part: ['id'],
+            forUsername: identifier,
+            maxResults: 1
+        });
+        const channelId = channelsResponse.data.items?.[0]?.id;
+        if (channelId) return channelId;
+    }
+    catch (error) {
+         console.warn('YouTube forUsername lookup failed.', error);
+    }
+    
+    return null; // If all methods fail
 }
 
 export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
@@ -79,7 +105,11 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
 
     } catch (error: any) {
         console.error('Error fetching channel info from YouTube API:', error);
-        throw new Error('Could not extract channel information from the YouTube API.');
+        // Provide a more specific error message to the user
+        if (error.message.includes('ID')) {
+             throw new Error('Could not find a valid YouTube channel ID from the provided URL. Please check the link.');
+        }
+        throw new Error('Could not extract channel information. The API may be unavailable or the URL is incorrect.');
     }
   }
 );
