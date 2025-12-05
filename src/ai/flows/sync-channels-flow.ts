@@ -10,9 +10,21 @@ import { ai } from '../genkit';
 import { z } from 'genkit';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import type { YouTubeVideoDetails } from './youtube-channel-videos-flow';
-import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
-import { initializeFirebase } from '../../firebase'; // Can now be called from server
-import { Channel } from '@/lib/types';
+import { initializeApp as initializeAdminApp, getApps as getAdminApps, getApp as getAdminApp } from 'firebase-admin/app';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
+import type { Channel } from '@/lib/types';
+import 'dotenv/config';
+
+
+// Server-side only Firebase Admin initialization
+function initializeFirebaseAdmin() {
+  if (!getAdminApps().length) {
+    return initializeAdminApp();
+  }
+  return getAdminApp();
+}
+const adminApp = initializeFirebaseAdmin();
+const firestore = getAdminFirestore(adminApp);
 
 
 const SyncResultSchema = z.object({
@@ -21,10 +33,6 @@ const SyncResultSchema = z.object({
   errors: z.array(z.string()).describe('A list of errors encountered during the sync process.'),
 });
 export type SyncResult = z.infer<typeof SyncResultSchema>;
-
-// We need a server-side instance of Firestore. initializeFirebase() will now provide
-// the Admin SDK instance when called from the server.
-const { firestore } = initializeFirebase() as { firestore: import('firebase-admin/firestore').Firestore };
 
 
 export const syncChannelsFlow = ai.defineFlow(
@@ -76,7 +84,7 @@ export const syncChannelsFlow = ai.defineFlow(
                     thumbnailUrl: videoData.thumbnailUrl,
                     channelId: channel.id, // Assign to the internal channel
                     contentCategory: 'Uncategorized', // Default category
-                    createdAt: serverTimestamp(),
+                    createdAt: new Date(), // Use current date for server timestamp
                     uploadDate: new Date().toISOString(),
                     views: Math.floor(Math.random() * 100), // Start with some random low views
                     watchTime: Math.floor(Math.random() * 100),
