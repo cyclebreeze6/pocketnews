@@ -2,7 +2,7 @@
 /**
  * @fileOverview A flow for fetching basic info from a YouTube channel using the YouTube Data API.
  *
- * - fetchYouTubeChannelInfo - Fetches a channel's logo, name, and description from a given URL.
+ * - fetchYouTubeChannelInfoFlow - Fetches a channel's logo, name, and description from a given URL.
  * - YouTubeChannelInfoInput - The input type for the flow.
  * - YouTubeChannelInfo - The output type for the flow.
  */
@@ -22,11 +22,6 @@ const YouTubeChannelInfoSchema = z.object({
   description: z.string().optional().describe("The channel's description."),
 });
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
-
-
-export async function fetchYouTubeChannelInfo(input: YouTubeChannelInfoInput): Promise<YouTubeChannelInfo> {
-  return fetchYouTubeChannelInfoFlow(input);
-}
 
 async function getChannelIdFromUrl(url: string): Promise<string | null> {
     const youtube = await getYoutubeClient();
@@ -49,8 +44,7 @@ async function getChannelIdFromUrl(url: string): Promise<string | null> {
     return null; // Could not determine ID
 }
 
-
-const fetchYouTubeChannelInfoFlow = ai.defineFlow(
+export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
   {
     name: 'fetchYouTubeChannelInfoFlow',
     inputSchema: YouTubeChannelInfoInputSchema,

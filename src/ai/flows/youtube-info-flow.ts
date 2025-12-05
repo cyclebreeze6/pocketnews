@@ -2,7 +2,7 @@
 /**
  * @fileOverview A flow for fetching YouTube video information.
  *
- * - fetchYouTubeVideoInfo - A function that fetches video details from a YouTube URL.
+ * - fetchYouTubeVideoInfoFlow - A function that fetches video details from a YouTube URL.
  * - YouTubeVideoInfoInput - The input type for the flow.
  * - YouTubeVideoInfo - The output type for the flow.
  */
@@ -24,11 +24,6 @@ const YouTubeVideoInfoSchema = z.object({
 });
 export type YouTubeVideoInfo = z.infer<typeof YouTubeVideoInfoSchema>;
 
-// This is the exported wrapper function that your client-side code will call.
-export async function fetchYouTubeVideoInfo(input: YouTubeVideoInfoInput): Promise<YouTubeVideoInfo> {
-  return fetchYouTubeVideoInfoFlow(input);
-}
-
 // Helper function to extract video ID from various YouTube URL formats
 function getYouTubeVideoId(url: string): string | null {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -36,7 +31,7 @@ function getYouTubeVideoId(url: string): string | null {
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-const fetchYouTubeVideoInfoFlow = ai.defineFlow(
+export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
   {
     name: 'fetchYouTubeVideoInfoFlow',
     inputSchema: YouTubeVideoInfoInputSchema,

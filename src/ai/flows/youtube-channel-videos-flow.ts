@@ -2,7 +2,7 @@
 /**
  * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube Data API.
  *
- * - fetchChannelVideos - Fetches a list of recent videos from a given channel URL.
+ * - fetchChannelVideosFlow - Fetches a list of recent videos from a given channel URL.
  * - YouTubeChannelVideosInput - The input type for the flow.
  * - YouTubeVideoDetails - The output type for a single video.
  */
@@ -27,11 +27,6 @@ export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 
 const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
 export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
-
-
-export async function fetchChannelVideos(input: YouTubeChannelVideosInput): Promise<YouTubeVideoList> {
-  return fetchChannelVideosFlow(input);
-}
 
 async function getChannelIdFromUrl(url: string): Promise<string | null> {
     const youtube = await getYoutubeClient();
@@ -88,7 +83,7 @@ async function getChannelIdFromUrl(url: string): Promise<string | null> {
 }
 
 
-const fetchChannelVideosFlow = ai.defineFlow(
+export const fetchChannelVideosFlow = ai.defineFlow(
   {
     name: 'fetchChannelVideosFlow',
     inputSchema: YouTubeChannelVideosInputSchema,

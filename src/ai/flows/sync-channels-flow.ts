@@ -2,13 +2,14 @@
 /**
  * @fileOverview A flow for syncing new videos from multiple YouTube channels.
  * 
- * - syncYouTubeChannels - The main function to trigger the sync process.
+ * - syncYouTubeChannelsFlow - The main function to trigger the sync process.
  * - SyncResult - The output type detailing how many videos were synced.
  */
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
-import { fetchChannelVideos, type YouTubeVideoDetails } from './youtube-channel-videos-flow';
+import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
+import type { YouTubeVideoDetails } from './youtube-channel-videos-flow';
 import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { initializeFirebase } from '../../firebase'; // Can now be called from server
 import { Channel } from '@/lib/types';
@@ -21,17 +22,12 @@ const SyncResultSchema = z.object({
 });
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 
-
-export async function syncYouTubeChannels(): Promise<SyncResult> {
-  return syncChannelsFlow();
-}
-
 // We need a server-side instance of Firestore. initializeFirebase() will now provide
 // the Admin SDK instance when called from the server.
 const { firestore } = initializeFirebase() as { firestore: import('firebase-admin/firestore').Firestore };
 
 
-const syncChannelsFlow = ai.defineFlow(
+export const syncChannelsFlow = ai.defineFlow(
   {
     name: 'syncChannelsFlow',
     outputSchema: SyncResultSchema,
@@ -62,7 +58,7 @@ const syncChannelsFlow = ai.defineFlow(
 
         try {
             // 3a. Fetch latest videos from the YouTube channel RSS feed
-            const fetchedVideos = await fetchChannelVideos({ channelUrl: channel.youtubeChannelUrl });
+            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl });
             syncedChannels++;
 
             // 3b. Filter out videos that already exist in our database
