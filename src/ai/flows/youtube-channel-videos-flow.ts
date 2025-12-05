@@ -45,20 +45,20 @@ function getIdentifierFromUrl(url: string): string | null {
             return pathParts[channelIdIndex + 1];
         }
 
+        // Check for @handle format
+        const handle = pathParts.find(p => p.startsWith('@'));
+        if (handle) {
+            return handle; // Return with '@'
+        }
+        
         // Check for /c/ or /user/ formats
         const legacyVanityIndex = pathParts.findIndex(p => p === 'c' || p === 'user');
         if (legacyVanityIndex !== -1 && pathParts[legacyVanityIndex + 1]) {
             return pathParts[legacyVanityIndex + 1];
         }
-        
-        // Check for @handle format
-        const handle = pathParts.find(p => p.startsWith('@'));
-        if (handle) {
-            return handle.substring(1); // Remove '@'
-        }
 
-        // As a fallback, take the last part of the path
-        if (pathParts.length > 0) {
+        // As a fallback, take the last part of the path if it seems like a name/handle
+        if (pathParts.length > 0 && !pathParts[pathParts.length - 1].startsWith('UC')) {
             return pathParts[pathParts.length - 1];
         }
 
