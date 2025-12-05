@@ -37,17 +37,32 @@ export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 function getIdentifierFromUrl(url: string): string | null {
     try {
         const urlObj = new URL(url);
-        const pathParts = urlObj.pathname.split('/').filter(p => p); // e.g., ['@handle'], ['channel', 'UC...'], ['user', 'name']
+        const pathParts = urlObj.pathname.split('/').filter(p => p);
 
-        if (pathParts.length === 0) return null;
+        // Check for /channel/UC... format
+        const channelIdIndex = pathParts.indexOf('channel');
+        if (channelIdIndex !== -1 && pathParts[channelIdIndex + 1]?.startsWith('UC')) {
+            return pathParts[channelIdIndex + 1];
+        }
+
+        // Check for /c/ or /user/ formats
+        const legacyVanityIndex = pathParts.findIndex(p => p === 'c' || p === 'user');
+        if (legacyVanityIndex !== -1 && pathParts[legacyVanityIndex + 1]) {
+            return pathParts[legacyVanityIndex + 1];
+        }
         
-        // Handle URLs like /@handle, /c/custom, /user/name, or just /name
-        // The last part of the path is usually the identifier.
-        const identifier = pathParts[pathParts.length - 1];
+        // Check for @handle format
+        const handle = pathParts.find(p => p.startsWith('@'));
+        if (handle) {
+            return handle.substring(1); // Remove '@'
+        }
 
-        // If it starts with @, remove it for the search query
-        return identifier.startsWith('@') ? identifier.substring(1) : identifier;
+        // As a fallback, take the last part of the path
+        if (pathParts.length > 0) {
+            return pathParts[pathParts.length - 1];
+        }
 
+        return null;
     } catch (e) {
         console.error("Invalid URL provided to getIdentifierFromUrl", e);
         return null;
