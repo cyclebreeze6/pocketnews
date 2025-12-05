@@ -4,17 +4,6 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import 'dotenv/config';
 
-// Initialize firebase-admin
-if (getApps().length === 0) {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    initializeApp({
-      credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
-    });
-  } else {
-    initializeApp();
-  }
-}
-
 // A leaner version of the Video type for this specific action
 type NewVideoData = {
   youtubeVideoId: string;
@@ -33,6 +22,18 @@ type NewVideoData = {
  * @param videos - An array of video data objects to save.
  */
 export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
+  if (!getApps().length) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      initializeApp({
+        credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+      });
+    } else {
+      // Fallback for environments where the service account key isn't set,
+      // relying on application default credentials.
+      initializeApp();
+    }
+  }
+
   if (!videos || videos.length === 0) {
     return;
   }

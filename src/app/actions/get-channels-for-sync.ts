@@ -5,24 +5,24 @@ import { getFirestore } from 'firebase-admin/firestore';
 import type { Channel } from '../../lib/types';
 import 'dotenv/config';
 
-// Initialize firebase-admin
-if (getApps().length === 0) {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    initializeApp({
-      credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
-    });
-  } else {
-    // For local development, it might use default credentials if available
-    initializeApp();
-  }
-}
-
 /**
  * Fetches channels that need syncing and all existing YouTube video IDs.
  * This is a server action and should only be called from server-side code.
  * @param channelId - Optional ID to fetch a single channel.
  */
 export async function getChannelsForSync(channelId?: string): Promise<{ channelsToSync: Channel[], existingYoutubeIds: string[] }> {
+  if (getApps().length === 0) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      initializeApp({
+        credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+      });
+    } else {
+      // Fallback for environments where the service account key isn't set,
+      // relying on application default credentials.
+      initializeApp();
+    }
+  }
+  
   const firestore = getFirestore();
   try {
     const channelsRef = firestore.collection('channels');
