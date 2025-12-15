@@ -120,10 +120,10 @@ export default function CategoryPage() {
         <div className="flex min-h-screen w-full flex-col">
             <SiteHeader />
             <main className="flex-1 py-12 md:py-16 text-center">
-                <h1 className="text-3xl font-bold tracking-tight mb-4 font-headline">
-                    Category: {categoryName}
-                </h1>
-                <p>No videos found in this category yet.</p>
+                <h2 className="text-2xl font-bold tracking-tight mb-4">
+                    No videos in {categoryName}
+                </h2>
+                <p>No videos found in this category yet. Check back later!</p>
             </main>
         </div>
      )
@@ -140,11 +140,6 @@ export default function CategoryPage() {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div className="px-4 md:px-0">
-                <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">
-                    Category: {categoryName}
-                </h1>
-            </div>
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
               <VideoPlayer youtubeId={currentVideo.youtubeVideoId} key={currentVideo.id} onEnd={handleVideoEnd} />
             </div>
