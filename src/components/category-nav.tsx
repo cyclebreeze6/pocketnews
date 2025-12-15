@@ -7,7 +7,7 @@ import { cn } from '../lib/utils';
 import type { Category } from '../lib/types';
 import { useCollection, useFirebase, useMemoFirebase } from '../firebase';
 import { collection } from 'firebase/firestore';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,14 +15,15 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Button } from './ui/button';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Menu } from 'lucide-react';
 import { useIsMobile } from '../hooks/use-mobile';
-import { ScrollArea } from './ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 
 export function CategoryNav() {
   const pathname = usePathname();
   const { firestore } = useFirebase();
   const isMobile = useIsMobile();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories, isLoading } = useCollection<Category>(categoriesQuery);
@@ -38,15 +39,22 @@ export function CategoryNav() {
   const isHomeActive = pathname === '/';
   
   const MAX_VISIBLE_DESKTOP = 6;
-  const visibleCategories = !isMobile ? categories.slice(0, MAX_VISIBLE_DESKTOP) : categories;
-  const hiddenCategories = !isMobile && categories.length > MAX_VISIBLE_DESKTOP ? categories.slice(MAX_VISIBLE_DESKTOP) : [];
+  const MAX_VISIBLE_MOBILE = 4;
+  
+  const visibleCategoriesDesktop = categories.slice(0, MAX_VISIBLE_DESKTOP);
+  const hiddenCategoriesDesktop = categories.length > MAX_VISIBLE_DESKTOP ? categories.slice(MAX_VISIBLE_DESKTOP) : [];
 
-  const CategoryLink = ({ href, children, isActive }: { href: string, children: React.ReactNode, isActive: boolean }) => (
+  const visibleCategoriesMobile = categories.slice(0, MAX_VISIBLE_MOBILE);
+  const hiddenCategoriesMobile = categories.length > MAX_VISIBLE_MOBILE ? categories.slice(MAX_VISIBLE_MOBILE) : [];
+
+  const CategoryLink = ({ href, children, isActive, className, onClick }: { href: string, children: React.ReactNode, isActive: boolean, className?: string, onClick?: () => void }) => (
     <Link
       href={href}
+      onClick={onClick}
       className={cn(
         'relative inline-block px-2 py-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap',
-        isActive ? 'text-primary' : 'text-muted-foreground'
+        isActive ? 'text-primary' : 'text-muted-foreground',
+        className,
       )}
     >
       {children}
@@ -56,22 +64,57 @@ export function CategoryNav() {
     </Link>
   );
 
+  const MobileSheet = () => (
+     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary px-2">
+            More
+            <Menu className="h-4 w-4" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-[240px]">
+        <SheetHeader>
+          <SheetTitle>All Categories</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col space-y-2 mt-4">
+             {hiddenCategoriesMobile.map((category) => {
+                const href = `/category/${encodeURIComponent(category.name)}`;
+                return (
+                    <Link
+                        key={category.id}
+                        href={href}
+                        onClick={() => setIsSheetOpen(false)}
+                        className={cn(
+                            'p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-primary', 
+                            pathname === href && 'bg-accent text-primary'
+                        )}
+                    >
+                        {category.name}
+                    </Link>
+                );
+            })}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
+
   if (isMobile) {
     return (
         <nav className="border-b border-border/40 overflow-hidden">
-            <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex items-center h-12 px-4 space-x-4">
-                    <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
-                    {categories.map((category) => {
+            <div className="container flex items-center justify-between h-12 px-2">
+                <div className="flex items-center">
+                    <CategoryLink href="/" isActive={isHomeActive} className="text-xs px-1.5">My Headlines</CategoryLink>
+                    {visibleCategoriesMobile.map((category) => {
                         const href = `/category/${encodeURIComponent(category.name)}`;
                         const isActive = pathname === href;
                         return (
-                            <CategoryLink key={category.id} href={href} isActive={isActive}>{category.name}</CategoryLink>
+                            <CategoryLink key={category.id} href={href} isActive={isActive} className="text-xs px-1.5">{category.name}</CategoryLink>
                         );
                     })}
                 </div>
-                <div className="h-px w-full border-b border-border/40 -translate-y-px"></div>
-            </ScrollArea>
+                 {hiddenCategoriesMobile.length > 0 && <MobileSheet />}
+            </div>
         </nav>
     )
   }
@@ -83,7 +126,7 @@ export function CategoryNav() {
             <li>
                 <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
             </li>
-          {visibleCategories.map((category) => {
+          {visibleCategoriesDesktop.map((category) => {
             const href = `/category/${encodeURIComponent(category.name)}`;
             const isActive = pathname === href;
             return (
@@ -92,7 +135,7 @@ export function CategoryNav() {
               </li>
             );
           })}
-          {hiddenCategories.length > 0 && (
+          {hiddenCategoriesDesktop.length > 0 && (
              <li>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -102,7 +145,7 @@ export function CategoryNav() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {hiddenCategories.map(category => {
+                    {hiddenCategoriesDesktop.map(category => {
                          const href = `/category/${encodeURIComponent(category.name)}`;
                          const isActive = pathname === href;
                         return (
