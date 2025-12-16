@@ -74,7 +74,6 @@ export default function Home() {
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
 
-  // Simplified query: always fetch the latest 20 videos, no follow-based filtering.
   const videosQuery = useMemoFirebase(() => 
     query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20)),
     [firestore]
@@ -329,9 +328,9 @@ export default function Home() {
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Coming Soon!</DialogTitle>
+            <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
             <DialogDescription>
-              Premium membership access with ad-free viewing is on its way. Stay tuned!
+             Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

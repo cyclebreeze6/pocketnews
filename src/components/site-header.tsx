@@ -40,6 +40,14 @@ import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
 import Image from 'next/image';
 import Logo from '../app/POCKETNEWSLOGOlight.png';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -54,6 +62,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const auth = useAuth();
   const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const router = useRouter(); 
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
@@ -74,6 +83,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const [showNotificationDot, setShowNotificationDot] = useState(false);
 
   useEffect(() => {
+    // This effect runs only on the client side
     if (recentVideos && recentVideos.length > 0) {
       const latestVideoTimestamp = toDate(recentVideos[0].createdAt).getTime();
       const lastSeenTimestamp = localStorage.getItem('lastSeenVideoTimestamp');
@@ -246,6 +256,19 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         {!hideCategoryNav && <CategoryNav />}
       </header>
       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={handleLoginSuccess} />
+        <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
+            <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
+                <DialogDescription>
+                Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
+            </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </>
   );
 }

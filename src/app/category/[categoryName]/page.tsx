@@ -254,9 +254,9 @@ export default function CategoryPage() {
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Coming Soon!</DialogTitle>
+            <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
             <DialogDescription>
-              Premium membership access with ad-free viewing is on its way. Stay tuned!
+              Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
