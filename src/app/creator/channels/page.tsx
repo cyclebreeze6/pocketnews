@@ -21,7 +21,8 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
-import { fetchChannelVideos, type YouTubeVideoDetails } from '../../actions/youtube-channel-videos-flow';
+import { fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
+import type { YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { useRouter } from 'next/navigation';
 
@@ -104,9 +105,9 @@ export default function CreatorChannelsPage() {
             setFetchedLogoUrl(info.logoUrl);
             toast({ title: "Channel info fetched!", description: `Found info for ${info.name}.` });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to fetch channel info:", error);
-        toast({ variant: 'destructive', title: 'Could not fetch info', description: 'Please check the URL and try again.' });
+        toast({ variant: 'destructive', title: 'Could not fetch info', description: 'Please check the URL and try again. ' + error.message });
     } finally {
         setIsFetchingInfo(false);
     }
