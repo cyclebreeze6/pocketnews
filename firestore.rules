@@ -94,11 +94,12 @@ service cloud.firestore {
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
       allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
     }
-    
-    // This rule specifically allows listing the entire videos collection.
+
+    // This rule allows any authenticated user to query the 'videos' collection.
     match /videos {
-        allow list: if isSignedIn();
+      allow list: if isSignedIn();
     }
+    
 
     match /roles_admin/{userId} {
       // For bootstrapping, allow a user to make themselves an admin.
