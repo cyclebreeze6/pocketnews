@@ -8,7 +8,7 @@ import { useToast } from '../../../hooks/use-toast';
 import { Loader2, Search, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { searchYouTubeVideos } from '../../actions/youtube-search-flow';
-import type { YouTubeVideoDetails } from '../../actions/youtube-search-flow';
+import type { YouTubeVideoDetails } from '../../../ai/flows/youtube-search-flow';
 import { useRouter } from 'next/navigation';
 
 export default function CreatorCurationPage() {
