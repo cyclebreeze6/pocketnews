@@ -68,7 +68,9 @@ export function VideoPlayer({ youtubeId, onEnd }: VideoPlayerProps) {
   const onReady = (event: { target: YouTubePlayer }) => {
     setPlayer(event.target);
     setIsPlayerReady(true);
-    event.target.playVideo();
+    if (event.target) {
+      event.target.playVideo();
+    }
   };
 
   const onStateChange = (event: { data: number }) => {
