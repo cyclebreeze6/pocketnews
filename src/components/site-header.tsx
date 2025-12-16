@@ -39,6 +39,7 @@ import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
 import Image from 'next/image';
+import Logo from '../app/POCKETNEWSLOGOlight.png';
 
 
 export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNav?: boolean }) {
@@ -81,7 +82,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8 border-b border-border/40">
           <div className="mr-4 flex">
             <Link href="/" className="flex items-center space-x-2">
-               <Image src="/POCKETNEWSLOGOlight.png" alt="Pocketnews TV" width={24} height={24} />
+               <Image src={Logo} alt="Pocketnews TV" width={24} height={24} />
               <span className="font-bold sm:inline-block font-headline">
                 Pocketnews TV
               </span>
