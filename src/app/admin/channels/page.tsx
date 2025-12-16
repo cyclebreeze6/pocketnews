@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, DownloadCloud, RefreshCw } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, DownloadCloud, RefreshCw, UploadCloud } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,12 +21,16 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
-import { syncSingleYouTubeChannel } from '../../actions/sync-single-channel-flow';
+import { fetchChannelVideos, type YouTubeVideoDetails } from '../../actions/youtube-channel-videos-flow';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
+import { useRouter } from 'next/navigation';
+
 
 export default function AdminChannelsPage() {
   const { firestore } = useFirebase();
   const storage = useStorage();
   const { toast } = useToast();
+  const router = useRouter();
 
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels } = useCollection<Channel>(channelsQuery);
@@ -40,7 +44,11 @@ export default function AdminChannelsPage() {
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingInfo, setIsFetchingInfo] = useState(false);
+  
+  const [isSyncing, setIsSyncing] = useState(false);
   const [syncingChannelId, setSyncingChannelId] = useState<string | null>(null);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [videosToImport, setVideosToImport] = useState<YouTubeVideoDetails[]>([]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,21 +172,39 @@ export default function AdminChannelsPage() {
     }
   };
 
-  const handleSyncChannel = async (channelId: string, channelName: string) => {
-    setSyncingChannelId(channelId);
+  const handleOpenSyncDialog = async (channel: Channel) => {
+    if (!channel.youtubeChannelUrl) {
+        toast({ variant: 'destructive', title: 'No YouTube URL', description: 'This channel does not have a YouTube URL linked.' });
+        return;
+    }
+
+    setSyncingChannelId(channel.id);
+    setIsSyncing(true);
+    setVideosToImport([]);
+    setIsSyncDialogOpen(true);
+
     try {
-      const result = await syncSingleYouTubeChannel(channelId);
-      if (result.errors && result.errors.length > 0) {
-        toast({ variant: 'destructive', title: `Sync for ${channelName} failed`, description: result.errors[0] });
-      } else {
-        toast({ title: 'Sync complete!', description: `Added ${result.newVideosAdded} new videos to ${channelName}.` });
-      }
+        const videos = await fetchChannelVideos({ channelUrl: channel.youtubeChannelUrl });
+        setVideosToImport(videos);
+        if (videos.length === 0) {
+            toast({ title: 'No recent videos found.' });
+        }
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'An error occurred', description: error.message || 'Could not sync channel.' });
+        toast({ variant: 'destructive', title: 'Failed to fetch videos', description: error.message || 'Could not fetch videos for this channel.' });
+        setIsSyncDialogOpen(false); // Close dialog on error
     } finally {
-      setSyncingChannelId(null);
+        setIsSyncing(false);
+        setSyncingChannelId(null);
     }
   };
+
+  const handleImportVideo = (video: YouTubeVideoDetails) => {
+    const youtubeUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
+    // Redirect to the new video page with the URL pre-filled
+    router.push(`/creator/videos/new?youtubeUrl=${encodeURIComponent(youtubeUrl)}`);
+    setIsSyncDialogOpen(false); // Close the dialog after initiating import
+  };
+
 
   return (
     <div>
@@ -293,7 +319,7 @@ export default function AdminChannelsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                          <DropdownMenuItem 
-                            onClick={() => handleSyncChannel(channel.id, channel.name)} 
+                            onClick={() => handleOpenSyncDialog(channel)} 
                             disabled={!channel.youtubeChannelUrl || syncingChannelId === channel.id}>
                           {syncingChannelId === channel.id ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -316,6 +342,48 @@ export default function AdminChannelsPage() {
           </Table>
         </CardContent>
       </Card>
+      
+      <Dialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Videos</DialogTitle>
+            <DialogDescription>
+              Select videos to import into your library.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto p-1">
+            {isSyncing ? (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : videosToImport.length > 0 ? (
+              <div className="space-y-4">
+                {videosToImport.map((video) => (
+                  <div key={video.videoId} className="flex items-center gap-4 p-2 rounded-lg border">
+                    <Image
+                      src={video.thumbnailUrl}
+                      alt={video.title}
+                      width={120}
+                      height={68}
+                      className="rounded-md aspect-video object-cover"
+                    />
+                    <div className="flex-grow">
+                      <p className="font-semibold line-clamp-2">{video.title}</p>
+                      <p className="text-xs text-muted-foreground">{video.authorName}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleImportVideo(video)}>
+                      <UploadCloud className="mr-2 h-4 w-4" />
+                      Import
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No recent videos found to import.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
