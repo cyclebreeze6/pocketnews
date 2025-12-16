@@ -31,15 +31,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthDialog } from './auth-dialog';
 import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '../firebase';
 import type { Video, Channel, UserProfile } from '../lib/types';
-import { collection, query, where, limit, doc, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
 import Image from 'next/image';
 import Logo from '../app/POCKETNEWSLOGOlight.png';
+
+const toDate = (timestamp: Timestamp | Date | string): Date => {
+    if (timestamp instanceof Timestamp) {
+        return timestamp.toDate();
+    }
+    return new Date(timestamp);
+};
 
 
 export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNav?: boolean }) {
@@ -63,6 +70,27 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const { data: recentVideos } = useCollection<Video>(recentVideosQuery);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels } = useCollection<Channel>(channelsQuery);
+  
+  const [showNotificationDot, setShowNotificationDot] = useState(false);
+
+  useEffect(() => {
+    if (recentVideos && recentVideos.length > 0) {
+      const latestVideoTimestamp = toDate(recentVideos[0].createdAt).getTime();
+      const lastSeenTimestamp = localStorage.getItem('lastSeenVideoTimestamp');
+      
+      if (!lastSeenTimestamp || latestVideoTimestamp > parseInt(lastSeenTimestamp, 10)) {
+        setShowNotificationDot(true);
+      }
+    }
+  }, [recentVideos]);
+  
+  const handlePopoverOpen = (isOpen: boolean) => {
+    if (isOpen && recentVideos && recentVideos.length > 0) {
+      const latestVideoTimestamp = toDate(recentVideos[0].createdAt).getTime();
+      localStorage.setItem('lastSeenVideoTimestamp', latestVideoTimestamp.toString());
+      setShowNotificationDot(false);
+    }
+  };
 
 
   const handleLoginSuccess = () => {
@@ -94,11 +122,11 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Search className="h-5 w-5" />
               </Button>
-              <Popover>
+              <Popover onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative" disabled={!user}>
                       <Bell className="h-5 w-5" />
-                      {recentVideos && recentVideos.length > 0 && (
+                      {showNotificationDot && (
                         <span className="absolute top-1 right-1 flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
