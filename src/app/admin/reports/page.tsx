@@ -4,7 +4,7 @@
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, updateDocumentNonBlocking } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase';
 import type { Report } from '../../../lib/types';
 import { collection, doc, Timestamp, query, orderBy } from 'firebase/firestore';
 import { MoreHorizontal, Trash2, CheckCircle, Eye } from 'lucide-react';
@@ -48,11 +48,9 @@ export default function AdminReportsPage() {
   };
   
   const handleDeleteVideo = (videoId: string) => {
-    // This is a placeholder for now. Deleting documents requires care.
     if(confirm(`Are you sure you want to delete video ID: ${videoId}? This action cannot be undone.`)) {
-        console.log("Deleting video: ", videoId);
-        // const videoRef = doc(firestore, 'videos', videoId);
-        // deleteDocumentNonBlocking(videoRef);
+        const videoRef = doc(firestore, 'videos', videoId);
+        deleteDocumentNonBlocking(videoRef);
     }
   }
 
