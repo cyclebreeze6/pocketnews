@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { useToast } from '../../../hooks/use-toast';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { syncYouTubeChannels } from '../../actions/sync-channels-flow';
+import type { FetchResult } from '../../../ai/flows/sync-channels-flow';
 import { Alert, AlertTitle, AlertDescription } from '../../../components/ui/alert';
 
 export default function CreatorSyncPage() {
   const [isFetching, setIsFetching] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ newVideosAdded: number; syncedChannels: number; errors?: string[] } | null>(null);
+  const [syncResult, setSyncResult] = useState<FetchResult | null>(null);
   const { toast } = useToast();
 
   const handleSync = async () => {

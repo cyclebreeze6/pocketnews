@@ -6,5 +6,3 @@ import type { FetchResult } from '../../ai/flows/sync-channels-flow';
 export async function syncYouTubeChannels(): Promise<FetchResult> {
   return fetchNewYouTubeVideosFlow();
 }
-
-export type { FetchResult };
