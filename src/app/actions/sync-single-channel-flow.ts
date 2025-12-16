@@ -5,5 +5,3 @@ import { syncSingleYouTubeChannelFlow, type SyncResult } from '../../ai/flows/sy
 export async function syncSingleYouTubeChannel(channelId: string): Promise<SyncResult> {
   return syncSingleYouTubeChannelFlow(channelId);
 }
-
-export type { SyncResult };
