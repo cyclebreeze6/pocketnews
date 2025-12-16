@@ -6,5 +6,3 @@ import type { YouTubeChannelInfoInput, YouTubeChannelInfo } from '../../ai/flows
 export async function fetchYouTubeChannelInfo(input: YouTubeChannelInfoInput): Promise<YouTubeChannelInfo> {
   return fetchYouTubeChannelInfoFlow(input);
 }
-
-export type { YouTubeChannelInfoInput, YouTubeChannelInfo };
