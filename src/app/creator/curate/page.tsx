@@ -47,9 +47,10 @@ export default function CreatorCurationPage() {
   };
 
   const handleImport = (video: YouTubeVideoDetails) => {
-    // Navigate to the 'new video' page and pass the YouTube URL as a query parameter
+    // Navigate to the 'new video' page and pass the YouTube URL and a redirect param
     const youtubeUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
-    router.push(`/creator/videos/new?youtubeUrl=${encodeURIComponent(youtubeUrl)}`);
+    const redirectUrl = '/creator/curate';
+    router.push(`/creator/videos/new?youtubeUrl=${encodeURIComponent(youtubeUrl)}&redirect=${encodeURIComponent(redirectUrl)}`);
   };
 
 

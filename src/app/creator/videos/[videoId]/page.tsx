@@ -217,7 +217,13 @@ export default function VideoEditPage() {
       toast({ title: 'Video Updated!', description: `${dataToSave.title} has been updated.` });
     }
     setIsSaving(false);
-    router.push('/creator/videos');
+    
+    const redirectUrl = searchParams.get('redirect');
+    if (redirectUrl) {
+      router.push(redirectUrl);
+    } else {
+      router.push('/creator/videos');
+    }
   };
   
   if (videoLoading) {
