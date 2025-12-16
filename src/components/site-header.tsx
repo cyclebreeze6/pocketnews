@@ -34,7 +34,7 @@ import {
 import { useState, useEffect } from 'react';
 import { AuthDialog } from './auth-dialog';
 import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '../firebase';
-import type { Video, Channel, UserProfile, UserFollow } from '../lib/types';
+import type { Video, Channel, UserProfile } from '../lib/types';
 import { collection, query, where, limit, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
@@ -59,26 +59,13 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const userFollowsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'follows') : null, [firestore, user]);
-  const { data: userFollows } = useCollection<UserFollow>(userFollowsQuery);
-
-  const followedChannelIds = useMemoFirebase(() => userFollows ? userFollows.map(f => f.id) : [], [userFollows]);
-
   const recentVideosQuery = useMemoFirebase(() => {
-    if (!followedChannelIds || followedChannelIds.length === 0) {
-      return query(
-        collection(firestore, 'videos'),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-    }
     return query(
-        collection(firestore, 'videos'),
-        where('channelId', 'in', followedChannelIds),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      )
-  }, [firestore, followedChannelIds]);
+      collection(firestore, 'videos'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+  }, [firestore]);
 
   const { data: recentVideos } = useCollection<Video>(recentVideosQuery);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
@@ -154,7 +141,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                           Notifications
                         </h4>
                         <p className="text-sm text-muted-foreground">
-                          Recent uploads from channels you follow.
+                          Recent uploads from all channels.
                         </p>
                       </div>
                        <Separator />

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking } from '../../../firebase';
 import SiteHeader from '../../../components/site-header';
 import { VideoPlayer } from '../../../components/video-player';
 import { Badge } from '../../../components/ui/badge';
@@ -13,7 +13,7 @@ import { Button } from '../../../components/ui/button';
 import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardContent } from '../../../components/ui/card';
-import type { Video, Channel, UserFollow } from '../../../lib/types';
+import type { Video, Channel } from '../../../lib/types';
 import { collection, query, where, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { useState, useEffect } from 'react';
@@ -69,9 +69,6 @@ export default function CategoryPage() {
   );
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
 
-  const userFollowsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'follows') : null, [firestore, user]);
-  const { data: userFollows } = useCollection<UserFollow>(userFollowsQuery);
-  
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   
@@ -84,9 +81,7 @@ export default function CategoryPage() {
   }, [videos]);
   
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
-  const isFollowingCurrentChannel = userFollows?.some(f => f.id === currentChannel?.id);
   
-
    useEffect(() => {
     if (currentVideo && user) {
         const historyRef = doc(firestore, 'users', user.uid, 'history', currentVideo.id);
@@ -124,26 +119,6 @@ export default function CategoryPage() {
             break;
         }
     };
-    
-    const handleFollowToggle = () => {
-        if (!user || !currentChannel) {
-            toast({variant: 'destructive', title: 'You must be logged in to follow channels.'});
-            return;
-        };
-
-        const followRef = doc(firestore, 'users', user.uid, 'follows', currentChannel.id);
-
-        if (isFollowingCurrentChannel) {
-            // Unfollow
-            deleteDocumentNonBlocking(followRef);
-            toast({title: `Unfollowed ${currentChannel.name}`});
-        } else {
-            // Follow
-            setDocumentNonBlocking(followRef, { followedAt: serverTimestamp() }, {});
-            toast({title: `Followed ${currentChannel.name}!`});
-        }
-    };
-
 
   if (videosLoading || channelsLoading) {
     return <div>Loading...</div>;
@@ -193,9 +168,9 @@ export default function CategoryPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                       <Button variant={isFollowingCurrentChannel ? 'secondary' : 'outline'} onClick={handleFollowToggle} disabled={!user}>
-                            {isFollowingCurrentChannel ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                            {isFollowingCurrentChannel ? 'Following' : 'Follow'}
+                       <Button variant={'outline'} onClick={() => setIsPremiumDialogOpen(true)}>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Follow
                         </Button>
                         <Popover>
                             <PopoverTrigger asChild>
