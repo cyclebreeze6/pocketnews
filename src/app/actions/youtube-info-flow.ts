@@ -6,6 +6,3 @@ import { fetchYouTubeVideoInfoFlow, type YouTubeVideoInfoInput, type YouTubeVide
 export async function fetchYouTubeVideoInfo(input: YouTubeVideoInfoInput): Promise<YouTubeVideoInfo> {
   return fetchYouTubeVideoInfoFlow(input);
 }
-
-// Re-exporting types for client-side usage if needed elsewhere
-export type { YouTubeVideoInfoInput, YouTubeVideoInfo };
