@@ -82,7 +82,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8 border-b border-border/40">
           <div className="mr-4 flex">
             <Link href="/" className="flex items-center space-x-2">
-               <Image src={Logo} alt="Pocketnews TV" width={108} height={108} />
+               <Image src={Logo} alt="Pocketnews TV" width={120} height={120} />
             </Link>
           </div>
 
