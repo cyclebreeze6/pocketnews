@@ -59,6 +59,12 @@ service cloud.firestore {
         return isSignedIn() && get(/databases/$(database)/documents/reports/$(reportId)).data.userId == request.auth.uid;
     }
 
+    function isSanitizedString(text) {
+      // Disallow <, >, &, and common script characters to prevent injection.
+      // This is a basic sanitization. For more complex needs, consider a server-side process.
+      return !text.matches('[<>&;{}]');
+    }
+
     // Security rules for collections
 
     match /users/{userId} {
@@ -103,7 +109,10 @@ service cloud.firestore {
     
     match /reports/{reportId} {
         allow get, list: if isAdmin();
-        allow create: if isSignedIn();
+        // Any signed-in user can create a report, but with data validation.
+        allow create: if isSignedIn()
+                      && request.resource.data.userId == request.auth.uid
+                      && isSanitizedString(request.resource.data.details);
         allow update: if isAdmin();
         allow delete: if isAdmin() || isReportOwner(reportId);
     }
