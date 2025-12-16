@@ -34,7 +34,7 @@ import {
 import { useState, useEffect } from 'react';
 import { AuthDialog } from './auth-dialog';
 import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '../firebase';
-import type { Video, Channel, UserProfile } from '../lib/types';
+import type { Video, Channel, UserProfile, UserFollow } from '../lib/types';
 import { collection, query, where, limit, doc, orderBy, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
@@ -59,13 +59,26 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const recentVideosQuery = useMemoFirebase(() => 
-    query(
-      collection(firestore, 'videos'),
-      orderBy('createdAt', 'desc'),
-      limit(5)
-    )
-  , [firestore]);
+  const userFollowsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'follows') : null, [firestore, user]);
+  const { data: userFollows } = useCollection<UserFollow>(userFollowsQuery);
+
+  const followedChannelIds = useMemoFirebase(() => userFollows ? userFollows.map(f => f.id) : [], [userFollows]);
+
+  const recentVideosQuery = useMemoFirebase(() => {
+    if (!followedChannelIds || followedChannelIds.length === 0) {
+      return query(
+        collection(firestore, 'videos'),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      );
+    }
+    return query(
+        collection(firestore, 'videos'),
+        where('channelId', 'in', followedChannelIds),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      )
+  }, [firestore, followedChannelIds]);
 
   const { data: recentVideos } = useCollection<Video>(recentVideosQuery);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
@@ -104,10 +117,10 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8 border-b border-border/40">
+        <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8">
           <div className="mr-4 flex">
             <Link href="/" className="flex items-center space-x-2">
-               <Image src={Logo} alt="Pocketnews TV" width={120} height={30} />
+               <Image src={Logo} alt="Pocketnews TV" width={180} height={45} />
             </Link>
           </div>
 

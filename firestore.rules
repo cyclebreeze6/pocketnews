@@ -68,6 +68,10 @@ service cloud.firestore {
       match /history/{videoId} {
          allow read, write, delete: if isOwner(userId);
       }
+      
+      match /follows/{channelId} {
+         allow read, write, delete: if isOwner(userId);
+      }
     }
 
     match /channels/{channelId} {

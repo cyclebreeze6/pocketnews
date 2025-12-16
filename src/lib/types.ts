@@ -51,3 +51,8 @@ export interface WatchHistory {
   videoId: string;
   watchedAt: Timestamp;
 }
+
+export interface UserFollow {
+    id: string; // This will be the channelId
+    followedAt: Timestamp;
+}
