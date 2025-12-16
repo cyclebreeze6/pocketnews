@@ -65,10 +65,6 @@ service cloud.firestore {
       allow update: if (isExistingOwner(userId) && userCanUpdateSelf()) || isExistingAdmin();
       allow delete: if isExistingOwner(userId) || isExistingAdmin();
 
-      match /follows/{channelId} {
-        allow read, write, delete: if isOwner(userId);
-      }
-
       match /history/{videoId} {
          allow read, write, delete: if isOwner(userId);
       }

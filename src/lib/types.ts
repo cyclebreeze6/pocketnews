@@ -45,13 +45,6 @@ export interface UserProfile extends User {
   // You can add more user-specific fields here
 }
 
-export interface UserFollow {
-  id: string; // Document ID from Firestore
-  channelId: string;
-  userId: string;
-  followedAt: Timestamp;
-}
-
 export interface WatchHistory {
   id: string;
   userId: string;

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -33,7 +34,7 @@ import {
 import { useState } from 'react';
 import { AuthDialog } from './auth-dialog';
 import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '../firebase';
-import type { Video, Channel, UserFollow, UserProfile } from '../lib/types';
+import type { Video, Channel, UserProfile } from '../lib/types';
 import { collection, query, where, limit, doc, orderBy } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
@@ -51,19 +52,13 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const followsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'follows') : null, [firestore, user]);
-  const { data: followedChannels } = useCollection<UserFollow>(followsQuery);
-
-  const recentVideosQuery = useMemoFirebase(() => {
-    if (!followedChannels || followedChannels.length === 0) return null;
-    const followedChannelIds = followedChannels.map(f => f.channelId);
-    return query(
+  const recentVideosQuery = useMemoFirebase(() => 
+    query(
       collection(firestore, 'videos'),
-      where('channelId', 'in', followedChannelIds),
       orderBy('createdAt', 'desc'),
       limit(5)
-    );
-  }, [firestore, followedChannels]);
+    )
+  , [firestore]);
 
   const { data: recentVideos } = useCollection<Video>(recentVideosQuery);
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);

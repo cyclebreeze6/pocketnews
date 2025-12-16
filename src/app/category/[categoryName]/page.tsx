@@ -13,7 +13,7 @@ import { Button } from '../../../components/ui/button';
 import { Share, Star, PlayCircle, Check, Copy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardContent } from '../../../components/ui/card';
-import type { Video, Channel, UserFollow } from '../../../lib/types';
+import type { Video, Channel } from '../../../lib/types';
 import { collection, query, where, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { useState, useEffect } from 'react';
@@ -82,10 +82,6 @@ export default function CategoryPage() {
   
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
   
-  const followRef = useMemoFirebase(() => user && currentVideo ? doc(firestore, 'users', user.uid, 'follows', currentVideo.channelId) : null, [user, currentVideo, firestore]);
-  const { data: userFollow } = useDoc<UserFollow>(followRef);
-  const isFollowing = !!userFollow;
-
 
    useEffect(() => {
     if (currentVideo && user) {
@@ -98,28 +94,6 @@ export default function CategoryPage() {
   }, [currentVideo, user, firestore]);
   
   const otherVideos = videos?.slice(0, 10);
-  
-  const handleFollowToggle = () => {
-    if (!user || !currentChannel) {
-      toast({
-        variant: 'destructive',
-        title: 'Please log in to follow channels.',
-      });
-      return;
-    }
-    const followDocRef = doc(firestore, 'users', user.uid, 'follows', currentChannel.id);
-    if (isFollowing) {
-      deleteDocumentNonBlocking(followDocRef);
-      toast({ title: `Unfollowed ${currentChannel.name}` });
-    } else {
-      setDocumentNonBlocking(followDocRef, {
-        channelId: currentChannel.id,
-        userId: user.uid,
-        followedAt: serverTimestamp(),
-      }, { merge: true });
-      toast({ title: `Followed ${currentChannel.name}!` });
-    }
-  };
   
     const handleVideoEnd = () => {
     if (!videos || !currentVideo) return;
@@ -196,9 +170,9 @@ export default function CategoryPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                       <Button variant={isFollowing ? 'secondary': 'outline'} onClick={handleFollowToggle}>
-                            {isFollowing ? <Check className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
-                            {isFollowing ? 'Following' : 'Follow'}
+                       <Button variant='outline'>
+                            <Star className="mr-2 h-4 w-4" />
+                            Follow
                         </Button>
                         <Popover>
                             <PopoverTrigger asChild>
