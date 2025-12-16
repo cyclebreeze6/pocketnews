@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { fetchYouTubeVideoInfo } from '../../../actions/youtube-info-flow';
 import type { YouTubeVideoInfo } from '../../../../ai/flows/youtube-info-flow';
 import { Textarea } from '../../../../components/ui/textarea';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import {
   Dialog,
@@ -31,6 +31,8 @@ export default function VideoEditPage() {
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const videoId = params.videoId as string;
   const isNewVideo = videoId === 'new';
 
@@ -57,6 +59,14 @@ export default function VideoEditPage() {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  useEffect(() => {
+    // If there's a URL in the query params, set it and fetch details
+    const urlFromQuery = searchParams.get('youtubeUrl');
+    if (urlFromQuery && isNewVideo) {
+      setYoutubeUrl(urlFromQuery);
+      handleFetchDetails(urlFromQuery);
+    }
+  }, [searchParams, isNewVideo]);
 
   useEffect(() => {
     if (existingVideo) {
@@ -64,14 +74,15 @@ export default function VideoEditPage() {
     }
   }, [existingVideo]);
 
-  const handleFetchDetails = async () => {
-    if (!youtubeUrl) {
+  const handleFetchDetails = async (urlToFetch?: string) => {
+    const finalUrl = urlToFetch || youtubeUrl;
+    if (!finalUrl) {
       toast({ variant: 'destructive', title: 'Please enter a YouTube URL.' });
       return;
     }
     setIsFetching(true);
     try {
-      const videoInfo: YouTubeVideoInfo = await fetchYouTubeVideoInfo({ videoUrl: youtubeUrl });
+      const videoInfo: YouTubeVideoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
       if (videoInfo && videoInfo.title) {
         setVideoDetails(prev => ({
             ...prev,
@@ -243,7 +254,7 @@ export default function VideoEditPage() {
                             placeholder="https://www.youtube.com/watch?v=..."
                             disabled={isFetching}
                             />
-                            <Button onClick={handleFetchDetails} disabled={isFetching || !youtubeUrl}>
+                            <Button onClick={() => handleFetchDetails()} disabled={isFetching || !youtubeUrl}>
                             {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch'}
                             </Button>
                         </div>

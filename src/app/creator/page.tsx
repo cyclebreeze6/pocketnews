@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import Link from 'next/link';
-import { Video, Tv, RefreshCw, PlusSquare } from 'lucide-react';
+import { Video, Tv, RefreshCw, PlusSquare, Search } from 'lucide-react';
 
 export default function CreatorDashboardPage() {
   return (
@@ -26,23 +26,23 @@ export default function CreatorDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5" /> Manage Videos</CardTitle>
-            <CardDescription>View, edit, and manage your entire video library.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5" /> Curate by Search</CardTitle>
+            <CardDescription>Search YouTube for topics and import relevant videos.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/creator/videos">
-              <Button variant="secondary">Manage Library</Button>
+             <Link href="/creator/curate">
+              <Button>Search YouTube</Button>
             </Link>
           </CardContent>
         </Card>
          <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" /> Curate & Sync</CardTitle>
-            <CardDescription>Fetch and publish the latest videos from your channels.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" /> Curate by Channel</CardTitle>
+            <CardDescription>Fetch and publish videos from your linked channels.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/creator/sync">
-              <Button>Curate Content</Button>
+              <Button>Sync Channels</Button>
             </Link>
           </CardContent>
         </Card>
