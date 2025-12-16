@@ -68,6 +68,7 @@ export default function Home() {
   const { toast } = useToast();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
 
+  // Simplified query: always fetch the latest 20 videos, no follow-based filtering.
   const videosQuery = useMemoFirebase(() => 
     query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20)),
     [firestore]
