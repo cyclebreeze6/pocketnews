@@ -87,7 +87,7 @@ service cloud.firestore {
     }
 
     match /videos/{videoId} {
-      allow get, list: if true;
+      allow get, list: if isSignedIn();
       // Only Admins or Creators can manage videos.
       allow create: if canCreateContent();
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
