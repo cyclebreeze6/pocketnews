@@ -11,7 +11,6 @@ import {
   User,
   LogOut,
   Shield,
-  Video as VideoIcon,
   PlusSquare,
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -35,7 +34,7 @@ import { useState } from 'react';
 import { AuthDialog } from './auth-dialog';
 import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '../firebase';
 import type { Video, Channel, UserFollow, UserProfile } from '../lib/types';
-import { collection, query, where, limit, doc } from 'firebase/firestore';
+import { collection, query, where, limit, doc, orderBy } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { CategoryNav } from './category-nav';
 import Image from 'next/image';
@@ -61,12 +60,15 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
     return query(
       collection(firestore, 'videos'),
       where('channelId', 'in', followedChannelIds),
+      orderBy('createdAt', 'desc'),
       limit(5)
     );
   }, [firestore, followedChannels]);
 
   const { data: recentVideos } = useCollection<Video>(recentVideosQuery);
-  const { data: channels } = useCollection<Channel>(useMemoFirebase(() => collection(firestore, 'channels'), [firestore]));
+  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
+  const { data: channels } = useCollection<Channel>(channelsQuery);
+
 
   const handleLoginSuccess = () => {
     setIsAuthDialogOpen(false);
@@ -82,7 +84,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8 border-b border-border/40">
           <div className="mr-4 flex">
             <Link href="/" className="flex items-center space-x-2">
-               <Image src={Logo} alt="Pocketnews TV" width={120} height={120} />
+               <Image src={Logo} alt="Pocketnews TV" width={120} height={30} />
             </Link>
           </div>
 
@@ -131,7 +133,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                                   className="flex items-start gap-4 p-2 -mx-2 rounded-lg hover:bg-accent"
                                 >
                                   <Avatar className="h-8 w-8 mt-1">
-                                      <AvatarImage src={`https://picsum.photos/seed/${channel?.id}/40/40`} alt={channel?.name} />
+                                      <AvatarImage src={channel?.logoUrl} alt={channel?.name} />
                                       <AvatarFallback>{channel?.name?.charAt(0)}</AvatarFallback>
                                   </Avatar>
                                   <div className="grid gap-1">

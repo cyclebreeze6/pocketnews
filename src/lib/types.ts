@@ -46,6 +46,7 @@ export interface UserProfile extends User {
 }
 
 export interface UserFollow {
+  id: string; // Document ID from Firestore
   channelId: string;
   userId: string;
   followedAt: Timestamp;
