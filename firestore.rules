@@ -87,12 +87,17 @@ service cloud.firestore {
     }
 
     match /videos/{videoId} {
-      // Allow any signed-in user to get individual videos or list the whole collection
-      allow read: if isSignedIn();
+      // Allow any signed-in user to get individual videos.
+      allow get: if isSignedIn();
       // Only Admins or Creators can manage videos.
       allow create: if canCreateContent();
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
       allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
+    }
+    
+    // This rule specifically allows listing the entire videos collection.
+    match /videos {
+        allow list: if isSignedIn();
     }
 
     match /roles_admin/{userId} {
