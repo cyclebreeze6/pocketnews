@@ -81,10 +81,15 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const { data: channels } = useCollection<Channel>(channelsQuery);
   
   const [showNotificationDot, setShowNotificationDot] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client side
-    if (recentVideos && recentVideos.length > 0) {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // This effect runs only on the client side after the component has mounted
+    if (hasMounted && recentVideos && recentVideos.length > 0) {
       const latestVideoTimestamp = toDate(recentVideos[0].createdAt).getTime();
       const lastSeenTimestamp = localStorage.getItem('lastSeenVideoTimestamp');
       
@@ -92,10 +97,10 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         setShowNotificationDot(true);
       }
     }
-  }, [recentVideos]);
+  }, [recentVideos, hasMounted]);
   
   const handlePopoverOpen = (isOpen: boolean) => {
-    if (isOpen && recentVideos && recentVideos.length > 0) {
+    if (isOpen && hasMounted && recentVideos && recentVideos.length > 0) {
       const latestVideoTimestamp = toDate(recentVideos[0].createdAt).getTime();
       localStorage.setItem('lastSeenVideoTimestamp', latestVideoTimestamp.toString());
       setShowNotificationDot(false);
@@ -116,8 +121,8 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8">
           <div className="mr-4 flex">
-            <Link href="/" className="flex items-center space-x-2 p-2.5">
-               <Image src={Logo} alt="Pocketnews TV" width={144} height={36} />
+            <Link href="/" className="flex items-center space-x-2 p-2">
+               <Image src={Logo} alt="Pocketnews TV" width={115.2} height={28.8} />
             </Link>
           </div>
 
@@ -136,7 +141,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative" disabled={!user}>
                       <Bell className="h-5 w-5" />
-                      {showNotificationDot && (
+                      {showNotificationDot && hasMounted && (
                         <span className="absolute top-1 right-1 flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
