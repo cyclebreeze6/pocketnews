@@ -116,7 +116,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8">
           <div className="mr-4 flex">
-            <Link href="/" className="flex items-center space-x-2 p-[10px]">
+            <Link href="/" className="flex items-center space-x-2 p-2.5">
                <Image src={Logo} alt="Pocketnews TV" width={180} height={45} />
             </Link>
           </div>
