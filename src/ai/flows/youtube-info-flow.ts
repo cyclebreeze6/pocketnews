@@ -9,12 +9,12 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
 
-const YouTubeVideoInfoInputSchema = z.object({
+export const YouTubeVideoInfoInputSchema = z.object({
   videoUrl: z.string().url().describe('The URL of the YouTube video.'),
 });
 export type YouTubeVideoInfoInput = z.infer<typeof YouTubeVideoInfoInputSchema>;
 
-const YouTubeVideoInfoSchema = z.object({
+export const YouTubeVideoInfoSchema = z.object({
   videoId: z.string().describe('The unique ID of the YouTube video.'),
   title: z.string().describe('The title of the video.'),
   description: z.string().describe('The description of the video.'),
