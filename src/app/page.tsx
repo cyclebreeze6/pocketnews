@@ -14,9 +14,9 @@ import { Share, Star, PlayCircle, Check, Copy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserFollow } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, where, limit } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -67,7 +67,26 @@ export default function Home() {
   const { toast } = useToast();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   
-  const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), orderBy('createdAt', 'desc')), [firestore]);
+  const followsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'follows') : null, [firestore, user]);
+  const { data: followedChannels, isLoading: followsLoading } = useCollection<UserFollow>(followsQuery);
+
+  const videosQuery = useMemoFirebase(() => {
+    // If we're still loading follows, or if there are no followed channels, fetch the latest 20 videos overall.
+    if (followsLoading || !followedChannels || followedChannels.length === 0) {
+      return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
+    }
+    
+    // If the user is following channels, fetch the latest videos from those channels.
+    const followedChannelIds = followedChannels.map(f => f.channelId);
+    return query(
+      collection(firestore, 'videos'),
+      where('channelId', 'in', followedChannelIds),
+      orderBy('createdAt', 'desc'),
+      limit(20)
+    );
+  }, [firestore, followedChannels, followsLoading]);
+
+  
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
@@ -185,7 +204,7 @@ export default function Home() {
         <SiteHeader />
         <main className="flex-1 flex flex-col items-center justify-center text-center">
             <h2 className="text-2xl font-bold mb-4">No videos found</h2>
-            <p className="text-muted-foreground">Check back later for new content!</p>
+            <p className="text-muted-foreground">Follow some channels to build your personalized feed!</p>
         </main>
       </div>
     );
