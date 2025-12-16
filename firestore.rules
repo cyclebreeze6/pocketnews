@@ -60,9 +60,8 @@ service cloud.firestore {
     }
 
     function isSanitizedString(text) {
-      // Disallow <, >, &, and common script characters to prevent injection.
-      // This is a basic sanitization. For more complex needs, consider a server-side process.
-      return !text.matches('[<>&;{}]');
+      // Allow empty strings, but if text is not empty, sanitize it.
+      return text == "" || !text.matches('[<>&;{}]');
     }
 
     // Security rules for collections
