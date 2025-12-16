@@ -139,6 +139,68 @@
         "id",
         "name"
       ]
+    },
+    "Report": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Report",
+      "type": "object",
+      "description": "Represents a user-submitted report about a video.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Report."
+        },
+        "videoId": {
+          "type": "string",
+          "description": "The ID of the reported video."
+        },
+        "videoTitle": {
+          "type": "string",
+          "description": "The title of the reported video (denormalized)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who submitted the report."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for the report.",
+          "enum": [
+            "Copyright",
+            "Wrong Information",
+            "False News",
+            "Other"
+          ]
+        },
+        "details": {
+          "type": "string",
+          "description": "Additional details provided by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the report was submitted."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the report.",
+          "enum": [
+            "Pending",
+            "Reviewed",
+            "Resolved",
+            "Dismissed"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "videoId",
+        "userId",
+        "reason",
+        "details",
+        "createdAt",
+        "status"
+      ]
     }
   },
   "auth": {
@@ -232,11 +294,25 @@
             }
           ]
         }
+      },
+      {
+        "path": "/reports/{reportId}",
+        "definition": {
+          "entityName": "Report",
+          "schema": {
+            "$ref": "#/backend/entities/Report"
+          },
+          "description": "Stores user-submitted reports on videos.",
+          "params": [
+            {
+              "name": "reportId",
+              "description": "The unique identifier of the report."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features, focusing on channel and video management, user roles, and admin analytics. To ensure security, scalability, and ease of debugging, the design adheres to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). \n\n**Authorization Independence:** This is achieved primarily through denormalization. The `videos` subcollection denormalizes the `channelId` to eliminate the need for security rules to read the parent `channel` document.  While ownership is managed at the Channel level, members with specific roles are defined within the Channel document and are propagated to the Video documents, eliminating complex `get()` calls in Firestore rules.\n\n**Structural Segregation:**  The structure segregates channels and videos, maintaining a homogenous security posture. `channels`, `users`, and `categories` are top-level collections, while videos are organized as subcollections of channels (`/channels/{channelId}/videos/{videoId}`). This segregation clarifies access control rules.\n\n**Access Modeling:** Private user data is stored under `/users/{userId}`, using path-based ownership. Channels and Videos data are stored in top level collections and subcollections respectively. Admin roles are managed via the existence of documents in `/roles_admin/{userId}`, representing global roles using DBAC principles.  The relationship between Channel and Video is modeled using a hierarchical path.\n\n**QAPs (Rules are not Filters):** The denormalized `channelId` field in the `/channels/{channelId}/videos/{videoId}` collection enables secure list operations. Rules can efficiently filter videos based on the `channelId` without requiring complex queries or client-side filtering. Also, admins are able to manage users in a secure way, making sure that each user has it's own ownership in `/users/{userId}` collection.\n\n**Invariants:**  Timestamps like `createdAt` and `uploadDate` can be enforced in security rules to ensure data integrity.  Denormalized data (e.g., the `channelId` in `/channels/{channelId}/videos/{videoId}`) can be validated against the parent `channel` document during creation."
+    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features, focusing on channel and video management, user roles, and admin analytics. To ensure security, scalability, and ease of debugging, the design adheres to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). \n\n**Authorization Independence:** This is achieved primarily through denormalization. The `videos` subcollection denormalizes the `channelId` to eliminate the need for security rules to read the parent `channel` document.  While ownership is managed at the Channel level, members with specific roles are defined within the Channel document and are propagated to the Video documents, eliminating complex `get()` calls in Firestore rules.\n\n**Structural Segregation:**  The structure segregates channels and videos, maintaining a homogenous security posture. `channels`, `users`, `categories`, and `reports` are top-level collections, while videos are organized as subcollections of channels (`/channels/{channelId}/videos/{videoId}`). This segregation clarifies access control rules.\n\n**Access Modeling:** Private user data is stored under `/users/{userId}`, using path-based ownership. Channels and Videos data are stored in top level collections and subcollections respectively. Admin roles are managed via the existence of documents in `/roles_admin/{userId}`, representing global roles using DBAC principles.  The relationship between Channel and Video is modeled using a hierarchical path.\n\n**QAPs (Rules are not Filters):** The denormalized `channelId` field in the `/channels/{channelId}/videos/{videoId}` collection enables secure list operations. Rules can efficiently filter videos based on the `channelId` without requiring complex queries or client-side filtering. Also, admins are able to manage users in a secure way, making sure that each user has it's own ownership in `/users/{userId}` collection.\n\n**Invariants:**  Timestamps like `createdAt` and `uploadDate` can be enforced in security rules to ensure data integrity.  Denormalized data (e.g., the `channelId` in `/channels/{channelId}/videos/{videoId}`) can be validated against the parent `channel` document during creation."
   }
 }
-    
-
     

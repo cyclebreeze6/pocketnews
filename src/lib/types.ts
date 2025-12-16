@@ -51,3 +51,14 @@ export interface WatchHistory {
   videoId: string;
   watchedAt: Timestamp;
 }
+
+export interface Report {
+    id: string;
+    videoId: string;
+    videoTitle: string;
+    userId: string;
+    reason: 'Copyright' | 'Wrong Information' | 'False News' | 'Other';
+    details: string;
+    createdAt: Timestamp | Date | string;
+    status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
+}

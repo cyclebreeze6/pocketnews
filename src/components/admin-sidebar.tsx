@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Settings, FolderKanban, Tv } from 'lucide-react';
+import { Home, Users, Settings, FolderKanban, Tv, Flag } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const AdminSidebar = () => {
@@ -13,6 +13,7 @@ const AdminSidebar = () => {
     { href: '/admin/channels', label: 'Channels', icon: Tv },
     { href: '/admin/categories', label: 'Categories', icon: FolderKanban },
     { href: '/admin/users', label: 'Users', icon: Users },
+    { href: '/admin/reports', label: 'Reports', icon: Flag },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 

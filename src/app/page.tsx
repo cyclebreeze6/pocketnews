@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, addDocumentNonBlocking } from '../firebase';
 import SiteHeader from '../components/site-header';
 import { VideoPlayer } from '../components/video-player';
 import { Badge } from '../components/ui/badge';
@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel } from '../lib/types';
@@ -31,6 +31,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '../components/ui/popover';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -67,6 +70,9 @@ export default function Home() {
   const { user } = useUser();
   const { toast } = useToast();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
 
   // Simplified query: always fetch the latest 20 videos, no follow-based filtering.
   const videosQuery = useMemoFirebase(() => 
@@ -127,6 +133,34 @@ export default function Home() {
       handleSetCurrentVideo(videos[currentIndex + 1]);
     }
   }
+  
+  const handleReportSubmit = () => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'You must be logged in to report a video.'});
+        return;
+    }
+    if (!currentVideo || !reportReason) {
+        toast({ variant: 'destructive', title: 'Please select a reason for the report.'});
+        return;
+    }
+
+    const reportRef = doc(collection(firestore, 'reports'));
+    addDocumentNonBlocking(collection(firestore, 'reports'), {
+        id: reportRef.id,
+        videoId: currentVideo.id,
+        videoTitle: currentVideo.title,
+        userId: user.uid,
+        reason: reportReason,
+        details: reportDetails,
+        createdAt: serverTimestamp(),
+        status: 'Pending',
+    });
+
+    toast({ title: 'Report submitted', description: "Thank you for helping us keep the community safe."});
+    setIsReportDialogOpen(false);
+    setReportReason('');
+    setReportDetails('');
+  };
 
   const handleShare = (platform: 'facebook' | 'whatsapp' | 'copy') => {
     if (!currentVideo) return;
@@ -228,6 +262,9 @@ export default function Home() {
                                 </div>
                             </PopoverContent>
                         </Popover>
+                         <Button variant="secondary" onClick={() => setIsReportDialogOpen(true)}>
+                            <Flag className="mr-2 h-4 w-4" /> Report
+                        </Button>
                     </div>
                 </div>
                 
@@ -299,6 +336,41 @@ export default function Home() {
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report Video</DialogTitle>
+            <DialogDescription>
+              Why are you reporting this video? Your report is anonymous.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+                <Label htmlFor="report-reason">Reason</Label>
+                <Select onValueChange={setReportReason} value={reportReason}>
+                    <SelectTrigger id="report-reason">
+                        <SelectValue placeholder="Select a reason..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Copyright">Copyright</SelectItem>
+                        <SelectItem value="Wrong Information">Wrong Information</SelectItem>
+                        <SelectItem value="False News">False News</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+             <div className="grid gap-2">
+                <Label htmlFor="report-details">Details (optional)</Label>
+                <Textarea id="report-details" value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder="Provide additional details..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleReportSubmit}>Report Video</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

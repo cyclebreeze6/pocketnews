@@ -167,15 +167,15 @@ export default function VideoEditPage() {
         toast({ variant: 'destructive', title: 'Please enter a category name.' });
         return;
     }
-    const newCategoryData = {
+    const newCategoryRef = doc(collection(firestore, 'categories'));
+    const newCategoryData: Category = {
+        id: newCategoryRef.id,
         name: newCategoryName,
         createdAt: serverTimestamp(),
     }
-    const newDocRef = await addDocumentNonBlocking(collection(firestore, 'categories'), newCategoryData);
-    if(newDocRef) {
-        updateDocumentNonBlocking(newDocRef, {id: newDocRef.id});
-        setVideoDetails(prev => ({...prev, contentCategory: newCategoryName}));
-    }
+    setDocumentNonBlocking(newCategoryRef, newCategoryData, {});
+    setVideoDetails(prev => ({...prev, contentCategory: newCategoryName}));
+
     toast({title: 'Category Added!', description: `${newCategoryName} has been created.`});
     setNewCategoryName('');
     setIsCategoryDialogOpen(false);
@@ -196,13 +196,13 @@ export default function VideoEditPage() {
 
     if (isNewVideo) {
       dataToSave.createdAt = serverTimestamp();
-      const newDocRef = await addDocumentNonBlocking(collection(firestore, 'videos'), dataToSave);
-      if(newDocRef) {
-        updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
-      }
+      const newDocRef = doc(collection(firestore, 'videos'));
+      dataToSave.id = newDocRef.id;
+      setDocumentNonBlocking(newDocRef, dataToSave, {});
       toast({ title: 'Video Added!', description: `${dataToSave.title} has been added.` });
     } else {
-      setDocumentNonBlocking(videoRef!, dataToSave, { merge: true });
+      // Use updateDocumentNonBlocking for existing documents
+      updateDocumentNonBlocking(videoRef!, dataToSave);
       toast({ title: 'Video Updated!', description: `${dataToSave.title} has been updated.` });
     }
     setIsSaving(false);
