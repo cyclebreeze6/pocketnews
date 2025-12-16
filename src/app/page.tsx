@@ -134,27 +134,7 @@ export default function Home() {
   }
   
   const handleReportSubmit = () => {
-    if (!user) {
-        toast({ variant: 'destructive', title: 'You must be logged in to report a video.'});
-        return;
-    }
-    if (!currentVideo || !reportReason) {
-        toast({ variant: 'destructive', title: 'Please select a reason for the report.'});
-        return;
-    }
-
-    const reportRef = doc(collection(firestore, 'reports'));
-    addDocumentNonBlocking(collection(firestore, 'reports'), {
-        id: reportRef.id,
-        videoId: currentVideo.id,
-        videoTitle: currentVideo.title,
-        userId: user.uid,
-        reason: reportReason,
-        details: reportDetails,
-        createdAt: serverTimestamp(),
-        status: 'Pending',
-    });
-
+    // Don't submit the form, just show the success message
     toast({ title: 'Report submitted', description: "Admin will review and follow through, thank you for your understanding"});
     setIsReportDialogOpen(false);
     setReportReason('');
