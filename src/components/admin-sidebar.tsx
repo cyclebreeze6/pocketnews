@@ -13,7 +13,6 @@ const AdminSidebar = () => {
     { href: '/admin/channels', label: 'Channels', icon: Tv },
     { href: '/admin/categories', label: 'Categories', icon: FolderKanban },
     { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/reports', label: 'Reports', icon: Flag },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 

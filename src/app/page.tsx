@@ -155,7 +155,7 @@ export default function Home() {
         status: 'Pending',
     });
 
-    toast({ title: 'Report submitted', description: "Thank you for helping us keep the community safe."});
+    toast({ title: 'Report submitted', description: "Admin will review and follow through, thank you for your understanding"});
     setIsReportDialogOpen(false);
     setReportReason('');
     setReportDetails('');
