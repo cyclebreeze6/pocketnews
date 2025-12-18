@@ -18,6 +18,7 @@ import { Button } from './ui/button';
 import { ChevronDown, Menu } from 'lucide-react';
 import { useIsMobile } from '../hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
 
 export function CategoryNav() {
   const pathname = usePathname();
@@ -39,20 +40,17 @@ export function CategoryNav() {
   const isHomeActive = pathname === '/';
   
   const MAX_VISIBLE_DESKTOP = 6;
-  const MAX_VISIBLE_MOBILE = 4;
   
   const visibleCategoriesDesktop = categories.slice(0, MAX_VISIBLE_DESKTOP);
   const hiddenCategoriesDesktop = categories.length > MAX_VISIBLE_DESKTOP ? categories.slice(MAX_VISIBLE_DESKTOP) : [];
 
-  const visibleCategoriesMobile = categories.slice(0, MAX_VISIBLE_MOBILE);
-  const hiddenCategoriesMobile = categories.length > MAX_VISIBLE_MOBILE ? categories.slice(MAX_VISIBLE_MOBILE) : [];
 
   const CategoryLink = ({ href, children, isActive, className, onClick }: { href: string, children: React.ReactNode, isActive: boolean, className?: string, onClick?: () => void }) => (
     <Link
       href={href}
       onClick={onClick}
       className={cn(
-        'relative inline-block px-2 py-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap',
+        'relative inline-block px-3 py-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap',
         isActive ? 'text-primary' : 'text-muted-foreground',
         className,
       )}
@@ -64,56 +62,23 @@ export function CategoryNav() {
     </Link>
   );
 
-  const MobileSheet = () => (
-     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary px-2">
-            More
-            <Menu className="h-4 w-4" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-[240px]">
-        <SheetHeader>
-          <SheetTitle>All Categories</SheetTitle>
-        </SheetHeader>
-        <div className="flex flex-col space-y-2 mt-4">
-             {hiddenCategoriesMobile.map((category) => {
-                const href = `/category/${encodeURIComponent(category.name)}`;
-                return (
-                    <Link
-                        key={category.id}
-                        href={href}
-                        onClick={() => setIsSheetOpen(false)}
-                        className={cn(
-                            'p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-primary', 
-                            pathname === href && 'bg-accent text-primary'
-                        )}
-                    >
-                        {category.name}
-                    </Link>
-                );
-            })}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-
-
   if (isMobile) {
     return (
-        <nav className="border-b border-border/40 overflow-hidden">
-            <div className="container flex items-center justify-between h-12 px-2">
-                <div className="flex items-center">
-                    <CategoryLink href="/" isActive={isHomeActive} className="text-xs px-1.5">My Headlines</CategoryLink>
-                    {visibleCategoriesMobile.map((category) => {
-                        const href = `/category/${encodeURIComponent(category.name)}`;
-                        const isActive = pathname === href;
-                        return (
-                            <CategoryLink key={category.id} href={href} isActive={isActive} className="text-xs px-1.5">{category.name}</CategoryLink>
-                        );
-                    })}
-                </div>
-                 {hiddenCategoriesMobile.length > 0 && <MobileSheet />}
+        <nav className="border-b border-border/40">
+            <div className="container h-12 px-2">
+                 <ScrollArea className="w-full whitespace-nowrap">
+                    <div className="flex w-max space-x-2">
+                         <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
+                        {categories.map((category) => {
+                            const href = `/category/${encodeURIComponent(category.name)}`;
+                            const isActive = pathname === href;
+                            return (
+                                <CategoryLink key={category.id} href={href} isActive={isActive}>{category.name}</CategoryLink>
+                            );
+                        })}
+                    </div>
+                    <ScrollBar orientation="horizontal" className="h-0" />
+                </ScrollArea>
             </div>
         </nav>
     )
