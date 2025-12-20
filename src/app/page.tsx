@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -35,6 +36,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { isNotificationPermissionGranted, requestNotificationPermission } from '../lib/firebase-notifications';
 import { NotificationPromptDialog } from '../components/notification-prompt-dialog';
+import { initiateAnonymousSignIn, useAuth } from '../firebase';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -68,6 +70,7 @@ const WhatsAppIcon = (props: any) => (
 
 export default function Home() {
   const { firestore } = useFirebase();
+  const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
@@ -87,6 +90,12 @@ export default function Home() {
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [isUserLoading, user, auth]);
   
   useEffect(() => {
     // Logic to show notification prompt, ensuring it runs only on client and after user status is known.
@@ -94,12 +103,14 @@ export default function Home() {
         return;
     }
     
+    // This will now work for anonymous users as well, since they will have a `user` object.
     if (user) {
       const lastPrompted = localStorage.getItem('notificationPrompted');
       const threeDays = 3 * 24 * 60 * 60 * 1000;
 
       const showPrompt = !lastPrompted || (Date.now() - parseInt(lastPrompted, 10) > threeDays);
-
+      
+      // We check for 'default' which means the user has not made a choice yet.
       if (showPrompt && Notification.permission === 'default') {
         // Delay showing the prompt slightly
         setTimeout(() => {

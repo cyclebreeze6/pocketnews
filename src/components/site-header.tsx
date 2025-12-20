@@ -139,9 +139,9 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
               </Button>
               <Popover onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative" disabled={!user}>
+                    <Button variant="ghost" size="icon" className="relative">
                       <Bell className="h-5 w-5" />
-                      {showNotificationDot && hasMounted && (
+                      {user && showNotificationDot && hasMounted && (
                         <span className="absolute top-1 right-1 flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
@@ -205,56 +205,58 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
 
               {!isUserLoading && (
                    user ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`} alt={user.displayName || 'User'} />
-                          <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
-                      <DropdownMenuLabel className="font-normal">
-                        <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'Anonymous User'}</p>
-                          <p className="text-xs leading-none text-muted-foreground">
-                            {user.email}
-                          </p>
-                        </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                        {(userProfile?.isAdmin || userProfile?.isCreator) && (
-                            <DropdownMenuItem onSelect={() => router.push('/creator')}>
-                                <PlusSquare className="mr-2 h-4 w-4" />
-                                <span>Creator Hub</span>
-                            </DropdownMenuItem>
-                        )}
-                        {userProfile?.isAdmin && (
-                            <DropdownMenuItem onSelect={() => router.push('/admin')}>
-                                <Shield className="mr-2 h-4 w-4" />
-                                <span>Admin Panel</span>
-                            </DropdownMenuItem>
-                        )}
-                      <DropdownMenuItem asChild>
-                        <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
-                      </DropdownMenuItem>
-                       <DropdownMenuItem asChild>
-                        <Link href="/settings"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Button size="sm" onClick={() => setIsAuthDialogOpen(true)}>Get Started</Button>
-                )
+                    user.isAnonymous ? (
+                      <Button size="sm" onClick={() => setIsAuthDialogOpen(true)}>Get Started</Button>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`} alt={user.displayName || 'User'} />
+                              <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                          <DropdownMenuLabel className="font-normal">
+                            <div className="flex flex-col space-y-1">
+                              <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'Pocketnews User'}</p>
+                              <p className="text-xs leading-none text-muted-foreground">
+                                {user.email}
+                              </p>
+                            </div>
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                            {(userProfile?.isAdmin || userProfile?.isCreator) && (
+                                <DropdownMenuItem onSelect={() => router.push('/creator')}>
+                                    <PlusSquare className="mr-2 h-4 w-4" />
+                                    <span>Creator Hub</span>
+                                </DropdownMenuItem>
+                            )}
+                            {userProfile?.isAdmin && (
+                                <DropdownMenuItem onSelect={() => router.push('/admin')}>
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    <span>Admin Panel</span>
+                                </DropdownMenuItem>
+                            )}
+                          <DropdownMenuItem asChild>
+                            <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/settings"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Log out</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )
+                ) : null
                 )}
           </div>
         </div>
