@@ -77,6 +77,11 @@ service cloud.firestore {
       match /history/{videoId} {
          allow read, write, delete: if isOwner(userId);
       }
+      
+      // Users can manage their own FCM tokens.
+      match /fcmTokens/{tokenId} {
+        allow read, write, delete: if isOwner(userId);
+      }
     }
 
     match /channels/{channelId} {
@@ -114,6 +119,10 @@ service cloud.firestore {
                       && isSanitizedString(request.resource.data.details);
         allow update: if isAdmin();
         allow delete: if isAdmin() || isReportOwner(reportId);
+    }
+    
+    match /email_queue/{emailId} {
+        allow read, write: if isAdmin(); // Only admins (backend) can manage the queue
     }
 
 
