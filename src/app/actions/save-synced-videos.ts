@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -43,7 +44,7 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   const batch = firestore.batch();
   const videosCollectionRef = firestore.collection('videos');
 
-  const savedVideoIds: string[] = [];
+  const videosToNotify: { id: string; category: string }[] = [];
 
   videos.forEach(videoData => {
     const newDocRef = videosCollectionRef.doc(); // Auto-generate a new ID
@@ -54,14 +55,17 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
       uploadDate: new Date().toISOString(), // Set upload date to now
     };
     batch.set(newDocRef, videoDoc);
-    savedVideoIds.push(newDocRef.id);
+    videosToNotify.push({ id: newDocRef.id, category: videoData.contentCategory });
   });
 
   try {
     await batch.commit();
-    // After successfully saving, trigger notifications for each new video
-    for (const videoId of savedVideoIds) {
-      await sendNewVideoNotificationFlow(videoId);
+    // After successfully saving, trigger notifications ONLY for videos in 'Breaking News'
+    for (const video of videosToNotify) {
+      if (video.category === 'Breaking News') {
+        // Do not await this, let it run in the background
+        sendNewVideoNotificationFlow(video.id);
+      }
     }
   } catch (error) {
     console.error("Error committing video batch:", error);
