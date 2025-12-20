@@ -68,7 +68,7 @@ const WhatsAppIcon = (props: any) => (
 
 export default function Home() {
   const { firestore } = useFirebase();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -89,8 +89,12 @@ export default function Home() {
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   
   useEffect(() => {
-    // Logic to show notification prompt
-    if (user && typeof window !== 'undefined' && 'Notification' in window) {
+    // Logic to show notification prompt, ensuring it runs only on client and after user status is known.
+    if (isUserLoading || typeof window === 'undefined' || !('Notification' in window)) {
+        return;
+    }
+    
+    if (user) {
       const lastPrompted = localStorage.getItem('notificationPrompted');
       const threeDays = 3 * 24 * 60 * 60 * 1000;
 
@@ -103,7 +107,7 @@ export default function Home() {
         }, 3000);
       }
     }
-  }, [user]);
+  }, [user, isUserLoading]);
 
   useEffect(() => {
     if (videos && videos.length > 0) {
