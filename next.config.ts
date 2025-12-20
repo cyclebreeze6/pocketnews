@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_VAPID_KEY: process.env.VAPID_KEY,
+    NEXT_PUBLIC_VAPID_KEY: process.env.NEXT_PUBLIC_VAPID_KEY,
   }
 };
 
