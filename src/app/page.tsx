@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -34,6 +33,8 @@ import {
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { isNotificationPermissionGranted, requestNotificationPermission } from '../lib/firebase-notifications';
+import { NotificationPromptDialog } from '../components/notification-prompt-dialog';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -73,6 +74,7 @@ export default function Home() {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
+  const [isNotificationPromptOpen, setIsNotificationPromptOpen] = useState(false);
 
   const videosQuery = useMemoFirebase(() => 
     query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20)),
@@ -85,6 +87,23 @@ export default function Home() {
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  
+  useEffect(() => {
+    // Logic to show notification prompt
+    if (user && typeof window !== 'undefined' && 'Notification' in window) {
+      const lastPrompted = localStorage.getItem('notificationPrompted');
+      const threeDays = 3 * 24 * 60 * 60 * 1000;
+
+      const showPrompt = !lastPrompted || (Date.now() - parseInt(lastPrompted, 10) > threeDays);
+
+      if (showPrompt && Notification.permission === 'default') {
+        // Delay showing the prompt slightly
+        setTimeout(() => {
+          setIsNotificationPromptOpen(true);
+        }, 3000);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     if (videos && videos.length > 0) {
@@ -158,6 +177,25 @@ export default function Home() {
         break;
     }
   };
+  
+  const handleAllowNotifications = async () => {
+    if (user) {
+        const granted = await requestNotificationPermission(firestore, user.uid);
+        if (granted) {
+            toast({ title: 'Notifications Enabled!' });
+        } else {
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'You can enable notifications in your browser settings.' });
+        }
+    }
+    localStorage.setItem('notificationPrompted', Date.now().toString());
+    setIsNotificationPromptOpen(false);
+  };
+
+  const handleDelayNotifications = () => {
+    localStorage.setItem('notificationPrompted', Date.now().toString());
+    setIsNotificationPromptOpen(false);
+  };
+
 
   if (videosLoading || channelsLoading) {
     return (
@@ -353,6 +391,12 @@ export default function Home() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <NotificationPromptDialog
+        open={isNotificationPromptOpen}
+        onOpenChange={setIsNotificationPromptOpen}
+        onAllow={handleAllowNotifications}
+        onLater={handleDelayNotifications}
+      />
     </div>
   );
 }
