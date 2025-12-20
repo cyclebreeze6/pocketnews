@@ -42,6 +42,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  env: {
+    NEXT_PUBLIC_VAPID_KEY: process.env.VAPID_KEY,
+  }
 };
 
 export default nextConfig;

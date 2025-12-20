@@ -8,8 +8,55 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { Label } from '../../components/ui/label';
 import { Separator } from '../../components/ui/separator';
 import { Switch } from '../../components/ui/switch';
+import { useFirebase, useUser } from '../../firebase';
+import { useState, useEffect } from 'react';
+import { requestNotificationPermission, isNotificationPermissionGranted } from '../../lib/firebase-notifications';
+import { useToast } from '../../hooks/use-toast';
 
 export default function SettingsPage() {
+  const { user } = useUser();
+  const { firestore } = useFirebase();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Check initial permission status on component mount
+    const checkPermission = async () => {
+        if(typeof window !== 'undefined' && 'Notification' in window) {
+            const permissionGranted = await isNotificationPermissionGranted();
+            setNotificationsEnabled(permissionGranted);
+        }
+    };
+    checkPermission();
+  }, []);
+
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (!user || !firestore) return;
+    
+    if (enabled) {
+      try {
+        const permissionGranted = await requestNotificationPermission(firestore, user.uid);
+        if (permissionGranted) {
+          setNotificationsEnabled(true);
+          toast({ title: 'Notifications Enabled!' });
+        } else {
+          setNotificationsEnabled(false);
+          toast({ variant: 'destructive', title: 'Permission Denied', description: 'You need to allow notifications in your browser settings.' });
+        }
+      } catch (error) {
+        console.error("Error requesting notification permission:", error);
+        setNotificationsEnabled(false);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not enable notifications.' });
+      }
+    } else {
+      // Logic to disable notifications (e.g., delete the token from Firestore) would go here.
+      // For now, we just update the UI state.
+      setNotificationsEnabled(false);
+      toast({ title: 'Notifications Disabled' });
+    }
+  };
+
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
@@ -27,18 +74,18 @@ export default function SettingsPage() {
                 <CardContent className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <Label htmlFor="email-notifications">Email Notifications</Label>
-                            <p className="text-sm text-muted-foreground">Receive emails about new videos and channel updates.</p>
+                            <Label htmlFor="push-notifications">Push Notifications</Label>
+                            <p className="text-sm text-muted-foreground">Get push notifications when new videos are uploaded.</p>
                         </div>
-                        <Switch id="email-notifications" defaultChecked />
+                        <Switch id="push-notifications" checked={notificationsEnabled} onCheckedChange={handleNotificationToggle} />
                     </div>
                      <Separator />
                      <div className="flex items-center justify-between">
                         <div>
-                            <Label htmlFor="push-notifications">Push Notifications</Label>
-                            <p className="text-sm text-muted-foreground">Get push notifications on your devices.</p>
+                            <Label htmlFor="email-notifications">Email Notifications</Label>
+                            <p className="text-sm text-muted-foreground">Receive emails about new videos and channel updates.</p>
                         </div>
-                        <Switch id="push-notifications" />
+                        <Switch id="email-notifications" />
                     </div>
                 </CardContent>
             </Card>

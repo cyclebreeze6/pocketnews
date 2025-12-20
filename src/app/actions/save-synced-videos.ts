@@ -3,6 +3,7 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import 'dotenv/config';
+import { sendNewVideoNotificationFlow } from '../../ai/flows/send-notification-flow';
 
 // A leaner version of the Video type for this specific action
 type NewVideoData = {
@@ -42,6 +43,8 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   const batch = firestore.batch();
   const videosCollectionRef = firestore.collection('videos');
 
+  const savedVideoIds: string[] = [];
+
   videos.forEach(videoData => {
     const newDocRef = videosCollectionRef.doc(); // Auto-generate a new ID
     const videoDoc = {
@@ -51,10 +54,15 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
       uploadDate: new Date().toISOString(), // Set upload date to now
     };
     batch.set(newDocRef, videoDoc);
+    savedVideoIds.push(newDocRef.id);
   });
 
   try {
     await batch.commit();
+    // After successfully saving, trigger notifications for each new video
+    for (const videoId of savedVideoIds) {
+      await sendNewVideoNotificationFlow(videoId);
+    }
   } catch (error) {
     console.error("Error committing video batch:", error);
     // Re-throw the error so the calling flow can handle it.
