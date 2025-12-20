@@ -64,7 +64,9 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
     for (const video of videosToNotify) {
       if (video.category === 'Breaking News') {
         // Do not await this, let it run in the background
-        sendNewVideoNotificationFlow(video.id);
+        sendNewVideoNotificationFlow(video.id).catch(err => {
+          console.error(`Error triggering notification for video ${video.id}:`, err);
+        });
       }
     }
   } catch (error) {
