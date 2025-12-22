@@ -60,14 +60,12 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
 
   try {
     await batch.commit();
-    // After successfully saving, trigger notifications ONLY for videos in 'Breaking News'
+    // After successfully saving, trigger notifications
     for (const video of videosToNotify) {
-      if (video.category === 'Breaking News') {
         // Do not await this, let it run in the background
-        sendNewVideoNotificationFlow(video.id).catch(err => {
+        sendNewVideoNotificationFlow({ videoId: video.id, category: video.category }).catch(err => {
           console.error(`Error triggering notification for video ${video.id}:`, err);
         });
-      }
     }
   } catch (error) {
     console.error("Error committing video batch:", error);

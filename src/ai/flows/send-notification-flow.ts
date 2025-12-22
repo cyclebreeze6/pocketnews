@@ -21,14 +21,19 @@ async function initializeAdminApp() {
     }
 }
 
+export const NotificationInputSchema = z.object({
+  videoId: z.string(),
+  category: z.string(),
+});
+export type NotificationInput = z.infer<typeof NotificationInputSchema>;
 
 export const sendNewVideoNotificationFlow = ai.defineFlow(
   {
     name: 'sendNewVideoNotificationFlow',
-    inputSchema: z.string(), // videoId
+    inputSchema: NotificationInputSchema,
     outputSchema: z.object({ success: z.boolean(), message: z.string() }),
   },
-  async (videoId) => {
+  async ({ videoId, category }) => {
     
     await initializeAdminApp();
     const firestore = getFirestore();
@@ -51,11 +56,18 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
       }
       const video = videoSnap.data() as Video;
       const videoUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/watch/${videoId}`;
+      
+      // 2. Define the filter for targeting users based on category
+      const categoryTag = `category_${category.toLowerCase()}`;
+      const filters = [
+        { "field": "tag", "key": categoryTag, "relation": "=", "value": "true" }
+      ];
 
-      // 2. Send Push Notification via OneSignal
+
+      // 3. Send Push Notification via OneSignal
       const notification = {
         app_id: ONE_SIGNAL_APP_ID,
-        included_segments: ["Subscribed Users"],
+        filters: filters,
         headings: { en: 'New Video: ' + video.title },
         contents: { en: video.description },
         web_url: videoUrl,
@@ -78,14 +90,17 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
       }
       console.log(`Successfully sent push notification via OneSignal. ID: ${responseData.id}`);
 
-      // 3. Queue Emails
+      // 4. Queue Emails
+      // Note: This queues an email for *all* users, not just those subscribed to the category.
+      // A more advanced implementation would store email preferences in the user profile.
       const emailQueueRef = firestore.collection('email_queue');
       const usersSnapshot = await firestore.collection('users').get();
       const uniqueEmails: string[] = [];
 
       usersSnapshot.forEach(doc => {
           const email = doc.data().email;
-          if (email && !uniqueEmails.includes(email)) {
+          // Filter out anonymous user emails
+          if (email && !doc.data().isAnonymous) {
               uniqueEmails.push(email);
           }
       });
@@ -94,7 +109,7 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
           await emailQueueRef.add({
               to: email,
               message: {
-                  subject: `New Breaking News: ${video.title}`,
+                  subject: `New Video in ${category}: ${video.title}`,
                   html: `
                     <h1>${video.title}</h1>
                     <p>${video.description}</p>
@@ -108,7 +123,7 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
       }
       console.log(`Successfully queued ${uniqueEmails.length} emails.`);
 
-      return { success: true, message: `Notifications processed.` };
+      return { success: true, message: `Notifications processed for category ${category}.` };
 
     } catch (error: any) {
       console.error('Error sending notification:', error);

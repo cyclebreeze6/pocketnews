@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -11,17 +10,48 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
-import { BellRing } from 'lucide-react';
+import { BellRing, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useCollection, useFirebase, useMemoFirebase } from '../firebase';
+import { collection } from 'firebase/firestore';
+import type { Category } from '../lib/types';
+import { useState } from 'react';
+import { Checkbox } from './ui/checkbox';
+import { Label } from './ui/label';
+import { useToast } from '../hooks/use-toast';
 
 interface NotificationPromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAllow: () => void;
+  onAllow: (selectedCategories: string[]) => void;
   onLater: () => void;
 }
 
 export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater }: NotificationPromptDialogProps) {
+  const { firestore } = useFirebase();
+  const { toast } = useToast();
+  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
+  const { data: categories, isLoading } = useCollection<Category>(categoriesQuery);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const handleCategoryToggle = (categoryId: string) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        if (prev.length < 3) {
+          return [...prev, categoryId];
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'You can select up to 3 categories.',
+          });
+          return prev;
+        }
+      }
+    });
+  };
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -33,15 +63,36 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
           </div>
           <AlertDialogTitle className="text-center">Get Notified of New Videos</AlertDialogTitle>
           <AlertDialogDescription className="text-center">
-            Enable push notifications to be the first to know when new content is uploaded. You can change this in settings at any time.
+            Enable notifications to know when new content is uploaded. Choose up to 3 categories to follow.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        
+        <div className="py-4">
+            <h4 className="font-medium mb-3 text-center">I want to be notified about...</h4>
+            {isLoading ? (
+                <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            ) : (
+                <div className="grid grid-cols-2 gap-4 max-h-40 overflow-y-auto pr-2">
+                    {categories?.map((category) => (
+                        <div key={category.id} className="flex items-center space-x-2">
+                            <Checkbox 
+                                id={`cat-${category.id}`} 
+                                checked={selectedCategories.includes(category.name)}
+                                onCheckedChange={() => handleCategoryToggle(category.name)}
+                            />
+                            <Label htmlFor={`cat-${category.id}`} className="font-normal cursor-pointer">{category.name}</Label>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+
         <AlertDialogFooter className="sm:justify-center flex-col-reverse sm:flex-row gap-2">
           <AlertDialogCancel asChild>
             <Button variant="ghost" onClick={onLater}>Maybe Later</Button>
           </AlertDialogCancel>
           <AlertDialogAction asChild>
-            <Button onClick={onAllow}>Allow Notifications</Button>
+            <Button onClick={() => onAllow(selectedCategories)}>Allow Notifications</Button>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

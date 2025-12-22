@@ -24,6 +24,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '../../../../components/ui/dialog';
+import { sendNewVideoNotificationFlow } from '../../../../ai/flows/send-notification-flow';
 
 export default function VideoEditPage() {
   const { firestore } = useFirebase();
@@ -209,7 +210,16 @@ export default function VideoEditPage() {
       dataToSave.createdAt = serverTimestamp();
       const newDocRef = doc(collection(firestore, 'videos'));
       dataToSave.id = newDocRef.id;
-      setDocumentNonBlocking(newDocRef, dataToSave, {});
+      await setDoc(newDocRef, dataToSave, {});
+
+      // Trigger notification for new manual upload
+      if (dataToSave.contentCategory) {
+        sendNewVideoNotificationFlow({
+          videoId: dataToSave.id,
+          category: dataToSave.contentCategory
+        }).catch(err => console.error("Failed to send notification:", err));
+      }
+
       toast({ title: 'Video Added!', description: `${dataToSave.title} has been added.` });
     } else {
       // Use updateDocumentNonBlocking for existing documents

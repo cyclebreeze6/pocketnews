@@ -99,26 +99,27 @@ export default function Home() {
   
   useEffect(() => {
     async function checkNotificationPermission() {
-      if (isUserLoading || typeof window === 'undefined' || !OneSignal.Notifications) {
-          return;
-      }
+      if (typeof window === 'undefined' || !OneSignal.Notifications) return;
       
-      if (user) {
-        const lastPrompted = localStorage.getItem('notificationPrompted');
-        const threeDays = 3 * 24 * 60 * 60 * 1000;
-        const showPrompt = !lastPrompted || (Date.now() - parseInt(lastPrompted, 10) > threeDays);
-        
-        const isPushEnabled = OneSignal.Notifications.permission;
+      const isPushSupported = OneSignal.Notifications.isPushSupported();
+      if (!isPushSupported) return;
 
-        if (showPrompt && !isPushEnabled) {
-          setTimeout(() => {
-            setIsNotificationPromptOpen(true);
-          }, 3000);
-        }
+      const lastPrompted = localStorage.getItem('notificationPrompted');
+      const threeDays = 3 * 24 * 60 * 60 * 1000;
+      const showPrompt = !lastPrompted || (Date.now() - parseInt(lastPrompted, 10) > threeDays);
+      
+      const isPushEnabled = OneSignal.Notifications.permission;
+
+      if (showPrompt && !isPushEnabled) {
+        setTimeout(() => {
+          setIsNotificationPromptOpen(true);
+        }, 3000);
       }
     }
-    checkNotificationPermission();
-  }, [user, isUserLoading]);
+    // Check after a small delay to let user context load
+    const timer = setTimeout(checkNotificationPermission, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (videos && videos.length > 0) {
@@ -193,8 +194,18 @@ export default function Home() {
     }
   };
   
-  const handleAllowNotifications = async () => {
+  const handleAllowNotifications = async (selectedCategories: string[]) => {
     await OneSignal.Notifications.requestPermission();
+    const isEnabled = OneSignal.Notifications.permission;
+    if (isEnabled) {
+      toast({ title: 'Notifications Enabled!' });
+      // Tag user with selected categories
+      const tags: { [key: string]: string } = {};
+      selectedCategories.forEach(cat => {
+        tags[`category_${cat.toLowerCase()}`] = "true";
+      });
+      OneSignal.User.addTags(tags);
+    }
     localStorage.setItem('notificationPrompted', Date.now().toString());
     setIsNotificationPromptOpen(false);
   };
