@@ -42,6 +42,17 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
       }
     });
   };
+  
+  const handleAllowClick = () => {
+    // A little UX improvement: if no categories are selected, select them all by default.
+    if (selectedCategories.length === 0 && categories) {
+      const allCategoryNames = categories.map(c => c.name);
+      onAllow(allCategoryNames);
+    } else {
+      onAllow(selectedCategories);
+    }
+  };
+
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -85,10 +96,12 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
             <Button variant="ghost" onClick={onLater}>Maybe Later</Button>
           </AlertDialogCancel>
           <AlertDialogAction asChild>
-            <Button onClick={() => onAllow(selectedCategories)}>Allow Notifications</Button>
+            <Button onClick={handleAllowClick}>Allow Notifications</Button>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
 }
+
+    

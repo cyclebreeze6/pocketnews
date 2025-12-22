@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -105,14 +104,11 @@ export default function Home() {
       
       const isPushSupported = OneSignal.Notifications.isPushSupported();
       if (!isPushSupported) return;
-
-      const lastPrompted = localStorage.getItem('notificationPrompted');
-      const threeDays = 3 * 24 * 60 * 60 * 1000;
-      const showPrompt = !lastPrompted || (Date.now() - parseInt(lastPrompted, 10) > threeDays);
       
-      const isPushEnabled = OneSignal.Notifications.permission;
+      const permission = await OneSignal.Notifications.getPermissionAsync();
 
-      if (showPrompt && !isPushEnabled) {
+      // Show the prompt only if the user hasn't made a decision yet ('default')
+      if (permission === 'default') {
         setTimeout(() => {
           setIsNotificationPromptOpen(true);
         }, 3000);
@@ -204,8 +200,8 @@ export default function Home() {
     }
 
     await OneSignal.Notifications.requestPermission();
-    const isEnabled = OneSignal.Notifications.permission;
-    if (isEnabled) {
+    const permission = await OneSignal.Notifications.getPermissionAsync();
+    if (permission === 'granted') {
       toast({ title: 'Notifications Enabled!' });
       // Tag user with selected categories
       const tags: { [key: string]: string } = {};
@@ -214,12 +210,11 @@ export default function Home() {
       });
       OneSignal.User.addTags(tags);
     }
-    localStorage.setItem('notificationPrompted', Date.now().toString());
     setIsNotificationPromptOpen(false);
   };
 
   const handleDelayNotifications = () => {
-    localStorage.setItem('notificationPrompted', Date.now().toString());
+    // Simply close the dialog. It will reappear on the next visit.
     setIsNotificationPromptOpen(false);
   };
 
@@ -284,7 +279,13 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant={'outline'} onClick={() => setIsPremiumDialogOpen(true)}>
+                        <Button variant={'outline'} onClick={() => {
+                              if (user?.isAnonymous) {
+                                setIsAuthDialogOpen(true);
+                              } else {
+                                setIsPremiumDialogOpen(true)
+                              }
+                            }}>
                             <UserPlus className="mr-2 h-4 w-4" />
                             Follow
                         </Button>
@@ -306,7 +307,13 @@ export default function Home() {
                                 </div>
                             </PopoverContent>
                         </Popover>
-                         <Button variant="secondary" onClick={() => setIsReportDialogOpen(true)}>
+                         <Button variant="secondary" onClick={() => {
+                              if (user?.isAnonymous) {
+                                setIsAuthDialogOpen(true);
+                              } else {
+                                setIsReportDialogOpen(true);
+                              }
+                            }}>
                             <Flag className="mr-2 h-4 w-4" /> Report
                         </Button>
                     </div>
@@ -432,3 +439,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
