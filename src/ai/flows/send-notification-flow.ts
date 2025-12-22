@@ -2,13 +2,12 @@
 
 import { ai } from '../genkit';
 import { z } from 'zod';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getMessaging } from 'firebase-admin/messaging';
 import 'dotenv/config';
 import type { Video } from '../../lib/types';
+import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
 
-
+// Helper to initialize the admin app idempotently
 async function initializeAdminApp() {
     if (getApps().length > 0) {
         return;
@@ -18,10 +17,10 @@ async function initializeAdminApp() {
             credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
         });
     } else {
-        // This is for environments like Google Cloud Run where ADC are available.
         initializeApp();
     }
 }
+
 
 export const sendNewVideoNotificationFlow = ai.defineFlow(
   {
@@ -30,9 +29,18 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
     outputSchema: z.object({ success: z.boolean(), message: z.string() }),
   },
   async (videoId) => {
+    
     await initializeAdminApp();
     const firestore = getFirestore();
-    const messaging = getMessaging();
+
+    const ONE_SIGNAL_APP_ID = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+    const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+
+    if (!ONE_SIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+      const errorMsg = 'OneSignal App ID or REST API Key is not configured in environment variables.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
     try {
       // 1. Get the new video's details
@@ -42,51 +50,45 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
         throw new Error('Video not found');
       }
       const video = videoSnap.data() as Video;
-
-      // 2. Get all users and their FCM tokens
-      const usersSnapshot = await firestore.collection('users').get();
-      const userTokens: { userId: string; token: string; email: string | undefined }[] = [];
-
-      for (const userDoc of usersSnapshot.docs) {
-          const userId = userDoc.id;
-          const userData = userDoc.data();
-          const tokensSnapshot = await firestore.collection('users').doc(userId).collection('fcmTokens').get();
-          tokensSnapshot.forEach(tokenDoc => {
-              userTokens.push({ userId, token: tokenDoc.data().token, email: userData.email });
-          });
-      }
-
-      if (userTokens.length === 0) {
-        return { success: true, message: 'No users subscribed for notifications.' };
-      }
-      
-      const uniqueTokens = Array.from(new Set(userTokens.map(ut => ut.token)));
       const videoUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/watch/${videoId}`;
 
-      // 3. Send Push Notifications
-      if (uniqueTokens.length > 0) {
-          const message = {
-            notification: {
-              title: 'New Video: ' + video.title,
-              body: video.description,
-            },
-            webpush: {
-              fcmOptions: {
-                link: videoUrl,
-              },
-              notification: {
-                icon: video.thumbnailUrl,
-              }
-            },
-            tokens: uniqueTokens,
-          };
-          const batchResponse = await messaging.sendEachForMulticast(message);
-          console.log(`Successfully sent ${batchResponse.successCount} push notifications.`);
-      }
+      // 2. Send Push Notification via OneSignal
+      const notification = {
+        app_id: ONE_SIGNAL_APP_ID,
+        included_segments: ["Subscribed Users"],
+        headings: { en: 'New Video: ' + video.title },
+        contents: { en: video.description },
+        web_url: videoUrl,
+        chrome_web_image: video.thumbnailUrl, // For Chrome on desktop
+        firefox_icon: video.thumbnailUrl, // For Firefox
+      };
 
-      // 4. Queue Emails
+      const response = await fetch('https://onesignal.com/api/v1/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+        },
+        body: JSON.stringify(notification),
+      });
+      
+      const responseData = await response.json();
+      if (responseData.errors) {
+          throw new Error(`OneSignal API Error: ${JSON.stringify(responseData.errors)}`);
+      }
+      console.log(`Successfully sent push notification via OneSignal. ID: ${responseData.id}`);
+
+      // 3. Queue Emails
       const emailQueueRef = firestore.collection('email_queue');
-      const uniqueEmails = Array.from(new Set(userTokens.map(ut => ut.email).filter(Boolean)));
+      const usersSnapshot = await firestore.collection('users').get();
+      const uniqueEmails: string[] = [];
+
+      usersSnapshot.forEach(doc => {
+          const email = doc.data().email;
+          if (email && !uniqueEmails.includes(email)) {
+              uniqueEmails.push(email);
+          }
+      });
       
       for (const email of uniqueEmails) {
           await emailQueueRef.add({
@@ -105,7 +107,6 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
           });
       }
       console.log(`Successfully queued ${uniqueEmails.length} emails.`);
-
 
       return { success: true, message: `Notifications processed.` };
 

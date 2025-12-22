@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "../components/ui/toaster"
 import { FirebaseClientProvider } from '../firebase';
 import { NetworkStatusIndicator } from '../components/network-status-indicator';
+import OneSignalInitializer from '../components/onesignal-initializer';
 
 export const metadata: Metadata = {
   title: 'Pocketnews TV',
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <div className="max-w-7xl mx-auto">
           <FirebaseClientProvider>
+            <OneSignalInitializer />
             <NetworkStatusIndicator />
             {children}
           </FirebaseClientProvider>

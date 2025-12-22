@@ -34,9 +34,9 @@ import {
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { isNotificationPermissionGranted, requestNotificationPermission } from '../lib/firebase-notifications';
 import { NotificationPromptDialog } from '../components/notification-prompt-dialog';
 import { initiateAnonymousSignIn, useAuth } from '../firebase';
+import OneSignal from 'react-onesignal';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -98,26 +98,26 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
   
   useEffect(() => {
-    // Logic to show notification prompt, ensuring it runs only on client and after user status is known.
-    if (isUserLoading || typeof window === 'undefined' || !('Notification' in window)) {
-        return;
-    }
-    
-    // This will now work for anonymous users as well, since they will have a `user` object.
-    if (user) {
-      const lastPrompted = localStorage.getItem('notificationPrompted');
-      const threeDays = 3 * 24 * 60 * 60 * 1000;
-
-      const showPrompt = !lastPrompted || (Date.now() - parseInt(lastPrompted, 10) > threeDays);
+    async function checkNotificationPermission() {
+      if (isUserLoading || typeof window === 'undefined' || !OneSignal.Notifications) {
+          return;
+      }
       
-      // We check for 'default' which means the user has not made a choice yet.
-      if (showPrompt && Notification.permission === 'default') {
-        // Delay showing the prompt slightly
-        setTimeout(() => {
-          setIsNotificationPromptOpen(true);
-        }, 3000);
+      if (user) {
+        const lastPrompted = localStorage.getItem('notificationPrompted');
+        const threeDays = 3 * 24 * 60 * 60 * 1000;
+        const showPrompt = !lastPrompted || (Date.now() - parseInt(lastPrompted, 10) > threeDays);
+        
+        const isPushEnabled = OneSignal.Notifications.permission;
+
+        if (showPrompt && !isPushEnabled) {
+          setTimeout(() => {
+            setIsNotificationPromptOpen(true);
+          }, 3000);
+        }
       }
     }
+    checkNotificationPermission();
   }, [user, isUserLoading]);
 
   useEffect(() => {
@@ -194,14 +194,7 @@ export default function Home() {
   };
   
   const handleAllowNotifications = async () => {
-    if (user) {
-        const granted = await requestNotificationPermission(firestore, user.uid);
-        if (granted) {
-            toast({ title: 'Notifications Enabled!' });
-        } else {
-            toast({ variant: 'destructive', title: 'Permission Denied', description: 'You can enable notifications in your browser settings.' });
-        }
-    }
+    await OneSignal.Notifications.requestPermission();
     localStorage.setItem('notificationPrompted', Date.now().toString());
     setIsNotificationPromptOpen(false);
   };

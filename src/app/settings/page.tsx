@@ -8,40 +8,39 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { Label } from '../../components/ui/label';
 import { Separator } from '../../components/ui/separator';
 import { Switch } from '../../components/ui/switch';
-import { useFirebase, useUser } from '../../firebase';
+import { useUser } from '../../firebase';
 import { useState, useEffect } from 'react';
-import { requestNotificationPermission, isNotificationPermissionGranted } from '../../lib/firebase-notifications';
 import { useToast } from '../../hooks/use-toast';
+import OneSignal from 'react-onesignal';
 
 export default function SettingsPage() {
   const { user } = useUser();
-  const { firestore } = useFirebase();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { toast } = useToast();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
-    // Check initial permission status on component mount
     const checkPermission = async () => {
-        if(typeof window !== 'undefined' && 'Notification' in window) {
-            const permissionGranted = await isNotificationPermissionGranted();
-            setNotificationsEnabled(permissionGranted);
+        if(typeof window !== 'undefined' && OneSignal) {
+          const permission = await OneSignal.Notifications.getPermission();
+          setNotificationsEnabled(permission === 'granted');
         }
     };
     checkPermission();
   }, []);
 
   const handleNotificationToggle = async (enabled: boolean) => {
-    if (!user || !firestore) return;
+    if (!user) return;
     
     if (enabled) {
       try {
-        const permissionGranted = await requestNotificationPermission(firestore, user.uid);
-        if (permissionGranted) {
-          setNotificationsEnabled(true);
-          toast({ title: 'Notifications Enabled!' });
+        await OneSignal.Notifications.requestPermission();
+        const permission = await OneSignal.Notifications.getPermission();
+        if (permission === 'granted') {
+            setNotificationsEnabled(true);
+            toast({ title: 'Notifications Enabled!' });
         } else {
-          setNotificationsEnabled(false);
-          toast({ variant: 'destructive', title: 'Permission Denied', description: 'You need to allow notifications in your browser settings.' });
+            setNotificationsEnabled(false);
+            toast({ variant: 'destructive', title: 'Permission Denied', description: 'You need to allow notifications in your browser settings.' });
         }
       } catch (error) {
         console.error("Error requesting notification permission:", error);
@@ -49,10 +48,10 @@ export default function SettingsPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not enable notifications.' });
       }
     } else {
-      // Logic to disable notifications (e.g., delete the token from Firestore) would go here.
-      // For now, we just update the UI state.
+      // OneSignal does not provide a direct API to "un-subscribe" a user via code 
+      // as a security measure. Users must disable it from their browser settings.
       setNotificationsEnabled(false);
-      toast({ title: 'Notifications Disabled' });
+      toast({ title: 'Notifications Disabled', description: 'Please manage permissions in your browser settings.' });
     }
   };
 
