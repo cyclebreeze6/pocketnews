@@ -85,6 +85,7 @@ service cloud.firestore {
     }
 
     match /channels/{channelId} {
+      // All users can view channels
       allow get, list: if true;
       // Only Admins or Creators can manage channels.
       allow create, update: if canCreateContent();
@@ -97,8 +98,8 @@ service cloud.firestore {
     }
 
     match /videos/{videoId} {
-      // Allow any signed-in user to get individual videos or list the collection.
-      allow get, list: if isSignedIn();
+      // All users can view videos
+      allow get, list: if true;
       // Only Admins or Creators can create, update or delete videos.
       allow create: if canCreateContent();
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
