@@ -105,18 +105,15 @@ export default function Home() {
       const isPushSupported = OneSignal.Notifications.isPushSupported();
       if (!isPushSupported) return;
       
-      const permission = await OneSignal.Notifications.getPermissionAsync();
+      const permission = await OneSignal.Notifications.getPermission();
 
       // Show the prompt only if the user hasn't made a decision yet ('default')
       if (permission === 'default') {
-        setTimeout(() => {
-          setIsNotificationPromptOpen(true);
-        }, 3000);
+        setIsNotificationPromptOpen(true);
       }
     }
     // Check after a small delay to let user context load
-    const timer = setTimeout(checkNotificationPermission, 2000);
-    return () => clearTimeout(timer);
+    checkNotificationPermission();
   }, [isUserLoading]);
 
   useEffect(() => {
@@ -200,7 +197,7 @@ export default function Home() {
     }
 
     await OneSignal.Notifications.requestPermission();
-    const permission = await OneSignal.Notifications.getPermissionAsync();
+    const permission = await OneSignal.Notifications.getPermission();
     if (permission === 'granted') {
       toast({ title: 'Notifications Enabled!' });
       // Tag user with selected categories
@@ -439,5 +436,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
