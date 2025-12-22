@@ -18,6 +18,7 @@ import type { Category } from '../lib/types';
 import { useState } from 'react';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
+import { ScrollArea } from './ui/scroll-area';
 
 interface NotificationPromptDialogProps {
   open: boolean;
@@ -62,18 +63,20 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
             {isLoading ? (
                 <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
             ) : (
-                <div className="grid grid-cols-2 gap-4 max-h-40 overflow-y-auto pr-2">
-                    {categories?.map((category) => (
-                        <div key={category.id} className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={`cat-${category.id}`} 
-                                checked={selectedCategories.includes(category.name)}
-                                onCheckedChange={() => handleCategoryToggle(category.name)}
-                            />
-                            <Label htmlFor={`cat-${category.id}`} className="font-normal cursor-pointer">{category.name}</Label>
-                        </div>
-                    ))}
-                </div>
+                <ScrollArea className="h-40">
+                  <div className="grid grid-cols-2 gap-4 pr-6">
+                      {categories?.map((category) => (
+                          <div key={category.id} className="flex items-center space-x-2">
+                              <Checkbox 
+                                  id={`cat-${category.id}`} 
+                                  checked={selectedCategories.includes(category.name)}
+                                  onCheckedChange={() => handleCategoryToggle(category.name)}
+                              />
+                              <Label htmlFor={`cat-${category.id}`} className="font-normal cursor-pointer">{category.name}</Label>
+                          </div>
+                      ))}
+                  </div>
+                </ScrollArea>
             )}
         </div>
 
