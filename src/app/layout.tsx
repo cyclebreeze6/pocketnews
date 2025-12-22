@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "../components/ui/toaster"
 import { FirebaseClientProvider } from '../firebase';
+import { NetworkStatusIndicator } from '../components/network-status-indicator';
 
 export const metadata: Metadata = {
   title: 'Pocketnews TV',
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <div className="max-w-7xl mx-auto">
           <FirebaseClientProvider>
+            <NetworkStatusIndicator />
             {children}
           </FirebaseClientProvider>
           <Toaster />
