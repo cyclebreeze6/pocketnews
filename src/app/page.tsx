@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { NotificationPromptDialog } from '../components/notification-prompt-dialog';
 import { initiateAnonymousSignIn, useAuth } from '../firebase';
 import OneSignal from 'react-onesignal';
+import { AuthDialog } from '../components/auth-dialog';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -73,6 +74,7 @@ export default function Home() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -99,7 +101,7 @@ export default function Home() {
   
   useEffect(() => {
     async function checkNotificationPermission() {
-      if (typeof window === 'undefined' || !OneSignal.Notifications) return;
+      if (typeof window === 'undefined' || !OneSignal.Notifications || isUserLoading) return;
       
       const isPushSupported = OneSignal.Notifications.isPushSupported();
       if (!isPushSupported) return;
@@ -119,7 +121,7 @@ export default function Home() {
     // Check after a small delay to let user context load
     const timer = setTimeout(checkNotificationPermission, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isUserLoading]);
 
   useEffect(() => {
     if (videos && videos.length > 0) {
@@ -195,6 +197,12 @@ export default function Home() {
   };
   
   const handleAllowNotifications = async (selectedCategories: string[]) => {
+    if (user?.isAnonymous) {
+      setIsNotificationPromptOpen(false);
+      setIsAuthDialogOpen(true);
+      return;
+    }
+
     await OneSignal.Notifications.requestPermission();
     const isEnabled = OneSignal.Notifications.permission;
     if (isEnabled) {
@@ -362,6 +370,11 @@ export default function Home() {
       <footer className="py-4 text-center text-sm text-muted-foreground">
         Meet the #1 App to Stream News. Watch Free!
       </footer>
+       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => {
+        setIsAuthDialogOpen(false);
+        // After successful login, re-trigger the notification prompt logic
+        setIsNotificationPromptOpen(true);
+      }} />
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
           <DialogHeader>

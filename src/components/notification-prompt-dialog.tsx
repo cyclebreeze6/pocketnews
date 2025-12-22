@@ -18,7 +18,6 @@ import type { Category } from '../lib/types';
 import { useState } from 'react';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
-import { useToast } from '../hooks/use-toast';
 
 interface NotificationPromptDialogProps {
   open: boolean;
@@ -29,7 +28,6 @@ interface NotificationPromptDialogProps {
 
 export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater }: NotificationPromptDialogProps) {
   const { firestore } = useFirebase();
-  const { toast } = useToast();
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories, isLoading } = useCollection<Category>(categoriesQuery);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -39,15 +37,7 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
       if (prev.includes(categoryId)) {
         return prev.filter(id => id !== categoryId);
       } else {
-        if (prev.length < 3) {
-          return [...prev, categoryId];
-        } else {
-          toast({
-            variant: 'destructive',
-            title: 'You can select up to 3 categories.',
-          });
-          return prev;
-        }
+        return [...prev, categoryId];
       }
     });
   };
@@ -63,7 +53,7 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
           </div>
           <AlertDialogTitle className="text-center">Get Notified of New Videos</AlertDialogTitle>
           <AlertDialogDescription className="text-center">
-            Enable notifications to know when new content is uploaded. Choose up to 3 categories to follow.
+            Enable notifications to know when new content is uploaded. Choose which categories to follow.
           </AlertDialogDescription>
         </AlertDialogHeader>
         
