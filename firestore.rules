@@ -123,6 +123,11 @@ service cloud.firestore {
         allow read, write: if isAdmin(); // Only admins (backend) can manage the queue
     }
 
+    // This rule allows collection group queries on the 'videos' collection.
+    // Any authenticated user can list videos, which is necessary for the homepage feed.
+    match /{path=**}/videos/{videoId} {
+      allow read: if true;
+    }
 
     match /roles_admin/{userId} {
       // For bootstrapping, allow a user to make themselves an admin.
