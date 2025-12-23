@@ -449,16 +449,7 @@ export default function Home() {
         onAllow={handleAllowNotifications}
         onLater={handleDelayNotifications}
       />
-      <Button 
-        variant="secondary" 
-        size="icon" 
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg"
-        onClick={() => setIsNotificationPromptOpen(true)}
-      >
-        <Bell className="h-6 w-6" />
-      </Button>
     </div>
   );
 }
 
-    

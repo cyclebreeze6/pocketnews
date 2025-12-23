@@ -17,23 +17,19 @@ export default function OneSignalInitializer() {
       return;
     }
 
-    // This is the production domain configured in OneSignal
-    const productionDomain = 'pocketnewslive.tv';
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal: any) {
+      if (OneSignal) {
+        await OneSignal.init({
+          appId: "272cbe7a-b3d6-4cc1-ad3e-2e19759f912f",
+          safari_web_id: "web.onesignal.auto.38b1a4de-a361-440e-ae28-b71c05790af2",
+          notifyButton: {
+            enable: true,
+          },
+        });
+      }
+    });
     
-    // Only initialize OneSignal if we are on the configured production domain
-    if (window.location.hostname === productionDomain) {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal: any) {
-        if (OneSignal) {
-          await OneSignal.init({
-            appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '',
-            allowBell: false,
-          });
-        }
-      });
-    } else {
-      console.log('OneSignal initialization skipped: not on production domain.');
-    }
   }, []);
 
   return null;
