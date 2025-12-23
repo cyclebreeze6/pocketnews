@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -34,7 +35,6 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { NotificationPromptDialog } from '../components/notification-prompt-dialog';
 import { initiateAnonymousSignIn, useAuth } from '../firebase';
-import OneSignal from 'react-onesignal';
 import { AuthDialog } from '../components/auth-dialog';
 
 
@@ -101,7 +101,8 @@ export default function Home() {
   
   useEffect(() => {
     async function checkNotificationPermission() {
-      if (typeof window === 'undefined' || !OneSignal.Notifications || isUserLoading) return;
+      const OneSignal = window.OneSignal;
+      if (typeof window === 'undefined' || !OneSignal || !OneSignal.Notifications || isUserLoading) return;
       
       const isPushSupported = OneSignal.Notifications.isPushSupported();
       if (!isPushSupported) return;
@@ -192,6 +193,7 @@ export default function Home() {
   };
   
   const handleAllowNotifications = async (selectedCategories: string[]) => {
+    const OneSignal = window.OneSignal;
     if (user?.isAnonymous) {
       setIsNotificationPromptOpen(false);
       setIsAuthDialogOpen(true);
@@ -458,3 +460,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

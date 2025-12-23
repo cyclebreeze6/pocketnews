@@ -11,7 +11,6 @@ import { Switch } from '../../components/ui/switch';
 import { useUser } from '../../firebase';
 import { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/use-toast';
-import OneSignal from 'react-onesignal';
 
 export default function SettingsPage() {
   const { user } = useUser();
@@ -20,7 +19,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const checkPermission = async () => {
-        if(typeof window !== 'undefined' && OneSignal.Notifications) {
+        const OneSignal = window.OneSignal;
+        if(typeof window !== 'undefined' && OneSignal?.Notifications) {
           const permission = OneSignal.Notifications.permission;
           setNotificationsEnabled(permission);
         }
@@ -29,7 +29,8 @@ export default function SettingsPage() {
   }, []);
 
   const handleNotificationToggle = async (enabled: boolean) => {
-    if (!user) return;
+    const OneSignal = window.OneSignal;
+    if (!user || !OneSignal) return;
     
     if (enabled) {
       try {
@@ -119,3 +120,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

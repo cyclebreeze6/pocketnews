@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -19,7 +20,6 @@ import { useState, useEffect } from 'react';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import OneSignal from 'react-onesignal';
 
 interface NotificationPromptDialogProps {
   open: boolean;
@@ -38,6 +38,8 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
     // When the dialog opens, fetch the current tags from OneSignal
     if (open && categories) {
       const getExistingTags = async () => {
+        const OneSignal = window.OneSignal;
+        if (!OneSignal) return;
         try {
           const tags = await OneSignal.User.getTags();
           if (tags) {
@@ -120,3 +122,5 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
     </AlertDialog>
   );
 }
+
+    
