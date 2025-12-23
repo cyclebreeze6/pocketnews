@@ -90,20 +90,21 @@ service cloud.firestore {
       // Only Admins or Creators can manage channels.
       allow create, update: if canCreateContent();
       allow delete: if isAdmin();
+
+      // Rules for the 'videos' subcollection
+      match /videos/{videoId} {
+        // All users can view videos
+        allow get, list: if true;
+        // Only Admins or Creators can create, update or delete videos.
+        allow create: if canCreateContent();
+        allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
+        allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
+      }
     }
     
     match /categories/{categoryId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
-    }
-
-    match /videos/{videoId} {
-      // All users can view videos
-      allow get, list: if true;
-      // Only Admins or Creators can create, update or delete videos.
-      allow create: if canCreateContent();
-      allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
-      allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
     }
     
     match /reports/{reportId} {
