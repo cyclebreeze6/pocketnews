@@ -36,12 +36,10 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
   
   useEffect(() => {
     // When the dialog opens, fetch the current tags from OneSignal
-    if (open && categories) {
+    if (open && categories && window.OneSignal) {
       const getExistingTags = async () => {
-        const OneSignal = window.OneSignal;
-        if (!OneSignal) return;
         try {
-          const tags = await OneSignal.User.getTags();
+          const tags = await window.OneSignal.User.getTags();
           if (tags) {
             const previouslySelected = categories
               .map(c => c.name)
@@ -122,5 +120,3 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
     </AlertDialog>
   );
 }
-
-    
