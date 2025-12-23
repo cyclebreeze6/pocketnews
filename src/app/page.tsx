@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -10,7 +9,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, UserCheck, Bell } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel } from '../lib/types';
@@ -433,6 +432,14 @@ export default function Home() {
         onAllow={handleAllowNotifications}
         onLater={handleDelayNotifications}
       />
+      <Button 
+        variant="secondary" 
+        size="icon" 
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg"
+        onClick={() => setIsNotificationPromptOpen(true)}
+      >
+        <Bell className="h-6 w-6" />
+      </Button>
     </div>
   );
 }
