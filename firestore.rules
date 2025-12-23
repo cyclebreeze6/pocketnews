@@ -93,7 +93,7 @@ service cloud.firestore {
     }
 
     match /videos/{videoId} {
-        // All users can view videos
+        // All users can view and list videos.
         allow get, list: if true;
         // Only Admins or Creators can create, update or delete videos.
         allow create: if canCreateContent();
