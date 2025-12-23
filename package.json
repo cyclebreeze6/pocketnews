@@ -57,8 +57,7 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.2",
     "react-day-picker": "8.10.1",
-    "firebase-functions": "^5.0.1",
-    "react-onesignal": "^3.0.1"
+    "firebase-functions": "^5.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",
