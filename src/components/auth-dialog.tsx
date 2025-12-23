@@ -15,11 +15,29 @@ import { Label } from './ui/label';
 import { useState } from 'react';
 import { useAuth, initiateEmailSignIn, initiateEmailSignUp } from '../firebase';
 import { useToast } from '../hooks/use-toast';
+import { FirebaseError } from 'firebase/app';
 
 interface AuthDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onLoginSuccess: () => void;
+}
+
+function getFirebaseErrorMessage(error: FirebaseError): string {
+    switch (error.code) {
+        case 'auth/invalid-email':
+            return 'Please enter a valid email address.';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            return 'Invalid email or password. Please try again.';
+        case 'auth/email-already-in-use':
+            return 'An account with this email address already exists.';
+        case 'auth/weak-password':
+            return 'The password is too weak. Please use at least 6 characters.';
+        default:
+            return 'An unexpected error occurred. Please try again.';
+    }
 }
 
 export function AuthDialog({ open, onOpenChange, onLoginSuccess }: AuthDialogProps) {
@@ -28,36 +46,53 @@ export function AuthDialog({ open, onOpenChange, onLoginSuccess }: AuthDialogPro
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    try {
-      initiateEmailSignIn(auth, email, password);
-      onLoginSuccess();
-      onOpenChange(false);
-      toast({ title: 'Logged in successfully!' });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error logging in',
-        description: error.message,
-      });
-    }
+    setIsLoading(true);
+    initiateEmailSignIn(
+      auth, 
+      email, 
+      password,
+      () => { // onSuccess
+        onLoginSuccess();
+        onOpenChange(false);
+        toast({ title: 'Logged in successfully!' });
+        setIsLoading(false);
+      },
+      (error) => { // onError
+        toast({
+            variant: 'destructive',
+            title: 'Error logging in',
+            description: getFirebaseErrorMessage(error),
+        });
+        setIsLoading(false);
+      }
+    );
   };
 
   const handleSignUp = async () => {
-     try {
-      initiateEmailSignUp(auth, email, password);
-      // Here you would typically also save the user's name to your database
-      onLoginSuccess();
-      onOpenChange(false);
-      toast({ title: 'Signed up successfully!' });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error signing up',
-        description: error.message,
-      });
-    }
+    setIsLoading(true);
+    initiateEmailSignUp(
+      auth, 
+      email, 
+      password,
+      name,
+      () => { // onSuccess
+        onLoginSuccess();
+        onOpenChange(false);
+        toast({ title: 'Signed up successfully!' });
+        setIsLoading(false);
+      },
+      (error) => { // onError
+        toast({
+            variant: 'destructive',
+            title: 'Error signing up',
+            description: getFirebaseErrorMessage(error),
+        });
+        setIsLoading(false);
+      }
+    );
   };
 
 
@@ -79,13 +114,15 @@ export function AuthDialog({ open, onOpenChange, onLoginSuccess }: AuthDialogPro
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input id="email" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
               </div>
-              <Button onClick={handleLogin} className="w-full mt-2">Log In</Button>
+              <Button onClick={handleLogin} className="w-full mt-2" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Log In'}
+              </Button>
             </div>
           </TabsContent>
           <TabsContent value="signup">
@@ -98,17 +135,19 @@ export function AuthDialog({ open, onOpenChange, onLoginSuccess }: AuthDialogPro
             <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} />
+                    <Input id="name" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} />
                 </div>
               <div className="grid gap-2">
                 <Label htmlFor="email-signup">Email</Label>
-                <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password-signup">Password</Label>
-                <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
               </div>
-              <Button onClick={handleSignUp} className="w-full mt-2">Sign Up</Button>
+              <Button onClick={handleSignUp} className="w-full mt-2" disabled={isLoading}>
+                {isLoading ? 'Signing up...' : 'Sign Up'}
+              </Button>
             </div>
           </TabsContent>
         </Tabs>
