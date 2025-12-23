@@ -43,12 +43,20 @@ service cloud.firestore {
     }
 
     function userCanUpdateSelf() {
+        // List of fields a user is allowed to update on their own profile.
+        let allowedFields = ['id', 'displayName', 'email', 'avatar', 'preferredCategories'];
+        // All incoming fields must be in the allowed list.
+        let allFieldsAreAllowed = request.resource.data.keys().hasOnly(allowedFields);
+
+        // A user cannot change their own roles. Only an admin can.
+        let isRoleFieldImmutable = request.resource.data.isAdmin == resource.data.isAdmin &&
+                                   request.resource.data.isCreator == resource.data.isCreator;
+                                   
+        // A user cannot change their own ID or email.
         let isIdImmutable = request.resource.data.id == resource.data.id;
-        // Role fields are for display only and cannot be changed by the user.
-        // Admins can change them, handled in the `isExistingAdmin()` rule path.
-        let isRoleFieldImmutable = (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == resource.data.isAdmin) &&
-                                   (!('isCreator' in request.resource.data) || request.resource.data.isCreator == resource.data.isCreator);
-        return isIdImmutable && isRoleFieldImmutable;
+        let isEmailImmutable = request.resource.data.email == resource.data.email;
+
+        return allFieldsAreAllowed && isRoleFieldImmutable && isIdImmutable && isEmailImmutable;
     }
 
     function videoChannelIsImmutable() {
