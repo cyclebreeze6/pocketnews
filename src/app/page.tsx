@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -103,6 +102,11 @@ export default function Home() {
 
   // Main video query logic
   const videosQuery = useMemoFirebase(() => {
+    // Crucial: Do not attempt to build a query until user profile is loaded.
+    if (isUserLoading || isProfileLoading) {
+      return null;
+    }
+
     const baseQuery = collectionGroup(firestore, 'videos');
     const hasChannelPrefs = userProfile?.preferredChannels && userProfile.preferredChannels.length > 0;
     const hasCategoryPrefs = userProfile?.preferredCategories && userProfile.preferredCategories.length > 0;
@@ -116,7 +120,7 @@ export default function Home() {
     
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
 
-  }, [firestore, userProfile]);
+  }, [firestore, userProfile, isUserLoading, isProfileLoading]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -610,5 +614,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
