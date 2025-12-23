@@ -17,18 +17,23 @@ export default function OneSignalInitializer() {
       return;
     }
 
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async function(OneSignal: any) {
-      if (OneSignal) {
-        await OneSignal.init({
-          appId: "272cbe7a-b3d6-4cc1-ad3e-2e19759f912f",
-          safari_web_id: "web.onesignal.auto.38b1a4de-a361-440e-ae28-b71c05790af2",
-          notifyButton: {
-            enable: true,
-          },
+    // Only initialize OneSignal on the production domain to avoid errors locally.
+    if (window.location.hostname === 'pocketnewslive.tv') {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal: any) {
+        if (OneSignal) {
+            await OneSignal.init({
+            appId: "272cbe7a-b3d6-4cc1-ad3e-2e19759f912f",
+            safari_web_id: "web.onesignal.auto.38b1a4de-a361-440e-ae28-b71c05790af2",
+            notifyButton: {
+                enable: true,
+            },
+            });
+        }
         });
-      }
-    });
+    } else {
+        console.log("OneSignal initialization skipped: not on production domain.");
+    }
     
   }, []);
 
