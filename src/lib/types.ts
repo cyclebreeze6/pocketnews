@@ -43,18 +43,6 @@ export interface Category {
 }
 
 export interface UserProfile extends User {
-  preferredCategories?: string[];
-  preferredChannels?: string[];
-}
-
-export interface HomepageConfig {
-    headlineTitle: string;
-    sections: Array<{
-        channel: string;
-        categories: string[];
-    }>;
-    layout: 'personalized' | 'default';
-    updatedAt: Timestamp | Date | string;
 }
 
 export interface WatchHistory {

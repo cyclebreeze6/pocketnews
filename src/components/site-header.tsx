@@ -245,9 +245,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                             <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href="/settings/headlines"><ListFilter className="mr-2 h-4 w-4" /><span>Your Headlines</span></Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
                             <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>

@@ -13,7 +13,7 @@ import { Button } from '../components/ui/button';
 import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel, UserProfile, Category, HomepageConfig } from '../lib/types';
+import type { Video, Channel, UserProfile, Category } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback } from 'react';
@@ -37,7 +37,6 @@ import { initiateAnonymousSignIn, useAuth } from '../firebase';
 import { AuthDialog } from '../components/auth-dialog';
 import { Checkbox } from '../components/ui/checkbox';
 import { Separator } from '../components/ui/separator';
-import { generateHeadline } from './actions/generate-headline-flow';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -78,17 +77,9 @@ export default function Home() {
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const homepageConfigRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid, 'homepageConfig', 'main') : null), [firestore, user]);
-  const { data: homepageConfig, isLoading: isHomepageConfigLoading } = useDoc<HomepageConfig>(homepageConfigRef);
-
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-  const [isCustomizeDialogOpen, setIsCustomizeDialogOpen] = useState(false);
-  const [isHeadlineModalOpen, setIsHeadlineModalOpen] = useState(false);
-  
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
@@ -102,22 +93,10 @@ export default function Home() {
 
   // Main video query logic
   const videosQuery = useMemoFirebase(() => {
-    // Crucial: Do not attempt to build a query until user profile is loaded.
     if (isUserLoading || isProfileLoading) {
       return null;
     }
-
     const baseQuery = collectionGroup(firestore, 'videos');
-    const hasChannelPrefs = userProfile?.preferredChannels && userProfile.preferredChannels.length > 0;
-    const hasCategoryPrefs = userProfile?.preferredCategories && userProfile.preferredCategories.length > 0;
-
-    if (hasChannelPrefs) {
-        return query(baseQuery, where('channelId', 'in', userProfile.preferredChannels), orderBy('createdAt', 'desc'), limit(20));
-    }
-    if (hasCategoryPrefs) {
-        return query(baseQuery, where('contentCategory', 'in', userProfile.preferredCategories), orderBy('createdAt', 'desc'), limit(20));
-    }
-    
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
 
   }, [firestore, userProfile, isUserLoading, isProfileLoading]);
@@ -131,13 +110,6 @@ export default function Home() {
       initiateAnonymousSignIn(auth);
     }
   }, [isUserLoading, user, auth]);
-
-  useEffect(() => {
-    if (userProfile) {
-        setSelectedCategories(userProfile.preferredCategories || []);
-        setSelectedChannels(userProfile.preferredChannels || []);
-    }
-  }, [userProfile]);
 
   useEffect(() => {
     if (videos && videos.length > 0 && !currentVideo) {
@@ -210,117 +182,9 @@ export default function Home() {
         break;
     }
   };
-
-  const handleCustomizeSave = () => {
-    if (userProfileRef) {
-        updateDocumentNonBlocking(userProfileRef, {
-            preferredCategories: selectedCategories,
-            preferredChannels: selectedChannels,
-        });
-        toast({ title: "Your headlines have been updated!" });
-        setIsCustomizeDialogOpen(false);
-    }
-  };
   
-  const handleHeadlineConfigSave = async () => {
-    if (homepageConfigRef) {
-        try {
-            const result = await generateHeadline({ channels: selectedChannels.map(id => channels?.find(c=>c.id === id)?.name || ''), categories: selectedCategories });
-            const dataToSave = { ...result, updatedAt: serverTimestamp() };
-            setDocumentNonBlocking(homepageConfigRef, dataToSave, {});
-            toast({ title: "Your personal headline is configured!"});
-            setIsHeadlineModalOpen(false);
-        } catch (error) {
-            console.error("Failed to generate or save headline config:", error);
-            toast({ variant: 'destructive', title: "Could not save configuration." });
-        }
-    }
-  }
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading;
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || isHomepageConfigLoading;
-  
-  const renderDefaultHomepage = () => (
-    <>
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold text-muted-foreground">My Headlines</h3>
-        <Button variant="ghost" size="sm" onClick={() => setIsCustomizeDialogOpen(true)}>
-            <SlidersHorizontal className="mr-2 h-4 w-4" />
-            Customize
-        </Button>
-      </div>
-      <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-          <div className="space-y-4">
-              {otherVideos.map((video) => {
-                  const videoChannel = channels.find(c => c.id === video.channelId);
-                  const isPlaying = video.id === currentVideo.id;
-                  return (
-                  <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
-                      <div className="relative w-32 h-20 flex-shrink-0">
-                          <Image
-                          src={video.thumbnailUrl}
-                          alt={video.title}
-                          fill
-                          className="rounded-md object-cover"
-                          />
-                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
-                            {Math.floor(video.views / 60000)}:{String(Math.floor((video.views % 60000)/1000)).padStart(2,'0')}
-                          </div>
-                      </div>
-                      <div className="flex-grow">
-                          {isPlaying && (
-                              <Badge variant="default" className="mb-1 text-xs animate-pulse">
-                                  <PlayCircle className="mr-1 h-3 w-3" />
-                                  Now Playing
-                              </Badge>
-                          )}
-                          <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
-                          <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
-                      </div>
-                  </div>
-                  )
-              })}
-          </div>
-      </ScrollArea>
-    </>
-  );
-
-  const renderPersonalizedHomepage = (config: HomepageConfig) => (
-     <>
-        <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-semibold text-muted-foreground">{config.headlineTitle}</h3>
-             <Button variant="ghost" size="sm" onClick={() => setIsHeadlineModalOpen(true)}>
-                <Settings2 className="mr-2 h-4 w-4" />
-                Configure
-            </Button>
-        </div>
-        <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-            <div className="space-y-4">
-                {otherVideos.map((video) => {
-                    const videoChannel = channels.find(c => c.id === video.channelId);
-                    const isPlaying = video.id === currentVideo.id;
-                    return (
-                    <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
-                        <div className="relative w-32 h-20 flex-shrink-0">
-                            <Image
-                            src={video.thumbnailUrl}
-                            alt={video.title}
-                            fill
-                            className="rounded-md object-cover"
-                            />
-                        </div>
-                        <div className="flex-grow">
-                            {isPlaying && <Badge variant="default" className="mb-1 text-xs animate-pulse">Now Playing</Badge>}
-                            <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
-                            <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
-                        </div>
-                    </div>
-                    )
-                })}
-            </div>
-        </ScrollArea>
-    </>
-  );
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
@@ -337,14 +201,10 @@ export default function Home() {
       <div className="flex min-h-screen w-full flex-col">
         <SiteHeader />
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
-            <h2 className="text-2xl font-bold mb-4">Your Headlines are Empty</h2>
+            <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
-              Select your favorite topics to build your personalized news feed.
+              There are currently no videos to display. Please check back later.
             </p>
-            <Button onClick={() => setIsCustomizeDialogOpen(true)}>
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Customize My Headlines
-            </Button>
         </main>
       </div>
     );
@@ -433,16 +293,46 @@ export default function Home() {
                     <Link href="/category/Technology"><Badge variant="outline">#technology</Badge></Link>
                     <Link href="/category/Sports"><Badge variant="outline">#sports</Badge></Link>
                 </div>
-                 <Button onClick={() => setIsHeadlineModalOpen(true)}>
-                    Configure My Headline
-                </Button>
             </div>
           </div>
           
           {/* Sidebar */}
           <div className="lg:col-span-1 px-4 md:px-0">
              
-            {homepageConfig?.layout === 'personalized' ? renderPersonalizedHomepage(homepageConfig) : renderDefaultHomepage()}
+            <h3 className="text-lg font-semibold text-muted-foreground">My Headlines</h3>
+            <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+                <div className="space-y-4">
+                    {otherVideos.map((video) => {
+                        const videoChannel = channels.find(c => c.id === video.channelId);
+                        const isPlaying = video.id === currentVideo.id;
+                        return (
+                        <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                            <div className="relative w-32 h-20 flex-shrink-0">
+                                <Image
+                                src={video.thumbnailUrl}
+                                alt={video.title}
+                                fill
+                                className="rounded-md object-cover"
+                                />
+                                <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
+                                  {Math.floor(video.views / 60000)}:{String(Math.floor((video.views % 60000)/1000)).padStart(2,'0')}
+                                </div>
+                            </div>
+                            <div className="flex-grow">
+                                {isPlaying && (
+                                    <Badge variant="default" className="mb-1 text-xs animate-pulse">
+                                        <PlayCircle className="mr-1 h-3 w-3" />
+                                        Now Playing
+                                    </Badge>
+                                )}
+                                <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
+                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
+                            </div>
+                        </div>
+                        )
+                    })}
+                </div>
+            </ScrollArea>
 
              <Card className="mt-8 bg-card/50">
                 <CardContent className="p-4 flex items-center justify-between">
@@ -506,111 +396,6 @@ export default function Home() {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isCustomizeDialogOpen} onOpenChange={setIsCustomizeDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>Customize My Headlines</DialogTitle>
-                <DialogDescription>
-                Select your favorite channels and categories to personalize your feed.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="max-h-[60vh] overflow-y-auto space-y-6 p-1">
-                <div>
-                    <h4 className="text-sm font-medium mb-2 text-muted-foreground">Categories</h4>
-                    <div className="space-y-2">
-                    {categories?.map(category => (
-                        <div key={category.id} className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={`cat-${category.id}`} 
-                                checked={selectedCategories.includes(category.name)}
-                                onCheckedChange={(checked) => {
-                                    setSelectedCategories(prev => checked ? [...prev, category.name] : prev.filter(c => c !== category.name))
-                                }}
-                            />
-                            <Label htmlFor={`cat-${category.id}`} className="cursor-pointer">{category.name}</Label>
-                        </div>
-                    ))}
-                    </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                    <h4 className="text-sm font-medium mb-2 text-muted-foreground">Channels</h4>
-                    <div className="space-y-2">
-                    {channels?.map(channel => (
-                        <div key={channel.id} className="flex items-center space-x-2">
-                            <Checkbox
-                                id={`chan-${channel.id}`}
-                                checked={selectedChannels.includes(channel.id)}
-                                onCheckedChange={(checked) => {
-                                    setSelectedChannels(prev => checked ? [...prev, channel.id] : prev.filter(c => c !== channel.id))
-                                }}
-                            />
-                            <Label htmlFor={`chan-${channel.id}`} className="cursor-pointer">{channel.name}</Label>
-                        </div>
-                    ))}
-                    </div>
-                </div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCustomizeDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleCustomizeSave}>Save Preferences</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-        <Dialog open={isHeadlineModalOpen} onOpenChange={setIsHeadlineModalOpen}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Configure Your Headline</DialogTitle>
-                    <DialogDescription>
-                    Choose channels and categories to generate a personalized headline and homepage layout.
-                    </DialogDescription>
-                </DialogHeader>
-                 <div className="max-h-[60vh] overflow-y-auto space-y-6 p-1">
-                    <div>
-                        <h4 className="text-sm font-medium mb-2 text-muted-foreground">Categories</h4>
-                        <div className="space-y-2">
-                        {categories?.map(category => (
-                            <div key={category.id} className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id={`hl-cat-${category.id}`} 
-                                    checked={selectedCategories.includes(category.name)}
-                                    onCheckedChange={(checked) => {
-                                        setSelectedCategories(prev => checked ? [...prev, category.name] : prev.filter(c => c !== category.name))
-                                    }}
-                                />
-                                <Label htmlFor={`hl-cat-${category.id}`} className="cursor-pointer">{category.name}</Label>
-                            </div>
-                        ))}
-                        </div>
-                    </div>
-                    <Separator />
-                    <div>
-                        <h4 className="text-sm font-medium mb-2 text-muted-foreground">Channels</h4>
-                        <div className="space-y-2">
-                        {channels?.map(channel => (
-                            <div key={channel.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`hl-chan-${channel.id}`}
-                                    checked={selectedChannels.includes(channel.id)}
-                                    onCheckedChange={(checked) => {
-                                        setSelectedChannels(prev => checked ? [...prev, channel.id] : prev.filter(c => c !== channel.id))
-                                    }}
-                                />
-                                <Label htmlFor={`hl-chan-${channel.id}`} className="cursor-pointer">{channel.name}</Label>
-                            </div>
-                        ))}
-                        </div>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsHeadlineModalOpen(false)}>Cancel</Button>
-                    <Button onClick={handleHeadlineConfigSave}>Generate & Save</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }
