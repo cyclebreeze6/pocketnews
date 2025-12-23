@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "../components/ui/toaster"
@@ -26,8 +27,8 @@ export default function RootLayout({
             dangerouslySetInnerHTML={{
                 __html: `
                     window.OneSignalDeferred = window.OneSignalDeferred || [];
-                    OneSignalDeferred.push(async function(OneSignal) {
-                        await OneSignal.init({
+                    OneSignalDeferred.push(function(OneSignal) {
+                        OneSignal.init({
                         appId: "272cbe7a-b3d6-4cc1-ad3e-2e19759f912f",
                         safari_web_id: "web.onesignal.auto.38b1a4de-a361-440e-ae28-b71c05790af2",
                         notifyButton: {
