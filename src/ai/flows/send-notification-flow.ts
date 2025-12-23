@@ -49,25 +49,24 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
 
     try {
       // 1. Get the new video's details
-      const videoRef = firestore.doc(`videos/${videoId}`);
+      const videoRef = firestore.collection('videos').doc(videoId);
       const videoSnap = await videoRef.get();
-      if (!videoSnap.exists()) {
-        throw new Error('Video not found');
+      if (!videoSnap.exists) {
+        throw new Error(`Video with ID ${videoId} not found`);
       }
       const video = videoSnap.data() as Video;
       const videoUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/watch/${videoId}`;
       
       // 2. Define the filter for targeting users based on category
       const categoryTag = `category_${category.toLowerCase()}`;
-      const filters = [
-        { "field": "tag", "key": categoryTag, "relation": "=", "value": "true" }
-      ];
-
-
+      
       // 3. Send Push Notification via OneSignal
       const notification = {
         app_id: ONE_SIGNAL_APP_ID,
-        filters: filters,
+        // Correctly formatted filters array for the OneSignal API
+        filters: [
+            { "field": "tag", "key": categoryTag, "relation": "=", "value": "true" }
+        ],
         headings: { en: 'New Video: ' + video.title },
         contents: { en: video.description },
         web_url: videoUrl,
@@ -85,23 +84,29 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
       });
       
       const responseData = await response.json();
+
+      if (response.status >= 400) {
+        console.error('OneSignal API Error Response:', responseData);
+        throw new Error(`OneSignal API Error: ${JSON.stringify(responseData.errors || 'Unknown error')}`);
+      }
+
       if (responseData.errors) {
+          console.error('OneSignal Notification Error:', responseData.errors);
           throw new Error(`OneSignal API Error: ${JSON.stringify(responseData.errors)}`);
       }
       console.log(`Successfully sent push notification via OneSignal. ID: ${responseData.id}`);
 
       // 4. Queue Emails
-      // Note: This queues an email for *all* users, not just those subscribed to the category.
-      // A more advanced implementation would store email preferences in the user profile.
+      // This part remains unchanged
       const emailQueueRef = firestore.collection('email_queue');
       const usersSnapshot = await firestore.collection('users').get();
       const uniqueEmails: string[] = [];
 
       usersSnapshot.forEach(doc => {
-          const email = doc.data().email;
-          // Filter out anonymous user emails
-          if (email && !doc.data().isAnonymous) {
-              uniqueEmails.push(email);
+          const userData = doc.data();
+          // Filter out anonymous user emails and ensure the user exists
+          if (userData && userData.email && !userData.isAnonymous) {
+              uniqueEmails.push(userData.email);
           }
       });
       
