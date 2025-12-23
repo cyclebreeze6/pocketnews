@@ -47,6 +47,16 @@ export interface UserProfile extends User {
   preferredChannels?: string[];
 }
 
+export interface HomepageConfig {
+    headlineTitle: string;
+    sections: Array<{
+        channel: string;
+        categories: string[];
+    }>;
+    layout: 'personalized' | 'default';
+    updatedAt: Timestamp | Date | string;
+}
+
 export interface WatchHistory {
   id: string;
   userId: string;

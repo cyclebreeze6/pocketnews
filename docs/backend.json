@@ -132,6 +132,46 @@
         "displayName"
       ]
     },
+    "HomepageConfig": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "HomepageConfig",
+        "type": "object",
+        "description": "Stores a user's personalized homepage configuration.",
+        "properties": {
+            "headlineTitle": {
+                "type": "string",
+                "description": "The personalized title for the user's homepage."
+            },
+            "sections": {
+                "type": "array",
+                "description": "An array of content sections for the homepage.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "channel": {
+                            "type": "string"
+                        },
+                        "categories": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "required": ["channel", "categories"]
+                }
+            },
+            "layout": {
+                "type": "string",
+                "enum": ["personalized", "default"]
+            },
+            "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+            }
+        },
+        "required": ["headlineTitle", "sections", "layout", "updatedAt"]
+    },
     "Category": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Category",
@@ -236,6 +276,16 @@
               "name": "userId",
               "description": "The unique identifier of the user."
             }
+          ],
+          "subcollections": [
+            {
+                "path": "/homepageConfig/main",
+                "definition": {
+                    "entityName": "HomepageConfig",
+                    "schema": { "$ref": "#/backend/entities/HomepageConfig" },
+                    "description": "Stores the user's personalized homepage configuration."
+                }
+            }
           ]
         }
       },
@@ -252,23 +302,21 @@
               "name": "channelId",
               "description": "The unique identifier of the channel."
             }
-          ],
-          "subcollections": [
+          ]
+        }
+      },
+      {
+        "path": "/videos/{videoId}",
+        "definition": {
+          "entityName": "Video",
+          "schema": {
+            "$ref": "#/backend/entities/Video"
+          },
+          "description": "Stores all videos for the application.",
+          "params": [
             {
-              "path": "/videos/{videoId}",
-              "definition": {
-                "entityName": "Video",
-                "schema": {
-                  "$ref": "#/backend/entities/Video"
-                },
-                "description": "Stores videos specific to this channel.",
-                "params": [
-                  {
-                    "name": "videoId",
-                    "description": "The unique identifier of the video."
-                  }
-                ]
-              }
+              "name": "videoId",
+              "description": "The unique identifier of the video."
             }
           ]
         }
@@ -348,7 +396,7 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos are now correctly nested as a subcollection under channels, which is a more organized and scalable approach than a single top-level videos collection. This structure simplifies channel-specific queries and aligns with a logical ownership model. The rest of the structure remains segregated for security and clarity."
+    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos are now a top-level collection to simplify homepage queries. The rest of the structure remains segregated for security and clarity. A new subcollection 'homepageConfig' has been added under users to store personalization settings."
   }
 }
     

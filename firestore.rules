@@ -82,6 +82,11 @@ service cloud.firestore {
       match /fcmTokens/{tokenId} {
         allow read, write, delete: if isOwner(userId);
       }
+      
+      // Users can manage their own homepage configuration.
+      match /homepageConfig/{docId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /channels/{channelId} {
@@ -90,23 +95,13 @@ service cloud.firestore {
       // Only Admins or Creators can manage channels.
       allow create, update: if canCreateContent();
       allow delete: if isAdmin();
-
-      // Videos are a subcollection of channels
-      match /videos/{videoId} {
-        // All users can view and list videos.
-        allow get: if true;
-        allow list: if true;
-        // Only Admins or Creators can create, update or delete videos.
-        allow create: if canCreateContent();
-        allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
-        allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
-      }
     }
     
-    // This rule allows collection group queries on the 'videos' collection.
-    // It's essential for fetching all videos across all channels for the homepage.
-    match /{path=**}/videos/{videoId} {
+    match /videos/{videoId} {
       allow get, list: if true;
+      allow create: if canCreateContent();
+      allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
+      allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
     }
 
     match /categories/{categoryId} {
