@@ -4,7 +4,7 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import 'dotenv/config';
-import { sendNewVideoNotification } from '../../ai/flows/send-notification-flow';
+import { sendNewVideoNotification, type NotificationInput } from '../../ai/flows/send-notification-flow';
 
 // A leaner version of the Video type for this specific action
 type NewVideoData = {
@@ -63,7 +63,7 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
     // After successfully saving, trigger notifications
     for (const video of videosToNotify) {
         // Do not await this, let it run in the background
-        sendNewVideoNotification({ videoId: video.id, category: video.category }).catch(err => {
+        sendNewVideoNotification({ videoId: video.id, category: video.category } as NotificationInput).catch(err => {
           console.error(`Error triggering notification for video ${video.id}:`, err);
         });
     }

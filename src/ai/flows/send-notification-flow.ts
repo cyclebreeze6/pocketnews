@@ -21,13 +21,13 @@ async function initializeAdminApp() {
     }
 }
 
-export const NotificationInputSchema = z.object({
+const NotificationInputSchema = z.object({
   videoId: z.string(),
   category: z.string(),
 });
 export type NotificationInput = z.infer<typeof NotificationInputSchema>;
 
-export const NotificationOutputSchema = z.object({ success: z.boolean(), message: z.string() });
+const NotificationOutputSchema = z.object({ success: z.boolean(), message: z.string() });
 export type NotificationOutput = z.infer<typeof NotificationOutputSchema>;
 
 
