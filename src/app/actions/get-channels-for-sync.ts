@@ -13,9 +13,15 @@ import 'dotenv/config';
 export async function getChannelsForSync(channelId?: string): Promise<{ channelsToSync: Channel[], existingYoutubeIds: string[] }> {
   if (getApps().length === 0) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      initializeApp({
-        credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
-      });
+        try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+            initializeApp({
+                credential: cert(serviceAccount),
+            });
+        } catch (e) {
+            console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is set but not valid JSON. Falling back to default credentials.", e);
+            initializeApp();
+        }
     } else {
       // Fallback for environments where the service account key isn't set,
       // relying on application default credentials.

@@ -4,7 +4,7 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import 'dotenv/config';
-import { sendNewVideoNotification, type NotificationInput } from '../../ai/flows/send-notification-flow';
+import { sendNewVideoNotification } from '../../ai/flows/send-notification-flow';
 
 // A leaner version of the Video type for this specific action
 type NewVideoData = {
@@ -18,6 +18,12 @@ type NewVideoData = {
   watchTime: number;
 };
 
+type NotificationInput = {
+    videoId: string;
+    category: string;
+}
+
+
 /**
  * Saves an array of new video data to Firestore using a batch write.
  * This is a server action.
@@ -26,9 +32,15 @@ type NewVideoData = {
 export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   if (!getApps().length) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      initializeApp({
-        credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
-      });
+        try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+            initializeApp({
+                credential: cert(serviceAccount),
+            });
+        } catch (e) {
+            console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is set but not valid JSON. Falling back to default credentials.", e);
+            initializeApp();
+        }
     } else {
       // Fallback for environments where the service account key isn't set,
       // relying on application default credentials.

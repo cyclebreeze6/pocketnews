@@ -12,11 +12,19 @@ async function initializeAdminApp() {
     if (getApps().length > 0) {
         return;
     }
+    // Check if the service account key is available and is a valid JSON string
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        initializeApp({
-            credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
-        });
+        try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+            initializeApp({
+                credential: cert(serviceAccount),
+            });
+        } catch (e) {
+            console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is set but is not valid JSON. Falling back to default credentials.", e);
+            initializeApp();
+        }
     } else {
+        // Fallback to Application Default Credentials
         initializeApp();
     }
 }
@@ -25,10 +33,10 @@ const NotificationInputSchema = z.object({
   videoId: z.string(),
   category: z.string(),
 });
-export type NotificationInput = z.infer<typeof NotificationInputSchema>;
+type NotificationInput = z.infer<typeof NotificationInputSchema>;
 
 const NotificationOutputSchema = z.object({ success: z.boolean(), message: z.string() });
-export type NotificationOutput = z.infer<typeof NotificationOutputSchema>;
+type NotificationOutput = z.infer<typeof NotificationOutputSchema>;
 
 
 const sendNewVideoNotificationFlow = ai.defineFlow(
