@@ -44,6 +44,7 @@ export interface Category {
 
 export interface UserProfile extends User {
   preferredCategories?: string[];
+  preferredChannels?: string[];
 }
 
 export interface WatchHistory {
@@ -63,4 +64,5 @@ export interface Report {
     createdAt: Timestamp | Date | string;
     status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
 }
+
 

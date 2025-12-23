@@ -110,14 +110,26 @@
         "isCreator": {
           "type": "boolean",
           "description": "Indicates if the user is a content creator."
+        },
+        "preferredCategories": {
+            "type": "array",
+            "description": "A list of category names the user prefers.",
+            "items": {
+                "type": "string"
+            }
+        },
+        "preferredChannels": {
+            "type": "array",
+            "description": "A list of channel IDs the user prefers.",
+            "items": {
+                "type": "string"
+            }
         }
       },
       "required": [
         "id",
         "email",
-        "displayName",
-        "isAdmin",
-        "isCreator"
+        "displayName"
       ]
     },
     "Category": {
@@ -339,6 +351,4 @@
     "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos are now correctly nested as a subcollection under channels, which is a more organized and scalable approach than a single top-level videos collection. This structure simplifies channel-specific queries and aligns with a logical ownership model. The rest of the structure remains segregated for security and clarity."
   }
 }
-    
-
     
