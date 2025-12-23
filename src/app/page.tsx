@@ -14,7 +14,7 @@ import { Share, Flag, PlayCircle, Check, Copy, UserPlus, UserCheck, Bell, ListFi
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -84,7 +84,8 @@ export default function Home() {
   // Main video query logic
   const videosQuery = useMemoFirebase(() => {
     const preferredCategories = userProfile?.preferredCategories;
-    const baseQuery = collection(firestore, 'videos');
+    // This is now a collection group query to fetch videos from all channels.
+    const baseQuery = collectionGroup(firestore, 'videos');
     
     // If user has preferences, filter by them
     if (preferredCategories && preferredCategories.length > 0) {
@@ -409,3 +410,4 @@ export default function Home() {
   );
 }
 
+    

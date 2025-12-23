@@ -240,21 +240,23 @@
               "name": "channelId",
               "description": "The unique identifier of the channel."
             }
-          ]
-        }
-      },
-      {
-        "path": "/videos/{videoId}",
-        "definition": {
-          "entityName": "Video",
-          "schema": {
-            "$ref": "#/backend/entities/Video"
-          },
-          "description": "Stores video data, including title, description, thumbnailUrl, and upload date. This is a top-level collection for efficient querying.",
-          "params": [
+          ],
+          "subcollections": [
             {
-              "name": "videoId",
-              "description": "The unique identifier of the video."
+              "path": "/videos/{videoId}",
+              "definition": {
+                "entityName": "Video",
+                "schema": {
+                  "$ref": "#/backend/entities/Video"
+                },
+                "description": "Stores videos specific to this channel.",
+                "params": [
+                  {
+                    "name": "videoId",
+                    "description": "The unique identifier of the video."
+                  }
+                ]
+              }
             }
           ]
         }
@@ -315,7 +317,7 @@
             "type": "object",
             "properties": {
               "to": { "type": "string" },
-              "message": { 
+              "message": {
                 "type": "object",
                 "properties": {
                   "subject": { "type": "string" },
@@ -334,7 +336,9 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features, focusing on channel and video management, user roles, and admin analytics. To ensure security, scalability, and ease of debugging, the design adheres to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). \n\n**Authorization Independence:** Videos are now in a top-level collection to simplify homepage and category-based queries, which is a common and efficient pattern. The `channelId` field is maintained on each video document to link back to the channel, allowing for easy data joins on the client and for authorization rules that might depend on channel ownership in the future.\n\n**Structural Segregation:**  The structure segregates `videos`, `channels`, `users`, `categories`, `reports`, and `email_queue` into their own top-level collections. This simplifies security rules and makes the data model easier to understand. Each collection can have its own distinct security posture.\n\n**Access Modeling:** Private user data is stored under `/users/{userId}`, using path-based ownership. Admin roles are managed via the existence of documents in `/roles_admin/{userId}`, representing global roles using DBAC principles. \n\n**QAPs (Rules are not Filters):** Placing videos in a top-level collection is essential for performant listing on the main pages. Firestore queries are shallow and can only query a single collection at a time (unless a collection group query is used, which adds complexity). By having a single `videos` collection, the homepage can easily query for the latest videos or filter by category across all channels. Security rules for the `videos` collection simply allow `list` and `get` for all users, which is appropriate for public video content."
+    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos are now correctly nested as a subcollection under channels, which is a more organized and scalable approach than a single top-level videos collection. This structure simplifies channel-specific queries and aligns with a logical ownership model. The rest of the structure remains segregated for security and clarity."
   }
 }
+    
+
     
