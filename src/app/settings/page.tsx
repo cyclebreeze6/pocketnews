@@ -20,9 +20,9 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const checkPermission = async () => {
-        if(typeof window !== 'undefined' && OneSignal) {
-          const permission = await OneSignal.Notifications.getPermission();
-          setNotificationsEnabled(permission === 'granted');
+        if(typeof window !== 'undefined' && OneSignal.Notifications) {
+          const permission = OneSignal.Notifications.permission;
+          setNotificationsEnabled(permission);
         }
     };
     checkPermission();
@@ -34,8 +34,8 @@ export default function SettingsPage() {
     if (enabled) {
       try {
         await OneSignal.Notifications.requestPermission();
-        const permission = await OneSignal.Notifications.getPermission();
-        if (permission === 'granted') {
+        const permission = OneSignal.Notifications.permission;
+        if (permission) {
             setNotificationsEnabled(true);
             toast({ title: 'Notifications Enabled!' });
         } else {

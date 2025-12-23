@@ -104,11 +104,11 @@ export default function Home() {
       
       const isPushSupported = OneSignal.Notifications.isPushSupported();
       if (!isPushSupported) return;
-      
-      const permission = await OneSignal.Notifications.getPermission();
 
+      const permission = OneSignal.Notifications.permission;
+      
       // Show the prompt only if the user hasn't made a decision yet ('default')
-      if (permission === 'default') {
+      if (permission) {
         setIsNotificationPromptOpen(true);
       }
     }
@@ -197,8 +197,8 @@ export default function Home() {
     }
 
     await OneSignal.Notifications.requestPermission();
-    const permission = await OneSignal.Notifications.getPermission();
-    if (permission === 'granted') {
+    const permission = OneSignal.Notifications.permission;
+    if (permission) {
       toast({ title: 'Notifications Enabled!' });
       // Tag user with selected categories
       const tags: { [key: string]: string } = {};
