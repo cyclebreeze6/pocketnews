@@ -27,11 +27,15 @@ export const NotificationInputSchema = z.object({
 });
 export type NotificationInput = z.infer<typeof NotificationInputSchema>;
 
-export const sendNewVideoNotificationFlow = ai.defineFlow(
+export const NotificationOutputSchema = z.object({ success: z.boolean(), message: z.string() });
+export type NotificationOutput = z.infer<typeof NotificationOutputSchema>;
+
+
+const sendNewVideoNotificationFlow = ai.defineFlow(
   {
     name: 'sendNewVideoNotificationFlow',
     inputSchema: NotificationInputSchema,
-    outputSchema: z.object({ success: z.boolean(), message: z.string() }),
+    outputSchema: NotificationOutputSchema,
   },
   async ({ videoId, category }) => {
     
@@ -90,7 +94,7 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
         throw new Error(`OneSignal API Error: ${JSON.stringify(responseData.errors || 'Unknown error')}`);
       }
 
-      if (responseData.errors) {
+      if (responseData.errors && responseData.errors.length > 0) {
           console.error('OneSignal Notification Error:', responseData.errors);
           throw new Error(`OneSignal API Error: ${JSON.stringify(responseData.errors)}`);
       }
@@ -136,3 +140,14 @@ export const sendNewVideoNotificationFlow = ai.defineFlow(
     }
   }
 );
+
+
+/**
+ * Server Action to trigger the new video notification flow.
+ * This is the function that should be imported and called from your client-side components.
+ * @param input - The videoId and category for the notification.
+ * @returns The result of the notification flow.
+ */
+export async function sendNewVideoNotification(input: NotificationInput): Promise<NotificationOutput> {
+  return sendNewVideoNotificationFlow(input);
+}

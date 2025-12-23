@@ -4,7 +4,7 @@ import { Button } from '../../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
 import { useDoc, useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, uploadFile, useStorage } from '../../../../firebase';
 import type { Video, Channel, Category } from '../../../../lib/types';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Loader2, PlusCircle, ArrowLeft } from 'lucide-react';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -24,7 +24,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '../../../../components/ui/dialog';
-import { sendNewVideoNotificationFlow } from '../../../../ai/flows/send-notification-flow';
+import { sendNewVideoNotification } from '../../../../ai/flows/send-notification-flow';
 
 export default function VideoEditPage() {
   const { firestore } = useFirebase();
@@ -214,7 +214,7 @@ export default function VideoEditPage() {
 
       // Trigger notification for new manual upload
       if (dataToSave.contentCategory) {
-        sendNewVideoNotificationFlow({
+        sendNewVideoNotification({
           videoId: dataToSave.id,
           category: dataToSave.contentCategory
         }).catch(err => console.error("Failed to send notification:", err));
