@@ -102,28 +102,16 @@ export default function Home() {
     const hasCategoryPrefs = userProfile?.preferredCategories && userProfile.preferredCategories.length > 0;
     const hasChannelPrefs = userProfile?.preferredChannels && userProfile.preferredChannels.length > 0;
 
-    // If user has preferences for either, filter by them
-    if (hasCategoryPrefs || hasChannelPrefs) {
-      const filters = [];
-      if (hasCategoryPrefs) {
-        filters.push(where('contentCategory', 'in', userProfile.preferredCategories));
-      }
-      if (hasChannelPrefs) {
-        filters.push(where('channelId', 'in', userProfile.preferredChannels));
-      }
-      // Note: Firestore does not support 'OR' queries on different fields.
-      // This query will find videos matching EITHER a category OR a channel if we had a single field.
-      // For now, we'll just query by categories if they exist, otherwise by channels, or latest if none.
-      // A more robust solution might involve client-side merging or denormalizing data.
-      if (hasCategoryPrefs) {
-        return query(baseQuery, where('contentCategory', 'in', userProfile.preferredCategories), orderBy('createdAt', 'desc'), limit(20));
-      }
-      if (hasChannelPrefs) {
-         return query(baseQuery, where('channelId', 'in', userProfile.preferredChannels), orderBy('createdAt', 'desc'), limit(20));
-      }
+    // Prioritize channel preferences as they are more specific
+    if (hasChannelPrefs) {
+      return query(baseQuery, where('channelId', 'in', userProfile.preferredChannels), orderBy('createdAt', 'desc'), limit(20));
+    }
+    // If no channel preferences, fall back to category preferences
+    if (hasCategoryPrefs) {
+      return query(baseQuery, where('contentCategory', 'in', userProfile.preferredCategories), orderBy('createdAt', 'desc'), limit(20));
     }
     
-    // Otherwise, get the latest videos from all categories
+    // Default: If no preferences are set, get the latest videos from all sources
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
 
   }, [firestore, userProfile]);
@@ -508,3 +496,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

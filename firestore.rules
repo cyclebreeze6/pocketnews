@@ -94,7 +94,8 @@ service cloud.firestore {
       // Videos are a subcollection of channels
       match /videos/{videoId} {
         // All users can view and list videos.
-        allow get, list: if true;
+        allow get: if true;
+        allow list: if true;
         // Only Admins or Creators can create, update or delete videos.
         allow create: if canCreateContent();
         allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
@@ -136,4 +137,5 @@ service cloud.firestore {
     }
   }
 }
+    
     
