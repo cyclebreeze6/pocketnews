@@ -15,10 +15,11 @@ import { Button } from './ui/button';
 import { useCollection, useFirebase, useMemoFirebase } from '../firebase';
 import { collection } from 'firebase/firestore';
 import type { Category } from '../lib/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
+import OneSignal from 'react-onesignal';
 
 interface NotificationPromptDialogProps {
   open: boolean;
@@ -32,25 +33,41 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories, isLoading } = useCollection<Category>(categoriesQuery);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  
+  useEffect(() => {
+    // When the dialog opens, fetch the current tags from OneSignal
+    if (open && categories) {
+      const getExistingTags = async () => {
+        try {
+          const tags = await OneSignal.User.getTags();
+          if (tags) {
+            const previouslySelected = categories
+              .map(c => c.name)
+              .filter(name => tags[`category_${name.toLowerCase()}`] === 'true');
+            setSelectedCategories(previouslySelected);
+          }
+        } catch (error) {
+          console.error("Error fetching OneSignal tags:", error);
+        }
+      };
+      getExistingTags();
+    }
+  }, [open, categories]);
 
-  const handleCategoryToggle = (categoryId: string) => {
+
+  const handleCategoryToggle = (categoryName: string) => {
     setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
+      if (prev.includes(categoryName)) {
+        return prev.filter(name => name !== categoryName);
       } else {
-        return [...prev, categoryId];
+        return [...prev, categoryName];
       }
     });
   };
   
   const handleAllowClick = () => {
-    // A little UX improvement: if no categories are selected, select them all by default.
-    if (selectedCategories.length === 0 && categories) {
-      const allCategoryNames = categories.map(c => c.name);
-      onAllow(allCategoryNames);
-    } else {
-      onAllow(selectedCategories);
-    }
+    // Pass the final list of selected categories to the parent
+    onAllow(selectedCategories);
   };
 
 
@@ -103,5 +120,3 @@ export function NotificationPromptDialog({ open, onOpenChange, onAllow, onLater 
     </AlertDialog>
   );
 }
-
-    

@@ -12,7 +12,7 @@ import { Button } from '../components/ui/button';
 import { Share, Flag, PlayCircle, Check, Copy, UserPlus, UserCheck, Bell } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel } from '../lib/types';
+import type { Video, Channel, Category } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback } from 'react';
@@ -85,9 +85,11 @@ export default function Home() {
   );
   
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
-  
+  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
+
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
@@ -111,8 +113,9 @@ export default function Home() {
         setIsNotificationPromptOpen(true);
       }
     }
-    // Check after a small delay to let user context load
-    checkNotificationPermission();
+    // Check after a small delay to let user context load and OneSignal to initialize
+    const timer = setTimeout(checkNotificationPermission, 3000);
+    return () => clearTimeout(timer);
   }, [isUserLoading]);
 
   useEffect(() => {
@@ -197,14 +200,26 @@ export default function Home() {
 
     await OneSignal.Notifications.requestPermission();
     const permission = OneSignal.Notifications.permission;
+    
     if (permission) {
-      toast({ title: 'Notifications Enabled!' });
-      // Tag user with selected categories
-      const tags: { [key: string]: string } = {};
-      selectedCategories.forEach(cat => {
-        tags[`category_${cat.toLowerCase()}`] = "true";
-      });
-      OneSignal.User.addTags(tags);
+        toast({ title: 'Notification Preferences Saved!' });
+        
+        // Get all possible category tags
+        const allCategoryTags = categories?.map(c => `category_${c.name.toLowerCase()}`) || [];
+        
+        // Remove all previous category tags
+        await OneSignal.User.removeTags(allCategoryTags);
+
+        // Create the new set of tags to add
+        const newTags: { [key: string]: string } = {};
+        selectedCategories.forEach(cat => {
+            newTags[`category_${cat.toLowerCase()}`] = "true";
+        });
+        
+        // Add the new tags
+        if (Object.keys(newTags).length > 0) {
+          await OneSignal.User.addTags(newTags);
+        }
     }
     setIsNotificationPromptOpen(false);
   };
