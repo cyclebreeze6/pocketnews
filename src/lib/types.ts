@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from 'firebase/firestore';
 
 export interface User {
@@ -42,7 +43,7 @@ export interface Category {
 }
 
 export interface UserProfile extends User {
-  // You can add more user-specific fields here
+  preferredCategories?: string[];
 }
 
 export interface WatchHistory {
@@ -62,3 +63,4 @@ export interface Report {
     createdAt: Timestamp | Date | string;
     status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
 }
+

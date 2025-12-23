@@ -10,11 +10,11 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, UserCheck, Bell } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, UserCheck, Bell, ListFilter } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel, Category } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit } from 'firebase/firestore';
+import type { Video, Channel, UserProfile } from '../lib/types';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -33,7 +33,6 @@ import {
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { NotificationPromptDialog } from '../components/notification-prompt-dialog';
 import { initiateAnonymousSignIn, useAuth } from '../firebase';
 import { AuthDialog } from '../components/auth-dialog';
 
@@ -72,60 +71,54 @@ export default function Home() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
+
+  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
-  const [isNotificationPromptOpen, setIsNotificationPromptOpen] = useState(false);
 
-  const videosQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20)),
-    [firestore]
-  );
+  // Main video query logic
+  const videosQuery = useMemoFirebase(() => {
+    const preferredCategories = userProfile?.preferredCategories;
+    const baseQuery = collection(firestore, 'videos');
+    
+    // If user has preferences, filter by them
+    if (preferredCategories && preferredCategories.length > 0) {
+      return query(baseQuery, where('contentCategory', 'in', preferredCategories), orderBy('createdAt', 'desc'), limit(20));
+    }
+    
+    // Otherwise, get the latest videos from all categories
+    return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
+
+  }, [firestore, userProfile]);
   
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
-  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
-
+  
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
-  const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-
+  
   useEffect(() => {
+    // Automatically sign in anonymous users if no user is logged in
     if (!isUserLoading && !user) {
       initiateAnonymousSignIn(auth);
     }
   }, [isUserLoading, user, auth]);
   
-  useEffect(() => {
-    async function checkNotificationPermission() {
-      const OneSignal = window.OneSignal;
-      if (typeof window === 'undefined' || !OneSignal || !OneSignal.Notifications || isUserLoading) return;
-      
-      const isPushSupported = OneSignal.Notifications.isPushSupported();
-      if (!isPushSupported) return;
-
-      const permission = OneSignal.Notifications.permission;
-      
-      // Show the prompt only if the user hasn't made a decision yet ('default')
-      if (permission) {
-        setIsNotificationPromptOpen(true);
-      }
-    }
-    // Check after a small delay to let user context load and OneSignal to initialize
-    const timer = setTimeout(checkNotificationPermission, 3000);
-    return () => clearTimeout(timer);
-  }, [isUserLoading]);
 
   useEffect(() => {
-    if (videos && videos.length > 0) {
+    // This effect sets the initial video to play
+    if (videos && videos.length > 0 && !currentVideo) {
       const videoIdFromUrl = getVideoIdFromPath();
       const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
       setCurrentVideo(videoToPlay || videos[0]);
     }
-  }, [videos]);
+  }, [videos, currentVideo]);
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
@@ -133,6 +126,7 @@ export default function Home() {
   }, []);
   
   useEffect(() => {
+    // This effect handles browser back/forward navigation
     const handlePopState = () => {
        if (videos) {
          const videoIdFromUrl = getVideoIdFromPath();
@@ -146,9 +140,10 @@ export default function Home() {
 
 
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
-  const otherVideos = videos?.slice(0, 10);
+  const otherVideos = videos;
 
   useEffect(() => {
+    // This effect updates the user's watch history
     if (currentVideo && user) {
         const historyRef = doc(firestore, 'users', user.uid, 'history', currentVideo.id);
         setDocumentNonBlocking(historyRef, {
@@ -159,6 +154,7 @@ export default function Home() {
   }, [currentVideo, user, firestore]);
 
   const handleVideoEnd = () => {
+    // This function plays the next video in the playlist
     if (!videos || !currentVideo) return;
     const currentIndex = videos.findIndex(v => v.id === currentVideo.id);
     if (currentIndex > -1 && currentIndex < videos.length - 1) {
@@ -167,7 +163,7 @@ export default function Home() {
   }
   
   const handleReportSubmit = () => {
-    // Don't submit the form, just show the success message
+    // This is a placeholder for report submission logic
     toast({ title: 'Report submitted', description: "Admin will review and follow through, thank you for your understanding"});
     setIsReportDialogOpen(false);
     setReportReason('');
@@ -192,52 +188,14 @@ export default function Home() {
     }
   };
   
-  const handleAllowNotifications = async (selectedCategories: string[]) => {
-    const OneSignal = window.OneSignal;
-    if (user?.isAnonymous) {
-      setIsNotificationPromptOpen(false);
-      setIsAuthDialogOpen(true);
-      return;
-    }
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading;
 
-    await OneSignal.Notifications.requestPermission();
-    const permission = OneSignal.Notifications.permission;
-    
-    if (permission) {
-        toast({ title: 'Notification Preferences Saved!' });
-        
-        // Get all possible category tags
-        const allCategoryTags = categories?.map(c => `category_${c.name.toLowerCase()}`) || [];
-        
-        // Remove all previous category tags
-        await OneSignal.User.removeTags(allCategoryTags);
-
-        // Create the new set of tags to add
-        const newTags: { [key: string]: string } = {};
-        selectedCategories.forEach(cat => {
-            newTags[`category_${cat.toLowerCase()}`] = "true";
-        });
-        
-        // Add the new tags
-        if (Object.keys(newTags).length > 0) {
-          await OneSignal.User.addTags(newTags);
-        }
-    }
-    setIsNotificationPromptOpen(false);
-  };
-
-  const handleDelayNotifications = () => {
-    // Simply close the dialog. It will reappear on the next visit.
-    setIsNotificationPromptOpen(false);
-  };
-
-
-  if (videosLoading || channelsLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center">
         <SiteHeader />
         <main className="flex-1 flex items-center justify-center">
-          <p>Loading...</p>
+          <p>Loading your headlines...</p>
         </main>
       </div>
     );
@@ -247,9 +205,17 @@ export default function Home() {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <SiteHeader />
-        <main className="flex-1 flex flex-col items-center justify-center text-center">
-            <h2 className="text-2xl font-bold mb-4">No videos found</h2>
-            <p className="text-muted-foreground">Follow some channels to build your personalized feed!</p>
+        <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
+            <h2 className="text-2xl font-bold mb-4">Your Headlines are Empty</h2>
+            <p className="text-muted-foreground mb-6">
+              Select your favorite topics to build your personalized news feed.
+            </p>
+            <Link href="/settings/headlines">
+              <Button>
+                <ListFilter className="mr-2 h-4 w-4" />
+                Choose Your Headlines
+              </Button>
+            </Link>
         </main>
       </div>
     );
@@ -390,11 +356,7 @@ export default function Home() {
       <footer className="py-4 text-center text-sm text-muted-foreground">
         Meet the #1 App to Stream News. Watch Free!
       </footer>
-       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => {
-        setIsAuthDialogOpen(false);
-        // After successful login, re-trigger the notification prompt logic
-        setIsNotificationPromptOpen(true);
-      }} />
+       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -443,12 +405,7 @@ export default function Home() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <NotificationPromptDialog
-        open={isNotificationPromptOpen}
-        onOpenChange={setIsNotificationPromptOpen}
-        onAllow={handleAllowNotifications}
-        onLater={handleDelayNotifications}
-      />
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import Link from 'next/link';
@@ -13,6 +14,7 @@ import {
   LogOut,
   Shield,
   PlusSquare,
+  ListFilter,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -243,6 +245,9 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                             <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
+                            <Link href="/settings/headlines"><ListFilter className="mr-2 h-4 w-4" /><span>Your Headlines</span></Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
                             <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
@@ -279,3 +284,4 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
     </>
   );
 }
+
