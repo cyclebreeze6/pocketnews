@@ -57,16 +57,23 @@ export default function MyCollectionsPage() {
   const preferredCategories = userProfile?.preferredCategories;
 
   const videosQuery = useMemoFirebase(
-    () =>
-      preferredCategories && preferredCategories.length > 0
-        ? query(collection(firestore, 'videos'), where('contentCategory', 'in', preferredCategories))
-        : null,
-    [firestore, preferredCategories]
+    () => {
+      // Do not construct the query until the user profile is loaded and has preferences.
+      if (profileLoading || !preferredCategories) {
+        return null;
+      }
+      if (preferredCategories.length === 0) {
+        return null; // Return null if no categories are selected to avoid an invalid 'in' query.
+      }
+      return query(collection(firestore, 'videos'), where('contentCategory', 'in', preferredCategories));
+    },
+    [firestore, preferredCategories, profileLoading]
   );
 
+  // Only run useCollection if the query is not null
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
 
-  const isLoading = isUserLoading || profileLoading || videosLoading;
+  const isLoading = isUserLoading || profileLoading;
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -84,7 +91,13 @@ export default function MyCollectionsPage() {
             </div>
             
             {preferredCategories && preferredCategories.length > 0 ? (
-                videos && videos.length > 0 ? (
+                videosLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {[...Array(8)].map((_, i) => (
+                        <CardSkeleton key={i} />
+                        ))}
+                    </div>
+                ) : videos && videos.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {videos.map((video) => (
                             <VideoCard key={video.id} video={video} />
@@ -118,5 +131,3 @@ export default function MyCollectionsPage() {
     </div>
   );
 }
-
-    
