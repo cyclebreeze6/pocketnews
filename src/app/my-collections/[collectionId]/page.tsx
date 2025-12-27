@@ -40,36 +40,47 @@ export default function CollectionPage() {
   const params = useParams();
   const collectionId = params.collectionId as string;
 
-  // Step 1: Fetch the collection document first
+  // Step 1: Fetch the collection document first.
+  // This query depends only on the user and the collectionId from the URL.
   const collectionRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid, 'collections', collectionId) : null),
     [user, firestore, collectionId]
   );
   const { data: collectionData, isLoading: collectionLoading } = useDoc<Collection>(collectionRef);
 
-  // Step 2: Conditionally create the videos query only when collection data is available
+  // Step 2: Conditionally create the videos query only when collection data is available.
+  // This query will remain `null` until `collectionData` is successfully fetched.
   const videosQuery = useMemoFirebase(() => {
-    if (!collectionData || collectionData.categoryIds.length === 0) {
-      return null; // Return null if no categories are selected to avoid an invalid query
+    // Do not build the query if the collection data is still loading or doesn't exist.
+    if (!collectionData || !collectionData.categoryIds || collectionData.categoryIds.length === 0) {
+      return null;
     }
+    // Firestore 'in' queries are limited to 30 items.
+    if (collectionData.categoryIds.length > 30) {
+      console.warn("Collection has more than 30 categories. Firestore 'in' query will be limited to the first 30.");
+    }
+
+    // Only proceed if we have categories to query.
     return query(
       collection(firestore, 'videos'),
-      where('contentCategory', 'in', collectionData.categoryIds)
+      where('contentCategory', 'in', collectionData.categoryIds.slice(0, 30))
     );
   }, [firestore, collectionData]);
   
+  // The useCollection hook is now safe because `videosQuery` will be `null` initially.
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
+  // Combine all loading states for the final loading skeleton.
   const isLoading = isUserLoading || collectionLoading || (collectionData && videosLoading);
 
   useEffect(() => {
-    // Redirect if user is not logged in after auth check completes
+    // Redirect unauthenticated users.
     if (!isUserLoading && !user) {
       notFound();
     }
   }, [user, isUserLoading]);
 
-  // If loading is finished and there's no collection data, the collection doesn't exist
+  // After loading, if the collection still wasn't found, show a 404.
   if (!collectionLoading && !collectionData) {
     notFound();
   }

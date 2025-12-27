@@ -62,11 +62,11 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    // If the query is not ready, set state to not loading and return.
-    // The component using this hook should show a loading state if the query is null.
+    // If the query is not ready (null or undefined), explicitly set loading to false and data to null.
+    // This prevents the hook from attempting to use an invalid query.
     if (!memoizedTargetRefOrQuery) {
       setData(null);
-      setIsLoading(false); // Set to false because we are not actively fetching.
+      setIsLoading(false);
       setError(null);
       return;
     }

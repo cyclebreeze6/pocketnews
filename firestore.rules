@@ -89,22 +89,24 @@ service cloud.firestore {
     }
 
     match /channels/{channelId} {
-      // All users can view channels
-      allow get, list: if true;
+      // All signed-in users can view channels
+      allow get, list: if isSignedIn();
       // Only Admins or Creators can manage channels.
       allow create, update: if canCreateContent();
       allow delete: if isAdmin();
     }
     
     match /videos/{videoId} {
-      allow get, list: if true;
+      // All signed-in users can view videos
+      allow get, list: if isSignedIn();
       allow create: if canCreateContent();
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
       allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
     }
 
     match /categories/{categoryId} {
-      allow get, list: if true;
+      // All signed-in users can view categories
+      allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
     
@@ -125,7 +127,7 @@ service cloud.firestore {
     // This rule allows collection group queries on the 'videos' collection.
     // Any authenticated user can list videos, which is necessary for the homepage feed.
     match /{path=**}/videos/{videoId} {
-      allow read: if true;
+      allow read: if isSignedIn();
     }
 
     match /roles_admin/{userId} {
