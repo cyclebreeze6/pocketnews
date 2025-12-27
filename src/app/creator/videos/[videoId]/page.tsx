@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '../../../../components/ui/button';
@@ -24,7 +25,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '../../../../components/ui/dialog';
-import { sendNewVideoNotification, type NotificationInput } from '../../../../ai/flows/send-notification-flow';
+import { sendNewVideoNotification } from '../../../../ai/flows/send-notification-flow';
 
 export default function VideoEditPage() {
   const { firestore } = useFirebase();
@@ -217,7 +218,7 @@ export default function VideoEditPage() {
         sendNewVideoNotification({
           videoId: dataToSave.id,
           category: dataToSave.contentCategory
-        } as NotificationInput).catch(err => console.error("Failed to send notification:", err));
+        }).catch(err => console.error("Failed to send notification:", err));
       }
 
       toast({ title: 'Video Added!', description: `${dataToSave.title} has been added.` });

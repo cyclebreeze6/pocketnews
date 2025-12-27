@@ -15,47 +15,6 @@ import { useToast } from '../../hooks/use-toast';
 export default function SettingsPage() {
   const { user } = useUser();
   const { toast } = useToast();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-
-  useEffect(() => {
-    const checkPermission = async () => {
-        const OneSignal = window.OneSignal;
-        if(typeof window !== 'undefined' && OneSignal?.Notifications) {
-          const permission = OneSignal.Notifications.permission;
-          setNotificationsEnabled(permission);
-        }
-    };
-    checkPermission();
-  }, []);
-
-  const handleNotificationToggle = async (enabled: boolean) => {
-    const OneSignal = window.OneSignal;
-    if (!user || !OneSignal) return;
-    
-    if (enabled) {
-      try {
-        await OneSignal.Notifications.requestPermission();
-        const permission = OneSignal.Notifications.permission;
-        if (permission) {
-            setNotificationsEnabled(true);
-            toast({ title: 'Notifications Enabled!' });
-        } else {
-            setNotificationsEnabled(false);
-            toast({ variant: 'destructive', title: 'Permission Denied', description: 'You need to allow notifications in your browser settings.' });
-        }
-      } catch (error) {
-        console.error("Error requesting notification permission:", error);
-        setNotificationsEnabled(false);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not enable notifications.' });
-      }
-    } else {
-      // OneSignal does not provide a direct API to "un-subscribe" a user via code 
-      // as a security measure. Users must disable it from their browser settings.
-      setNotificationsEnabled(false);
-      toast({ title: 'Notifications Disabled', description: 'Please manage permissions in your browser settings.' });
-    }
-  };
-
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -72,14 +31,6 @@ export default function SettingsPage() {
                     <CardDescription>Manage how you receive notifications.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <Label htmlFor="push-notifications">Push Notifications</Label>
-                            <p className="text-sm text-muted-foreground">Get push notifications when new videos are uploaded.</p>
-                        </div>
-                        <Switch id="push-notifications" checked={notificationsEnabled} onCheckedChange={handleNotificationToggle} />
-                    </div>
-                     <Separator />
                      <div className="flex items-center justify-between">
                         <div>
                             <Label htmlFor="email-notifications">Email Notifications</Label>
@@ -120,5 +71,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

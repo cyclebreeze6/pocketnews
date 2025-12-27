@@ -69,34 +69,6 @@ export default function HeadlinesSettingsPage() {
     // Update Firestore
     updateDocumentNonBlocking(userProfileRef, { preferredCategories: selectedCategories });
 
-    // Update OneSignal tags
-    if (window.OneSignal) {
-        try {
-            // Get all possible category tags to ensure we can clear them
-            const allCategoryTags = categories?.map(c => `category_${c.name.toLowerCase()}`) || [];
-            
-            // This will remove any tags that are not in the new selection
-            await window.OneSignal.User.removeTags(allCategoryTags);
-
-            const newTags: { [key: string]: string } = {};
-            selectedCategories.forEach(cat => {
-                newTags[`category_${cat.toLowerCase()}`] = 'true';
-            });
-
-            // Add the new tags for the current selection
-            if (Object.keys(newTags).length > 0) {
-              await window.OneSignal.User.addTags(newTags);
-            }
-        } catch (error) {
-            console.error("Error updating OneSignal tags:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Notification Error',
-                description: 'Could not update your notification preferences.'
-            });
-        }
-    }
-
     setIsSaving(false);
     toast({ title: 'Your headlines have been updated!' });
     router.push('/'); // Redirect to homepage to see changes
@@ -124,7 +96,7 @@ export default function HeadlinesSettingsPage() {
                 What do you want in your Headlines?
             </h1>
             <p className="text-muted-foreground mb-8">
-                Select the topics you're interested in. This will customize the content on your home page and the notifications you receive.
+                Select the topics you're interested in. This will customize the content on your home page.
             </p>
 
             <Card>
