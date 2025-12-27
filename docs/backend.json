@@ -110,19 +110,51 @@
         "isCreator": {
           "type": "boolean",
           "description": "Indicates if the user is a content creator."
-        },
-        "preferredCategories": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "A list of category names the user prefers for their collection."
         }
       },
       "required": [
         "id",
         "email",
         "displayName"
+      ]
+    },
+    "Collection": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Collection",
+      "type": "object",
+      "description": "Represents a user-created collection of video categories.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Collection."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the collection."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who created the collection."
+        },
+        "categoryIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of category names included in the collection."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the collection was created."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "userId",
+        "categoryIds",
+        "createdAt"
       ]
     },
     "Category": {
@@ -228,6 +260,26 @@
             {
               "name": "userId",
               "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/collections/{collectionId}",
+        "definition": {
+          "entityName": "Collection",
+          "schema": {
+            "$ref": "#/backend/entities/Collection"
+          },
+          "description": "Stores user-created collections of categories.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the collection."
+            },
+            {
+              "name": "collectionId",
+              "description": "The unique identifier of the collection."
             }
           ]
         }
@@ -342,6 +394,4 @@
     "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos are a top-level collection to simplify homepage queries. The rest of the structure remains segregated for security and clarity."
   }
 }
-    
-
     
