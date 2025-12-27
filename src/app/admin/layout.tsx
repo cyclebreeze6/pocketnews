@@ -45,9 +45,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isLongLoading, setIsLongLoading] = useState(true);
 
   useEffect(() => {
+    // Introduce a minimum loading time to avoid flashing content and ensure auth state is settled.
     const timer = setTimeout(() => {
         setIsLongLoading(false);
-    }, 20000); // 20 seconds
+    }, 500); // A short delay of 500ms
 
     return () => clearTimeout(timer);
   }, []);
@@ -55,25 +56,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLoading = isUserLoading || isProfileLoading || isLongLoading;
 
   useEffect(() => {
-    // Wait until all loading is done.
-    if (isLoading) {
-      return; 
+    // This effect runs only when loading is complete.
+    if (!isLoading) {
+        // If there's no authenticated user or the user profile doesn't indicate they are an admin,
+        // redirect them to the homepage.
+        if (!user || !userProfile?.isAdmin) {
+            router.replace('/');
+        }
     }
-
-    // After loading, if there's no user or the user is not an admin, redirect.
-    if (!user || !userProfile?.isAdmin) {
-      router.replace('/');
-    }
-
   }, [user, userProfile, isLoading, router]);
 
-  // If we are still loading, or if the user is not a confirmed admin yet,
-  // show the loading skeleton. This prevents rendering the admin content prematurely.
+  // While loading is in progress, or if the user is not yet confirmed as an admin,
+  // show the loading skeleton. This prevents rendering admin content prematurely.
   if (isLoading || !userProfile?.isAdmin) {
     return <AdminLoadingSkeleton />;
   }
 
-  // Only if loading is complete AND the user is a confirmed admin, render the layout.
+  // Only render the full admin layout if loading is complete AND the user is confirmed as an admin.
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
