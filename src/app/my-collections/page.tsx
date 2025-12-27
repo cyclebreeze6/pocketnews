@@ -49,13 +49,21 @@ export default function MyCollectionsPage() {
 
   const isLoading = isUserLoading || collectionsLoading;
 
+  if (isLoading) {
+    return (
+        <div className="flex min-h-screen w-full flex-col">
+            <SiteHeader />
+            <main className="flex-1 py-12 md:py-16">
+                <CollectionsSkeleton />
+            </main>
+        </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
       <main className="flex-1 py-12 md:py-16">
-        {isLoading ? (
-          <CollectionsSkeleton />
-        ) : (
           <div className="container px-4 md:px-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
               <h1 className="text-3xl font-bold tracking-tight font-headline">My Collections</h1>
@@ -90,9 +98,7 @@ export default function MyCollectionsPage() {
                 </div>
             )}
           </div>
-        )}
       </main>
     </div>
   );
 }
-

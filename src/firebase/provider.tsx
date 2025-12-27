@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -64,30 +65,40 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
  * @param user - The Firebase Auth user object.
  */
 const ensureUserDocument = async (firestore: Firestore, user: User) => {
+  if (!user) return;
   const userRef = doc(firestore, 'users', user.uid);
-  const docSnap = await getDoc(userRef);
+  
+  try {
+    const docSnap = await getDoc(userRef);
 
-  if (!docSnap.exists()) {
-    // Logic to make a specific user an admin automatically.
-    const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com';
+    if (!docSnap.exists()) {
+      // Logic to make a specific user an admin automatically.
+      const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com';
 
-    // Document doesn't exist, so create it.
-    const newUserProfile = {
-      id: user.uid,
-      email: user.email || '',
-      displayName: user.displayName || 'Anonymous User',
-      isAdmin: isDesignatedAdmin, // Set admin status based on email match
-      avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
-    };
-    
-    // Use the non-blocking write to create the user document
-    setDocumentNonBlocking(userRef, newUserProfile, {});
+      // Document doesn't exist, so create it.
+      const newUserProfile = {
+        id: user.uid,
+        email: user.email || '',
+        displayName: user.displayName || 'Anonymous User',
+        isAdmin: isDesignatedAdmin,
+        isCreator: isDesignatedAdmin, // Also make them a creator
+        avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
+        preferredCategories: [], // Initialize with empty array
+      };
+      
+      // Use setDoc here to ensure the document exists before proceeding.
+      await setDoc(userRef, newUserProfile, { merge: true });
 
-    // If they are the designated admin, also add them to the DBAC collection
-    if (isDesignatedAdmin) {
-      const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-      setDocumentNonBlocking(adminRoleRef, { grantedAt: serverTimestamp() }, {});
+      // If they are the designated admin, also add them to the DBAC collection
+      if (isDesignatedAdmin) {
+        const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
+        // Use setDoc here as well for initial setup reliability.
+        await setDoc(adminRoleRef, { grantedAt: serverTimestamp() });
+      }
     }
+  } catch (error) {
+    console.error("Error ensuring user document:", error);
+    // Handle or log the error appropriately
   }
 };
 
@@ -119,12 +130,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+      async (firebaseUser) => { // Auth state determined
          if (firebaseUser) {
           // When a user logs in, ensure their document exists in Firestore.
-          ensureUserDocument(firestore, firebaseUser);
+          await ensureUserDocument(firestore, firebaseUser);
         }
+        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
