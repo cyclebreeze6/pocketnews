@@ -44,7 +44,7 @@ service cloud.firestore {
 
     function userCanUpdateSelf() {
         // List of fields a user is allowed to update on their own profile.
-        let allowedFields = ['displayName', 'avatar', 'preferredCategories'];
+        let allowedFields = ['displayName', 'avatar', 'preferredCategories', 'preferredChannels'];
         // All incoming fields must be in the allowed list.
         let allFieldsAreAllowed = request.resource.data.keys().hasOnly(allowedFields);
 
@@ -132,5 +132,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
