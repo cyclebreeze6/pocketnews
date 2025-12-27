@@ -5,6 +5,7 @@ import { Toaster } from "../components/ui/toaster"
 import { FirebaseClientProvider } from '../firebase';
 import { NetworkStatusIndicator } from '../components/network-status-indicator';
 import Script from 'next/script';
+import { FirebaseMessagingProvider } from '../components/firebase-messaging-provider';
 
 export const metadata: Metadata = {
   title: 'Pocketnews TV',
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <div className="max-w-7xl mx-auto">
           <FirebaseClientProvider>
+            <FirebaseMessagingProvider />
             <NetworkStatusIndicator />
             {children}
           </FirebaseClientProvider>

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import 'dotenv/config';
 import type { Video } from '../../lib/types';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 
 // Helper to initialize the admin app idempotently
@@ -21,7 +22,7 @@ async function initializeAdminApp() {
                 credential: cert(serviceAccount),
             });
         } catch (e) {
-            console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is set but is not valid JSON. Falling back to default credentials.", e);
+            console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is set but not valid JSON. Falling back to default credentials.", e);
             initializeApp();
         }
     } else {
@@ -50,6 +51,7 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
     
     await initializeAdminApp();
     const firestore = getFirestore();
+    const messaging = getMessaging();
 
     try {
       // 1. Get the new video's details
@@ -61,38 +63,48 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
       const video = videoSnap.data() as Video;
       const videoUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/watch/${videoId}`;
       
-      // 2. Queue Emails
-      const emailQueueRef = firestore.collection('email_queue');
-      // For now, let's only get users who have a preference for this category.
+      // 2. Find users interested in this category
       const usersSnapshot = await firestore.collection('users').where('preferredCategories', 'array-contains', category).get();
 
-      const uniqueEmails: string[] = [];
-      usersSnapshot.forEach(doc => {
-          const userData = doc.data();
-          if (userData && userData.email && !userData.isAnonymous) {
-              uniqueEmails.push(userData.email);
-          }
-      });
-      
-      for (const email of uniqueEmails) {
-          await emailQueueRef.add({
-              to: email,
-              message: {
-                  subject: `New Video in ${category}: ${video.title}`,
-                  html: `
-                    <h1>${video.title}</h1>
-                    <p>${video.description}</p>
-                    <a href="${videoUrl}">
-                        <img src="${video.thumbnailUrl}" alt="${video.title}" width="480" />
-                    </a>
-                    <p><a href="${videoUrl}">Watch Now</a></p>
-                  `,
-              }
-          });
+      if (usersSnapshot.empty) {
+        return { success: true, message: `No users subscribed to category ${category}.` };
       }
-      console.log(`Successfully queued ${uniqueEmails.length} emails for category ${category}.`);
 
-      return { success: true, message: `Email notifications processed for category ${category}.` };
+      const userIds = usersSnapshot.docs.map(doc => doc.id);
+      
+      // 3. Get FCM tokens for these users
+      const tokens: string[] = [];
+      for (const userId of userIds) {
+        const tokensSnapshot = await firestore.collection('users').doc(userId).collection('fcmTokens').get();
+        tokensSnapshot.forEach(doc => tokens.push(doc.id));
+      }
+      
+      // 4. Send Push Notifications if tokens are available
+      if (tokens.length > 0) {
+        const message = {
+            notification: {
+                title: `New Video in ${category}`,
+                body: video.title,
+            },
+            webpush: {
+                fcm_options: {
+                    link: videoUrl,
+                },
+                 notification: {
+                    icon: video.thumbnailUrl,
+                 }
+            },
+            tokens: tokens,
+        };
+
+        const response = await messaging.sendEachForMulticast(message);
+        console.log(`Successfully sent ${response.successCount} push notifications.`);
+        if (response.failureCount > 0) {
+            console.warn(`Failed to send ${response.failureCount} push notifications.`);
+        }
+      }
+
+      return { success: true, message: `Notifications processed for category ${category}.` };
 
     } catch (error: any) {
       console.error('Error sending notification:', error);
