@@ -49,6 +49,8 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
   },
   async ({ videoId, category }) => {
     
+    console.log(`[Notification Flow] Starting for video ${videoId} in category: ${category}`);
+
     await initializeAdminApp();
     const firestore = getFirestore();
     const messaging = getMessaging();
@@ -67,10 +69,12 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
       const usersSnapshot = await firestore.collection('users').where('preferredCategories', 'array-contains', category).get();
 
       if (usersSnapshot.empty) {
+        console.log(`[Notification Flow] No users subscribed to category ${category}.`);
         return { success: true, message: `No users subscribed to category ${category}.` };
       }
 
       const userIds = usersSnapshot.docs.map(doc => doc.id);
+      console.log(`[Notification Flow] Found ${userIds.length} user(s) subscribed to ${category}.`);
       
       // 3. Get FCM tokens for these users
       const tokens: string[] = [];
@@ -81,6 +85,7 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
       
       // 4. Send Push Notifications if tokens are available
       if (tokens.length > 0) {
+        console.log(`[Notification Flow] Attempting to send notifications to ${tokens.length} token(s).`);
         const message = {
             notification: {
                 title: `New Video in ${category}`,
@@ -98,16 +103,18 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
         };
 
         const response = await messaging.sendEachForMulticast(message);
-        console.log(`Successfully sent ${response.successCount} push notifications.`);
+        console.log(`[Notification Flow] Successfully sent ${response.successCount} push notifications.`);
         if (response.failureCount > 0) {
-            console.warn(`Failed to send ${response.failureCount} push notifications.`);
+            console.warn(`[Notification Flow] Failed to send ${response.failureCount} push notifications.`);
         }
+      } else {
+        console.log(`[Notification Flow] No FCM tokens found for the subscribed users.`);
       }
 
       return { success: true, message: `Notifications processed for category ${category}.` };
 
     } catch (error: any) {
-      console.error('Error sending notification:', error);
+      console.error('[Notification Flow] Error sending notification:', error);
       return { success: false, message: error.message || 'An unknown error occurred.' };
     }
   }
