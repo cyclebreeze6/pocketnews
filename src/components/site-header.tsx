@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import Link from 'next/link';
@@ -140,11 +139,12 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Search className="h-5 w-5" />
               </Button>
+              {hasMounted && (
               <Popover onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative">
                       <Bell className="h-5 w-5" />
-                      {user && showNotificationDot && hasMounted && (
+                      {user && showNotificationDot && (
                         <span className="absolute top-1 right-1 flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
@@ -205,6 +205,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                     </div>
                   </PopoverContent>
                 </Popover>
+              )}
 
               {!isUserLoading && (
                    user ? (
