@@ -110,6 +110,13 @@
         "isCreator": {
           "type": "boolean",
           "description": "Indicates if the user is a content creator."
+        },
+        "preferredCategories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of category names the user prefers for their collection."
         }
       },
       "required": [
@@ -335,4 +342,6 @@
     "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos are a top-level collection to simplify homepage queries. The rest of the structure remains segregated for security and clarity."
   }
 }
+    
+
     

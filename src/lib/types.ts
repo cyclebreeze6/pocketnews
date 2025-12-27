@@ -43,6 +43,7 @@ export interface Category {
 }
 
 export interface UserProfile extends User {
+    preferredCategories?: string[];
 }
 
 export interface WatchHistory {
@@ -63,4 +64,4 @@ export interface Report {
     status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
 }
 
-
+    

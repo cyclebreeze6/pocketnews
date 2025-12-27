@@ -15,6 +15,7 @@ import {
   Shield,
   PlusSquare,
   ListFilter,
+  Package,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -242,10 +243,16 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                                 </DropdownMenuItem>
                             )}
                           <DropdownMenuItem asChild>
+                             <Link href="/my-collections"><Package className="mr-2 h-4 w-4" /><span>My Collections</span></Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
                             <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
+                          </DropdownMenuItem>
+                           <DropdownMenuItem asChild>
+                            <Link href="/settings/collections"><ListFilter className="mr-2 h-4 w-4" /><span>Customize Collections</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href="/settings"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
@@ -282,3 +289,4 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   );
 }
 
+    
