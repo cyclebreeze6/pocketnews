@@ -140,13 +140,13 @@ export default function Home() {
 
   // Main video query logic
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading) {
+    if (isUserLoading || !firestore) {
       return null;
     }
-    const baseQuery = collectionGroup(firestore, 'videos');
-    return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
+    // Always fetch the latest 20 videos for all users.
+    return query(collectionGroup(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
 
-  }, [firestore, userProfile, isUserLoading, isProfileLoading]);
+  }, [firestore, isUserLoading]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -445,5 +445,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
