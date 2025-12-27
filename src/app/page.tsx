@@ -140,13 +140,14 @@ export default function Home() {
 
   // Main video query logic
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || !firestore) {
+    // This is the critical fix: Do not create the query until the user object is available.
+    // This ensures we always have an authenticated session (even anonymous) before querying.
+    if (isUserLoading || !user) {
       return null;
     }
     // Always fetch the latest 20 videos for all users.
     return query(collectionGroup(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
-
-  }, [firestore, isUserLoading]);
+  }, [firestore, isUserLoading, user]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
