@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2 } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
@@ -37,6 +37,7 @@ import { initiateAnonymousSignIn, useAuth } from '../firebase';
 import { AuthDialog } from '../components/auth-dialog';
 import { Checkbox } from '../components/ui/checkbox';
 import { Separator } from '../components/ui/separator';
+import { Skeleton } from '../components/ui/skeleton';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -66,6 +67,52 @@ const WhatsAppIcon = (props: any) => (
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
 );
+
+function HomepageSkeleton() {
+  return (
+    <div className="flex min-h-screen w-full flex-col">
+      <SiteHeader />
+       <main className="flex-1 md:py-8">
+        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
+          <div className="lg:col-span-2">
+            <Skeleton className="aspect-video mb-4 md:rounded-lg" />
+            <div className="px-4 md:px-0">
+              <Skeleton className="h-8 w-3/4 mb-4" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div>
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-10 w-24" />
+                  <Skeleton className="h-10 w-24" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-1 px-4 md:px-0">
+            <Skeleton className="h-6 w-1/2 mb-4" />
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex gap-4 items-start p-2">
+                  <Skeleton className="w-32 h-20 flex-shrink-0 rounded-md" />
+                  <div className="flex-grow space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
 
 
 export default function Home() {
@@ -159,11 +206,28 @@ export default function Home() {
   }
   
   const handleReportSubmit = () => {
+    if (!user || !currentVideo) return;
+
+    const reportRef = doc(collection(firestore, 'reports'));
+    const reportData = {
+        id: reportRef.id,
+        videoId: currentVideo.id,
+        videoTitle: currentVideo.title,
+        userId: user.uid,
+        reason: reportReason,
+        details: reportDetails,
+        createdAt: serverTimestamp(),
+        status: 'Pending'
+    };
+    
+    setDocumentNonBlocking(reportRef, reportData, {});
+    
     toast({ title: 'Report submitted', description: "Admin will review and follow through, thank you for your understanding"});
     setIsReportDialogOpen(false);
     setReportReason('');
     setReportDetails('');
   };
+
 
   const handleShare = (platform: 'facebook' | 'whatsapp' | 'copy') => {
     if (!currentVideo) return;
@@ -185,15 +249,8 @@ export default function Home() {
   
   const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading;
   
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center">
-        <SiteHeader />
-        <main className="flex-1 flex items-center justify-center">
-          <p>Loading your headlines...</p>
-        </main>
-      </div>
-    );
+  if (isLoading || !currentVideo || !currentChannel || !otherVideos) {
+    return <HomepageSkeleton />;
   }
 
   if (!videos || videos.length === 0) {
@@ -205,17 +262,6 @@ export default function Home() {
             <p className="text-muted-foreground mb-6">
               There are currently no videos to display. Please check back later.
             </p>
-        </main>
-      </div>
-    );
-  }
-
-  if (!currentVideo || !currentChannel || !otherVideos) {
-     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center">
-        <SiteHeader />
-        <main className="flex-1 flex items-center justify-center">
-          <p>Loading video details...</p>
         </main>
       </div>
     );
@@ -399,3 +445,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
