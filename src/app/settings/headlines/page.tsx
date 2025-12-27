@@ -1,4 +1,3 @@
-
 'use client';
 
 import SiteHeader from '../../../components/site-header';
@@ -96,7 +95,7 @@ export default function HeadlinesSettingsPage() {
                 What do you want in your Headlines?
             </h1>
             <p className="text-muted-foreground mb-8">
-                Select the topics you're interested in. This will customize the content on your home page.
+                Select the topics you're interested in. This will customize the content on your home page and the notifications you receive.
             </p>
 
             <Card>
