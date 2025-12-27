@@ -146,7 +146,7 @@ export default function Home() {
       return null;
     }
     // Always fetch the latest 20 videos for all users.
-    return query(collectionGroup(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
+    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
   }, [firestore, isUserLoading, user]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
