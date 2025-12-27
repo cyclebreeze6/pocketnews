@@ -9,12 +9,11 @@ import { Label } from '../../components/ui/label';
 import { Separator } from '../../components/ui/separator';
 import { Switch } from '../../components/ui/switch';
 import { useUser } from '../../firebase';
-import { useState, useEffect } from 'react';
-import { useToast } from '../../hooks/use-toast';
+import Link from 'next/link';
+import { ListFilter } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user } = useUser();
-  const { toast } = useToast();
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -27,17 +26,16 @@ export default function SettingsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Notifications</CardTitle>
-                    <CardDescription>Manage how you receive notifications.</CardDescription>
+                    <CardTitle>Push Notifications</CardTitle>
+                    <CardDescription>Manage which video categories you want to receive push notifications for.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                     <div className="flex items-center justify-between">
-                        <div>
-                            <Label htmlFor="email-notifications">Email Notifications</Label>
-                            <p className="text-sm text-muted-foreground">Receive emails about new videos and channel updates.</p>
-                        </div>
-                        <Switch id="email-notifications" />
-                    </div>
+                <CardContent>
+                    <Link href="/settings/headlines">
+                        <Button variant="outline">
+                            <ListFilter className="mr-2 h-4 w-4" />
+                            Customize Your Topics
+                        </Button>
+                    </Link>
                 </CardContent>
             </Card>
 
