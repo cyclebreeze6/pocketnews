@@ -20,36 +20,36 @@ export async function setupPushNotifications(userId: string): Promise<void> {
     return;
   }
   
-  const messaging = getMessaging(getApp());
-  const firestore = getFirestore();
-
   try {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      console.log('Notification permission granted.');
+    const messaging = getMessaging(getApp());
+    const firestore = getFirestore();
 
-      if (!process.env.NEXT_PUBLIC_VAPID_KEY) {
-        console.error('VAPID key is not set. Cannot get FCM token.');
-        return;
-      }
-
-      const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
-      
-      if (currentToken) {
-        console.log('FCM Token:', currentToken);
-        // Save the token to Firestore
-        const tokenRef = doc(firestore, 'users', userId, 'fcmTokens', currentToken);
-        await setDoc(tokenRef, { 
-            token: currentToken,
-            createdAt: serverTimestamp() 
-        });
-        console.log('FCM token saved to Firestore.');
-      } else {
-        console.log('No registration token available. Request permission to generate one.');
-      }
-    } else {
-      console.log('Unable to get permission to notify.');
+    if (!process.env.NEXT_PUBLIC_VAPID_KEY) {
+      console.error('VAPID key is not set. Cannot get FCM token.');
+      return;
     }
+
+    // Wait for the service worker to be ready
+    const registration = await navigator.serviceWorker.ready;
+
+    const currentToken = await getToken(messaging, { 
+        vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY,
+        serviceWorkerRegistration: registration,
+    });
+    
+    if (currentToken) {
+      console.log('FCM Token:', currentToken);
+      // Save the token to Firestore
+      const tokenRef = doc(firestore, 'users', userId, 'fcmTokens', currentToken);
+      await setDoc(tokenRef, { 
+          token: currentToken,
+          createdAt: serverTimestamp() 
+      });
+      console.log('FCM token saved to Firestore.');
+    } else {
+      console.log('No registration token available. Request permission to generate one.');
+    }
+
   } catch (err) {
     console.error('An error occurred while retrieving token. ', err);
   }

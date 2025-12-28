@@ -19,12 +19,10 @@ export function FirebaseMessagingProvider() {
     // Show the dialog only if the user is logged in, not anonymous,
     // and hasn't made a decision yet ('default').
     if (user && !user.isAnonymous && permissionStatus === 'default') {
-      // Add a small delay to not overwhelm the user immediately on login.
-      const timer = setTimeout(() => {
-        setIsDialogOpen(true);
-      }, 5000); // 5-second delay
-
-      return () => clearTimeout(timer);
+      setIsDialogOpen(true);
+    } else {
+      // If conditions are not met (e.g., user logs out), ensure dialog is closed.
+      setIsDialogOpen(false);
     }
   }, [user, permissionStatus]);
 
