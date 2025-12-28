@@ -105,8 +105,11 @@ service cloud.firestore {
     }
 
     match /shorts/{shortId} {
-      allow read: if isSignedIn();
+      allow get: if true;
       allow create, update, delete: if canCreateContent();
+    }
+    match /shorts {
+        allow list: if true;
     }
 
     match /categories/{categoryId} {
