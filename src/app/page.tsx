@@ -140,11 +140,8 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
   const shortsQuery = useMemoFirebase(() => {
-    if (isUserLoading || !user) {
-      return null;
-    }
     return query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(10));
-  }, [firestore, isUserLoading, user]);
+  }, [firestore]);
 
   const { data: shorts, isLoading: shortsLoading } = useCollection<Short>(shortsQuery);
 
