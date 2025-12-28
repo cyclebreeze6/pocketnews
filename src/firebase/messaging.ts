@@ -1,10 +1,13 @@
+
 'use client';
 
 import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 import { getApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirebase } from './provider';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+
+type PermissionStatus = 'default' | 'granted' | 'denied';
 
 /**
  * Requests permission to send push notifications and saves the token if granted.
@@ -57,10 +60,37 @@ export async function setupPushNotifications(userId: string): Promise<void> {
  */
 export function usePushNotifications() {
   const { user } = useFirebase();
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('default');
 
   useEffect(() => {
-    if (user && !user.isAnonymous) {
-      setupPushNotifications(user.uid);
+    // This effect runs only on the client.
+    if ('Notification' in window) {
+      setPermissionStatus(Notification.permission);
+    }
+  }, []);
+
+  const requestPermission = useCallback(async () => {
+    if (!user || user.isAnonymous) return;
+
+    try {
+      const permission = await Notification.requestPermission();
+      setPermissionStatus(permission);
+
+      if (permission === 'granted') {
+        // If permission is granted, proceed to get and save the token.
+        await setupPushNotifications(user.uid);
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
     }
   }, [user]);
+
+  useEffect(() => {
+    // If permission is already granted, ensure token is set up on login.
+    if (user && !user.isAnonymous && permissionStatus === 'granted') {
+      setupPushNotifications(user.uid);
+    }
+  }, [user, permissionStatus]);
+
+  return { permissionStatus, requestPermission };
 }
