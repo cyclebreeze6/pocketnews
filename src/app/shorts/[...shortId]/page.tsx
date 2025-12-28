@@ -9,7 +9,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { VideoPlayer } from '../../../components/video-player';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Button } from '../../../components/ui/button';
-import { Home, ChevronUp, ChevronDown, Volume2, VolumeX, Pause, Play, Heart } from 'lucide-react';
+import { Home, ChevronUp, ChevronDown, Volume2, VolumeX, Pause, Play, Heart, VideoOff } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { cn } from '../../../lib/utils';
 import Link from 'next/link';
@@ -73,17 +73,18 @@ export default function ShortsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (shorts && initialShortId) {
-      const index = shorts.findIndex(s => s.id === initialShortId);
-      if (index !== -1) {
-        setCurrentIndex(index);
-      } else if(shorts.length > 0) {
-        setCurrentIndex(0); // Fallback to first short
+    if (shorts && shorts.length > 0) {
+      if (initialShortId) {
+          const index = shorts.findIndex(s => s.id === initialShortId);
+          setCurrentIndex(index !== -1 ? index : 0);
+      } else {
+          setCurrentIndex(0);
       }
-    } else if (shorts && shorts.length > 0) {
-        setCurrentIndex(0);
+    } else if (!shortsLoading && shorts?.length === 0) {
+        // Handle no shorts case after loading is complete
+        setCurrentIndex(-2); // Use a specific state for "no shorts"
     }
-  }, [shorts, initialShortId]);
+  }, [shorts, initialShortId, shortsLoading]);
 
   const scrollToShort = useCallback((index: number) => {
     const container = containerRef.current;
@@ -126,7 +127,7 @@ export default function ShortsPage() {
   }, [handleNext, handlePrev]);
 
   useEffect(() => {
-    if (currentIndex !== -1 && containerRef.current?.children[currentIndex]) {
+    if (currentIndex >= 0 && containerRef.current?.children[currentIndex]) {
         containerRef.current.children[currentIndex].scrollIntoView({ behavior: 'auto' });
     }
   }, [currentIndex]);
@@ -136,6 +137,22 @@ export default function ShortsPage() {
   
   if (shortsLoading || channelsLoading || currentIndex === -1) {
     return <ShortsSkeleton />;
+  }
+  
+  if (currentIndex === -2 || !shorts || shorts.length === 0) {
+    return (
+      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white">
+        <VideoOff className="h-16 w-16 text-muted-foreground mb-4" />
+        <h2 className="text-xl font-bold">No Shorts Yet</h2>
+        <p className="text-muted-foreground mb-6">Check back later for new content!</p>
+        <Link href="/">
+          <Button variant="secondary">
+            <Home className="mr-2 h-4 w-4" />
+            Go to Homepage
+          </Button>
+        </Link>
+      </div>
+    );
   }
 
   return (
