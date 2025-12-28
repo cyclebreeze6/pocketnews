@@ -105,7 +105,7 @@ service cloud.firestore {
     }
 
     match /shorts/{shortId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create, update, delete: if canCreateContent();
     }
 
