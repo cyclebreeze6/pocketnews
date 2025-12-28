@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -13,7 +14,7 @@ import { Button } from '../components/ui/button';
 import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel, UserProfile, Category } from '../lib/types';
+import type { Video, Channel, UserProfile, Category, Short } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback } from 'react';
@@ -38,6 +39,7 @@ import { AuthDialog } from '../components/auth-dialog';
 import { Checkbox } from '../components/ui/checkbox';
 import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -136,6 +138,15 @@ export default function Home() {
   
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
+
+  const shortsQuery = useMemoFirebase(() => {
+    if (isUserLoading || !user) {
+      return null;
+    }
+    return query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(10));
+  }, [firestore, isUserLoading, user]);
+
+  const { data: shorts, isLoading: shortsLoading } = useCollection<Short>(shortsQuery);
 
 
   // Main video query logic
@@ -248,7 +259,7 @@ export default function Home() {
     }
   };
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading;
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || shortsLoading;
   
   if (isLoading || !currentVideo || !currentChannel || !otherVideos) {
     return <HomepageSkeleton />;
@@ -341,6 +352,44 @@ export default function Home() {
                     <Link href="/category/Sports"><Badge variant="outline">#sports</Badge></Link>
                 </div>
             </div>
+
+            {shorts && shorts.length > 0 && (
+              <div className="mt-8 px-4 md:px-0">
+                <Separator />
+                <h3 className="text-xl font-bold tracking-tight mt-6 mb-4 font-headline">Shorts</h3>
+                <Carousel
+                  opts={{
+                    align: "start",
+                    dragFree: true,
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent>
+                    {shorts.map((short) => (
+                      <CarouselItem key={short.id} className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                        <Link href={`/shorts/${short.id}`}>
+                          <div className="group relative aspect-[9/16] overflow-hidden rounded-lg">
+                            <Image
+                              src={short.thumbnailUrl}
+                              alt={short.title}
+                              fill
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <div className="absolute bottom-2 left-2 right-2">
+                              <p className="text-white text-sm font-semibold line-clamp-2">{short.title}</p>
+                            </div>
+                          </div>
+                        </Link>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="hidden sm:flex" />
+                  <CarouselNext className="hidden sm:flex" />
+                </Carousel>
+              </div>
+            )}
+
           </div>
           
           {/* Sidebar */}
@@ -446,3 +495,4 @@ export default function Home() {
     </div>
   );
 }
+

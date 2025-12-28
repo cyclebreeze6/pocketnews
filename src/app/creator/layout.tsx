@@ -8,19 +8,23 @@ import SiteHeader from '../../components/site-header';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '../../lib/types';
 import { Skeleton } from '../../components/ui/skeleton';
+import CreatorSidebar from '../../components/creator-sidebar';
 
 function CreatorLoadingSkeleton() {
     return (
         <div className="flex min-h-screen w-full flex-col">
             <SiteHeader hideCategoryNav={true} />
-            <main className="flex-1 p-6 md:p-8 container">
-                <Skeleton className="h-8 w-1/3 mb-8" />
-                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Skeleton className="h-32" />
-                    <Skeleton className="h-32" />
-                    <Skeleton className="h-32" />
-                </div>
-            </main>
+             <div className="flex flex-1">
+                <CreatorSidebar />
+                <main className="flex-1 p-6 md:p-8">
+                    <Skeleton className="h-8 w-1/3 mb-8" />
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <Skeleton className="h-32" />
+                        <Skeleton className="h-32" />
+                        <Skeleton className="h-32" />
+                    </div>
+                </main>
+            </div>
       </div>
     )
 }
@@ -52,9 +56,9 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     // This effect runs only when loading is complete.
     if (!isLoading) {
-        // If there's no authenticated user or the user profile doesn't indicate they are a creator,
+        // If there's no authenticated user or the user profile doesn't indicate they are a creator or admin,
         // redirect them to the homepage.
-        if (!user || !userProfile?.isCreator) {
+        if (!user || !(userProfile?.isCreator || userProfile?.isAdmin)) {
             router.replace('/');
         }
     }
@@ -62,7 +66,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
 
   // While loading is in progress, or if the user is not yet confirmed as a creator,
   // show the loading skeleton. This prevents rendering creator content prematurely.
-  if (isLoading || !userProfile?.isCreator) {
+  if (isLoading || !(userProfile?.isCreator || userProfile?.isAdmin)) {
     return <CreatorLoadingSkeleton />;
   }
 
@@ -70,7 +74,10 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader hideCategoryNav={true} />
-      <main className="flex-1 p-6 md:p-8 container">{children}</main>
+      <div className="flex flex-1">
+        <CreatorSidebar />
+        <main className="flex-1 p-6 md:p-8">{children}</main>
+      </div>
     </div>
   );
 }

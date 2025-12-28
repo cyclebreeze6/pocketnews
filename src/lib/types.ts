@@ -36,6 +36,17 @@ export interface Video {
   createdAt: Timestamp | Date | string;
 }
 
+export interface Short {
+  id: string;
+  youtubeVideoId: string;
+  title: string;
+  channelId: string;
+  thumbnailUrl: string;
+  createdAt: Timestamp | Date | string;
+  views: number;
+}
+
+
 export interface Category {
   id: string;
   name: string;
@@ -65,7 +76,7 @@ export interface WatchHistory {
 }
 
 export interface Report {
-    id: string;
+    id:string;
     videoId: string;
     videoTitle: string;
     userId: string;
