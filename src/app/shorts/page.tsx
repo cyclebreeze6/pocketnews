@@ -8,7 +8,9 @@ import { collection, orderBy, query } from 'firebase/firestore';
 import { Skeleton } from '../../components/ui/skeleton';
 import Link from 'next/link';
 import Image from 'next/image';
-import { PlayCircle } from 'lucide-react';
+import { PlayCircle, Search } from 'lucide-react';
+import { Input } from '../../components/ui/input';
+import { useState } from 'react';
 
 function ShortsGridSkeleton() {
     return (
@@ -24,20 +26,31 @@ export default function ShortsGridPage() {
     const { firestore } = useFirebase();
     const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc')), [firestore]);
     const { data: shorts, isLoading } = useCollection<Short>(shortsQuery);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredShorts = shorts?.filter(short => 
+        short.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="flex min-h-screen w-full flex-col">
             <SiteHeader hideCategoryNav={true} />
             <main className="flex-1 py-8">
                 <div className="container px-4 md:px-6">
-                    <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">
-                        Shorts
-                    </h1>
+                    <div className="relative w-full max-w-lg mx-auto mb-8">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Search shorts..." 
+                            className="pl-9 bg-input text-base"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                     {isLoading ? (
                         <ShortsGridSkeleton />
-                    ) : shorts && shorts.length > 0 ? (
+                    ) : filteredShorts && filteredShorts.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {shorts.map(short => (
+                            {filteredShorts.map(short => (
                                 <Link href={`/shorts/${short.id}`} key={short.id} className="group relative block aspect-[9/16] overflow-hidden rounded-xl">
                                     <Image
                                         src={short.thumbnailUrl}
@@ -58,8 +71,8 @@ export default function ShortsGridPage() {
                         </div>
                     ) : (
                         <div className="text-center py-16">
-                            <h2 className="text-2xl font-semibold">No Shorts Yet</h2>
-                            <p className="text-muted-foreground mt-2">Check back later for new short videos!</p>
+                            <h2 className="text-2xl font-semibold">No Shorts Found</h2>
+                            <p className="text-muted-foreground mt-2">Try adjusting your search or check back later for new short videos!</p>
                         </div>
                     )}
                 </div>
