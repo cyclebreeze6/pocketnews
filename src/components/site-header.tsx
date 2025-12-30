@@ -264,9 +264,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                                 </DropdownMenuItem>
                             )}
                           <DropdownMenuItem asChild>
-                             <Link href="/my-collections"><Package className="mr-2 h-4 w-4" /><span>My Collections</span></Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
                             <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>

@@ -82,15 +82,11 @@ service cloud.firestore {
       match /fcmTokens/{tokenId} {
         allow read, write, delete: if isOwner(userId);
       }
-       // Users can manage their own collections
-      match /collections/{collectionId} {
-        allow read, write, delete: if isOwner(userId);
-      }
     }
 
     match /channels/{channelId} {
-      // All signed-in users can view channels
-      allow get, list: if isSignedIn();
+      // All users, including non-authenticated ones, can view channels.
+      allow get, list: if true;
       // Only Admins or Creators can manage channels.
       allow create, update: if canCreateContent();
       allow delete: if isAdmin();
@@ -103,7 +99,7 @@ service cloud.firestore {
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
       allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
     }
-
+    
     match /shorts/{shortId} {
       allow get, list: if true;
       allow create, update, delete: if canCreateContent();
@@ -126,7 +122,7 @@ service cloud.firestore {
     }
     
     match /email_queue/{emailId} {
-        allow read, write: if isAdmin(); // Only admins (backend) can manage the queue
+        allow read, write: if false; // Only backend can manage the queue
     }
 
     // This rule allows collection group queries on the 'videos' collection.

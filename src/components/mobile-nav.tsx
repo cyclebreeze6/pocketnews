@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -16,7 +17,6 @@ export default function MobileNav() {
   const navItems = [
     { href: '/', label: 'Home', icon: Home, isProtected: false },
     { href: '/shorts', label: 'Shorts', icon: Clapperboard, isProtected: false },
-    { href: '/my-collections', label: 'Collections', icon: Package, isProtected: true },
     { href: '/history', label: 'History', icon: History, isProtected: true },
     { href: '/settings/profile', label: 'Profile', icon: User, isProtected: true },
   ];

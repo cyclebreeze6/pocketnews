@@ -1,0 +1,402 @@
+
+{
+  "entities": {
+    "Channel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Channel",
+      "type": "object",
+      "description": "Represents a TV channel on Pocketnews TV.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Channel entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the channel."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the channel."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time the channel was created.",
+          "format": "date-time"
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL for the channel's logo.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "createdAt"
+      ]
+    },
+    "Video": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Video",
+      "type": "object",
+      "description": "Represents a video uploaded to Pocketnews TV.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Video entity."
+        },
+        "channelId": {
+          "type": "string",
+          "description": "Reference to Channel. (Relationship: Channel 1:N Video)"
+        },
+        "youtubeVideoId": {
+          "type": "string",
+          "description": "The YouTube video ID."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the video."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the video."
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "URL of the video thumbnail.",
+          "format": "uri"
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "The date and time the video was uploaded.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "channelId",
+        "youtubeVideoId",
+        "title",
+        "description",
+        "thumbnailUrl",
+        "uploadDate"
+      ]
+    },
+    "Short": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Short",
+      "type": "object",
+      "description": "Represents a short-form video, similar to YouTube Shorts.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Short entity."
+        },
+        "youtubeVideoId": {
+          "type": "string",
+          "description": "The YouTube video ID for the short."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the short."
+        },
+        "creatorId": {
+          "type": "string",
+          "description": "The ID of the user who created the short."
+        },
+        "channelId": {
+          "type": "string",
+          "description": "The ID of the channel this short belongs to."
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "URL for the short's thumbnail.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time the short was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "youtubeVideoId",
+        "title",
+        "creatorId",
+        "channelId",
+        "createdAt"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of Pocketnews TV.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's display name."
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Indicates if the user is an administrator."
+        },
+        "isCreator": {
+          "type": "boolean",
+          "description": "Indicates if the user is a content creator."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a content category for videos.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Report": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Report",
+      "type": "object",
+      "description": "Represents a user-submitted report about a video.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Report."
+        },
+        "videoId": {
+          "type": "string",
+          "description": "The ID of the reported video."
+        },
+        "videoTitle": {
+          "type": "string",
+          "description": "The title of the reported video (denormalized)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who submitted the report."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for the report.",
+          "enum": [
+            "Copyright",
+            "Wrong Information",
+            "False News",
+            "Other"
+          ]
+        },
+        "details": {
+          "type": "string",
+          "description": "Additional details provided by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the report was submitted."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the report.",
+          "enum": [
+            "Pending",
+            "Reviewed",
+            "Resolved",
+            "Dismissed"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "videoId",
+        "userId",
+        "reason",
+        "details",
+        "createdAt",
+        "status"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data, including email, display name, and admin status.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/channels/{channelId}",
+        "definition": {
+          "entityName": "Channel",
+          "schema": {
+            "$ref": "#/backend/entities/Channel"
+          },
+          "description": "Stores channel data including name, description, and creation date.",
+          "params": [
+            {
+              "name": "channelId",
+              "description": "The unique identifier of the channel."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/videos/{videoId}",
+        "definition": {
+          "entityName": "Video",
+          "schema": {
+            "$ref": "#/backend/entities/Video"
+          },
+          "description": "Stores all videos for the application.",
+          "params": [
+            {
+              "name": "videoId",
+              "description": "The unique identifier of the video."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/shorts/{shortId}",
+        "definition": {
+          "entityName": "Short",
+          "schema": {
+            "$ref": "#/backend/entities/Short"
+          },
+          "description": "Stores all short-form videos for the application.",
+          "params": [
+            {
+              "name": "shortId",
+              "description": "The unique identifier of the short."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Indicates admin role by document existence. Document content is irrelevant. (DBAC).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores content categories for videos.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique identifier of the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/reports/{reportId}",
+        "definition": {
+          "entityName": "Report",
+          "schema": {
+            "$ref": "#/backend/entities/Report"
+          },
+          "description": "Stores user-submitted reports on videos.",
+          "params": [
+            {
+              "name": "reportId",
+              "description": "The unique identifier of the report."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/email_queue/{emailId}",
+        "definition": {
+          "entityName": "Email",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "to": { "type": "string" },
+              "message": {
+                "type": "object",
+                "properties": {
+                  "subject": { "type": "string" },
+                  "html": { "type": "string" }
+                }
+              }
+            }
+          },
+          "description": "Stores email messages to be sent by a backend service.",
+          "params": [
+            {
+              "name": "emailId",
+              "description": "The unique identifier of the email message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos and Shorts are top-level collections to simplify queries for feeds. The rest of the structure remains segregated for security and clarity."
+  }
+}
+    
+
+    

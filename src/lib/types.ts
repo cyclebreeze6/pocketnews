@@ -52,18 +52,7 @@ export interface Category {
   createdAt?: Timestamp | Date | string;
 }
 
-// Represents a user-created collection of categories
-export interface Collection {
-    id: string;
-    name: string;
-    userId: string;
-    categoryIds: string[]; // List of category IDs
-    createdAt: Timestamp | Date | string;
-}
-
-
 export interface UserProfile extends User {
-    // This is deprecated in favor of the new collections subcollection
     preferredCategories?: string[];
 }
 
