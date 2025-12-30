@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -152,20 +153,19 @@ export default function Home() {
   const [isPlayerSticky, setIsPlayerSticky] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
-  const HEADER_HEIGHT = 64; // Corresponds to h-16 in SiteHeader
+  const HEADER_HEIGHT = 0; // The header is no longer sticky
 
   useEffect(() => {
     const handleScroll = () => {
-        if (!playerContainerRef.current || !isMobile || !mainRef.current) return;
+        if (!playerContainerRef.current || !isMobile) return;
 
-        const playerBottom = playerContainerRef.current.getBoundingClientRect().bottom;
-        const mainTop = mainRef.current.getBoundingClientRect().top;
+        const playerTop = playerContainerRef.current.getBoundingClientRect().top;
         
-        // Stick when the player's bottom edge is about to scroll past the header's bottom edge.
-        if (playerBottom <= HEADER_HEIGHT && !isPlayerSticky) {
+        // Stick when the player's top edge scrolls up to the header's height
+        if (playerTop <= HEADER_HEIGHT && !isPlayerSticky) {
             setIsPlayerSticky(true);
-        } else if (mainTop >= HEADER_HEIGHT && isPlayerSticky) {
-            // Unstick when the main content area is back in view at the top.
+        } else if (playerTop > HEADER_HEIGHT && isPlayerSticky) {
+            // Unstick when it's scrolled back down below the header height
              setIsPlayerSticky(false);
         }
     };
@@ -302,7 +302,7 @@ export default function Home() {
           ref={playerContainerRef}
           className={cn(
               'z-40 w-full bg-background',
-              isPlayerSticky && isMobile ? 'fixed top-16' : 'relative'
+               isPlayerSticky && isMobile ? 'fixed top-0' : 'relative'
           )}
         >
           <div className="aspect-video">
@@ -483,6 +483,3 @@ export default function Home() {
     </div>
   );
 }
-
-
-    
