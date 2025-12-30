@@ -186,9 +186,25 @@ export default function Home() {
     if (videos && videos.length > 0 && !currentVideo) {
       const videoIdFromUrl = getVideoIdFromPath();
       const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
-      setCurrentVideo(videoToPlay || videos[0]);
+      if (videoToPlay) {
+        setCurrentVideo(videoToPlay);
+      } else if (videoIdFromUrl) {
+        // If a video ID is in the URL but not in our current `videos` list (e.g., from an old link)
+        // we fetch it directly.
+        const videoRef = doc(firestore, 'videos', videoIdFromUrl);
+        getDoc(videoRef).then(docSnap => {
+          if (docSnap.exists()) {
+            setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
+          } else {
+            // Video not found, fall back to the first video in the list
+            setCurrentVideo(videos[0]);
+          }
+        });
+      } else {
+         setCurrentVideo(videos[0]);
+      }
     }
-  }, [videos, currentVideo]);
+  }, [videos, currentVideo, firestore]);
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
@@ -483,3 +499,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
