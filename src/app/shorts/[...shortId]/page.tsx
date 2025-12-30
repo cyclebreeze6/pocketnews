@@ -12,6 +12,7 @@ import { Button } from '../../../components/ui/button';
 import { Heart, MessageCircle, Share2, Clapperboard, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { Skeleton } from '../../../components/ui/skeleton';
+import { useToast } from '../../../hooks/use-toast';
 
 function ShortsPlayerSkeleton() {
     return (
@@ -25,9 +26,8 @@ function ShortsPlayerInner() {
     const { firestore } = useFirebase();
     const router = useRouter();
     const params = useParams();
-    const searchParams = useSearchParams();
+    const { toast } = useToast();
     
-    // The shortId can be an array from the catch-all route, take the first element
     const shortId = Array.isArray(params.shortId) ? params.shortId[0] : params.shortId;
 
     const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc')), [firestore]);
@@ -37,8 +37,8 @@ function ShortsPlayerInner() {
     const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [isLiked, setIsLiked] = useState(false);
 
-    // Effect to find the initial short based on the URL
     useEffect(() => {
         if (shorts && shortId) {
             const index = shorts.findIndex(s => s.id === shortId);
@@ -47,9 +47,14 @@ function ShortsPlayerInner() {
             }
         }
     }, [shorts, shortId]);
-
+    
     const currentShort = shorts?.[currentIndex];
     const currentChannel = channels?.find(c => c.id === currentShort?.channelId);
+    
+    useEffect(() => {
+        // Reset like state when the video changes
+        setIsLiked(false);
+    }, [currentShort]);
 
     const handleNext = useCallback(() => {
         if (shorts && currentIndex < shorts.length - 1) {
@@ -66,8 +71,37 @@ function ShortsPlayerInner() {
             router.replace(`/shorts/${shorts[prevIndex].id}`, { scroll: false });
         }
     }, [currentIndex, shorts, router]);
+    
+    const handleShare = async () => {
+        if (!currentShort) return;
+        const shareUrl = `${window.location.origin}/shorts/${currentShort.id}`;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: currentShort.title,
+                    text: `Check out this short from ${currentChannel?.name}!`,
+                    url: shareUrl,
+                });
+            } catch (error) {
+                console.error('Error sharing:', error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Could not share',
+                    description: 'Sharing was cancelled or failed.',
+                });
+            }
+        } else {
+            // Fallback for browsers that don't support the Web Share API
+            navigator.clipboard.writeText(shareUrl);
+            toast({
+                title: 'Link Copied!',
+                description: 'The video link has been copied to your clipboard.',
+            });
+        }
+    };
 
-    // Handle scroll wheel and keyboard navigation
+
     useEffect(() => {
         const handleWheel = (e: WheelEvent) => {
             if (e.deltaY > 50) handleNext();
@@ -87,16 +121,15 @@ function ShortsPlayerInner() {
         };
     }, [handleNext, handlePrev]);
     
-    // Handle touch gestures for mobile
     const touchStartY = useRef(0);
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartY.current = e.touches[0].clientY;
     };
     const handleTouchEnd = (e: React.TouchEvent) => {
         const touchEndY = e.changedTouches[0].clientY;
-        if (touchStartY.current - touchEndY > 100) { // Swiped up
+        if (touchStartY.current - touchEndY > 50) { // Swiped up
             handleNext();
-        } else if (touchEndY - touchStartY.current > 100) { // Swiped down
+        } else if (touchEndY - touchStartY.current > 50) { // Swiped down
             handlePrev();
         }
     };
@@ -118,7 +151,6 @@ function ShortsPlayerInner() {
     }
 
     if (!currentShort || !currentChannel) {
-        // This might happen briefly while the initial index is being set
         return <ShortsPlayerSkeleton />;
     }
 
@@ -161,15 +193,11 @@ function ShortsPlayerInner() {
                 </div>
 
                 <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4 text-white">
-                    <Button variant="ghost" size="icon" className="flex flex-col h-auto">
-                        <Heart className="h-8 w-8" />
+                    <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={() => setIsLiked(!isLiked)}>
+                        <Heart className={cn("h-8 w-8", isLiked && "fill-red-500 text-red-500")} />
                         <span className="text-xs">1.2k</span>
                     </Button>
-                     <Button variant="ghost" size="icon" className="flex flex-col h-auto">
-                        <MessageCircle className="h-8 w-8" />
-                        <span className="text-xs">34</span>
-                    </Button>
-                     <Button variant="ghost" size="icon" className="flex flex-col h-auto">
+                     <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={handleShare}>
                         <Share2 className="h-8 w-8" />
                         <span className="text-xs">Share</span>
                     </Button>
