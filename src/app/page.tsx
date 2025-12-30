@@ -149,25 +149,31 @@ export default function Home() {
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   
   // Sticky player state
-  const [isMiniPlayer, setIsMiniPlayer] = useState(false);
+  const [isPlayerSticky, setIsPlayerSticky] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const HEADER_HEIGHT = 64; // Corresponds to h-16 in SiteHeader
 
   useEffect(() => {
     const handleScroll = () => {
-      if (!playerContainerRef.current || !isMobile) return;
+        if (!playerContainerRef.current || !isMobile || !mainRef.current) return;
 
-      const { bottom } = playerContainerRef.current.getBoundingClientRect();
-      // When the bottom of the player goes off-screen (is negative)
-      if (bottom < 0 && !isMiniPlayer) {
-        setIsMiniPlayer(true);
-      } else if (bottom >= 0 && isMiniPlayer) {
-        setIsMiniPlayer(false);
-      }
+        const playerBottom = playerContainerRef.current.getBoundingClientRect().bottom;
+        const mainTop = mainRef.current.getBoundingClientRect().top;
+        
+        // Stick when the player's bottom edge is about to scroll past the header's bottom edge.
+        if (playerBottom <= HEADER_HEIGHT && !isPlayerSticky) {
+            setIsPlayerSticky(true);
+        } else if (mainTop >= HEADER_HEIGHT && isPlayerSticky) {
+            // Unstick when the main content area is back in view at the top.
+             setIsPlayerSticky(false);
+        }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isMiniPlayer, isMobile]);
+}, [isPlayerSticky, isMobile]);
+
   
   
   useEffect(() => {
@@ -186,10 +192,11 @@ export default function Home() {
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
-    if(isMiniPlayer) setIsMiniPlayer(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if(isPlayerSticky) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     window.history.pushState({}, '', `/watch/${video.id}`);
-  }, [isMiniPlayer]);
+  }, [isPlayerSticky]);
   
   useEffect(() => {
     const handlePopState = () => {
@@ -290,28 +297,25 @@ export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
-      <main className="flex-1 md:py-8">
+      <main ref={mainRef} className="flex-1 md:py-8">
+        <div
+          ref={playerContainerRef}
+          className={cn(
+              'z-40 w-full bg-background',
+              isPlayerSticky && isMobile ? 'fixed top-16' : 'relative'
+          )}
+        >
+          <div className="aspect-video">
+            <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
+          </div>
+        </div>
+        {/* Placeholder to prevent content jump when player becomes sticky */}
+        {isPlayerSticky && isMobile && <div className="aspect-video" />}
+
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div
-              ref={playerContainerRef}
-              className={cn(
-                'aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4 transition-all duration-300 ease-in-out',
-                isMiniPlayer && 'fixed bottom-20 right-4 w-64 h-auto z-50 rounded-lg shadow-2xl'
-              )}
-            >
-              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
-              {isMiniPlayer && (
-                 <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-8 w-8 bg-black/50 text-white hover:bg-black/70 z-10" onClick={() => handleSetCurrentVideo(currentVideo)}>
-                    <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-             {/* Placeholder to prevent layout jump */}
-            {isMiniPlayer && <div className="aspect-video mb-4" />}
-            
-            <div className="px-4 md:px-0">
+            <div className="px-4 md:px-0 pt-4">
                 <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -479,5 +483,6 @@ export default function Home() {
     </div>
   );
 }
+
 
     
