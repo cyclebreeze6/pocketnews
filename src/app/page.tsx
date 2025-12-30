@@ -11,13 +11,13 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2, Loader2 } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2, Loader2, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,8 @@ import { AuthDialog } from '../components/auth-dialog';
 import { Checkbox } from '../components/ui/checkbox';
 import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
+import { cn } from '../lib/utils';
+import { useIsMobile } from '../hooks/use-mobile';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -121,6 +123,7 @@ export default function Home() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
@@ -137,21 +140,36 @@ export default function Home() {
   
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
-
-  // Main video query logic
+  
   const videosQuery = useMemoFirebase(() => {
-    // This is the critical fix: Do not create the query until the user object is available.
-    // This ensures we always have an authenticated session (even anonymous) before querying.
-    if (isUserLoading || !user) {
-      return null;
-    }
-    // Always fetch the latest 20 videos for all users.
     return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore, isUserLoading, user]);
+  }, [firestore]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  
+  // Sticky player state
+  const [isMiniPlayer, setIsMiniPlayer] = useState(false);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!playerContainerRef.current || !isMobile) return;
+
+      const { bottom } = playerContainerRef.current.getBoundingClientRect();
+      // When the bottom of the player goes off-screen (is negative)
+      if (bottom < 0 && !isMiniPlayer) {
+        setIsMiniPlayer(true);
+      } else if (bottom >= 0 && isMiniPlayer) {
+        setIsMiniPlayer(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isMiniPlayer, isMobile]);
+  
   
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -169,8 +187,10 @@ export default function Home() {
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
+    if(isMiniPlayer) setIsMiniPlayer(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     window.history.pushState({}, '', `/watch/${video.id}`);
-  }, []);
+  }, [isMiniPlayer]);
   
   useEffect(() => {
     const handlePopState = () => {
@@ -275,9 +295,22 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
+            <div
+              ref={playerContainerRef}
+              className={cn(
+                'aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4 transition-all duration-300 ease-in-out',
+                isMiniPlayer && 'fixed bottom-4 right-4 w-64 h-auto z-50 rounded-lg shadow-2xl'
+              )}
+            >
               <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
+              {isMiniPlayer && (
+                 <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-8 w-8 bg-black/50 text-white hover:bg-black/70 z-10" onClick={() => handleSetCurrentVideo(currentVideo)}>
+                    <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
+             {/* Placeholder to prevent layout jump */}
+            {isMiniPlayer && <div className="aspect-video mb-4" />}
             
             <div className="px-4 md:px-0">
                 <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
@@ -447,4 +480,3 @@ export default function Home() {
     </div>
   );
 }
-
