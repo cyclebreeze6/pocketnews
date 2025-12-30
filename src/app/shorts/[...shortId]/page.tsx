@@ -104,19 +104,22 @@ function ShortsPlayerInner() {
 
     useEffect(() => {
         const handleWheel = (e: WheelEvent) => {
-            if (e.deltaY > 50) handleNext();
-            if (e.deltaY < -50) handlePrev();
+            e.preventDefault();
+            if (e.deltaY > 1) handleNext();
+            if (e.deltaY < -1) handlePrev();
         };
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'ArrowDown') handleNext();
             if (e.key === 'ArrowUp') handlePrev();
         };
+        
+        const container = document.getElementById('shorts-container');
 
-        window.addEventListener('wheel', handleWheel);
+        container?.addEventListener('wheel', handleWheel, { passive: false });
         window.addEventListener('keydown', handleKeyDown);
         return () => {
-            window.removeEventListener('wheel', handleWheel);
+            container?.removeEventListener('wheel', handleWheel);
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [handleNext, handlePrev]);
@@ -156,6 +159,7 @@ function ShortsPlayerInner() {
 
     return (
         <div 
+            id="shorts-container"
             className="h-screen w-screen bg-black flex items-center justify-center overflow-hidden"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
@@ -171,7 +175,7 @@ function ShortsPlayerInner() {
                     <ArrowUp className="h-6 w-6" />
                 </Button>
             </div>
-            <div className="absolute left-4 bottom-4 z-20 hidden md:block">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden md:block">
                  <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={handleNext} disabled={currentIndex === shorts.length - 1}>
                     <ArrowDown className="h-6 w-6" />
                 </Button>
