@@ -9,6 +9,7 @@ import AdminSidebar from '../../components/admin-sidebar';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '../../lib/types';
 import { Skeleton } from '../../components/ui/skeleton';
+import { SidebarProvider, SidebarInset } from '../../components/ui/sidebar';
 
 
 function AdminLoadingSkeleton() {
@@ -16,7 +17,6 @@ function AdminLoadingSkeleton() {
         <div className="flex min-h-screen w-full flex-col">
             <SiteHeader />
             <div className="flex flex-1">
-                <AdminSidebar />
                 <main className="flex-1 p-6 md:p-8">
                     <Skeleton className="h-8 w-1/3 mb-8" />
                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -74,12 +74,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Only render the full admin layout if loading is complete AND the user is confirmed as an admin.
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
-      <div className="flex flex-1">
-        <AdminSidebar />
-        <main className="flex-1 p-6 md:p-8">{children}</main>
-      </div>
-    </div>
+    <SidebarProvider>
+        <div className="flex min-h-screen w-full flex-col">
+        <SiteHeader />
+        <div className="flex flex-1">
+            <AdminSidebar />
+            <SidebarInset>
+                <main className="flex-1 p-6 md:p-8">{children}</main>
+            </SidebarInset>
+        </div>
+        </div>
+    </SidebarProvider>
   );
 }

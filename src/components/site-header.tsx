@@ -15,7 +15,8 @@ import {
   PlusSquare,
   ListFilter,
   Package,
-  Clapperboard
+  Clapperboard,
+  Menu
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -51,6 +52,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from './ui/dialog';
+import { SidebarTrigger } from './ui/sidebar';
+import { usePathname } from 'next/navigation';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -67,6 +70,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const router = useRouter(); 
+  const pathname = usePathname();
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
@@ -85,6 +89,8 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   
   const [showNotificationDot, setShowNotificationDot] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+
+  const isDashboardPage = pathname.startsWith('/admin') || pathname.startsWith('/creator');
 
   useEffect(() => {
     setHasMounted(true);
@@ -123,6 +129,13 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
     <>
       <header className="w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8">
+            {isDashboardPage && (
+                <div className="mr-4 md:hidden">
+                    <SidebarTrigger>
+                        <Menu />
+                    </SidebarTrigger>
+                </div>
+            )}
           <div className="mr-4 flex">
             <Link href="/" className="flex items-center space-x-2 p-2">
                <Image src={Logo} alt="Pocketnews TV" width={115.2} height={28.8} />
