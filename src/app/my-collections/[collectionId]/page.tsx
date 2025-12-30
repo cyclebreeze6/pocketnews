@@ -10,6 +10,8 @@ import { Skeleton } from '../../../components/ui/skeleton';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
+import { Card, CardContent } from '../../../components/ui/card';
+import { Folder } from 'lucide-react';
 
 function CollectionPageSkeleton() {
   return (
@@ -18,9 +20,9 @@ function CollectionPageSkeleton() {
       <main className="flex-1 py-12 md:py-16">
         <div className="container px-4 md:px-6">
           <Skeleton className="h-10 w-1/2 mb-8" />
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-10 w-28 rounded-md" />
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
             ))}
           </div>
         </div>
@@ -64,10 +66,15 @@ export default function CollectionPage() {
         <div className="container px-4 md:px-6">
           <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">{collectionData?.name}</h1>
           {collectionData.categoryIds && collectionData.categoryIds.length > 0 ? (
-            <div className="flex flex-wrap gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {collectionData.categoryIds.map((categoryName) => (
                 <Link href={`/category/${encodeURIComponent(categoryName)}`} key={categoryName}>
-                  <Button variant="outline" size="lg">{categoryName}</Button>
+                    <Card className="h-full transition-all hover:shadow-lg hover:-translate-y-1">
+                        <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
+                        <Folder className="h-12 w-12 mb-3 text-primary"/>
+                        <h2 className="font-semibold text-base">{categoryName}</h2>
+                        </CardContent>
+                    </Card>
                 </Link>
               ))}
             </div>
