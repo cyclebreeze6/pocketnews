@@ -84,6 +84,52 @@
         "uploadDate"
       ]
     },
+    "Short": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Short",
+      "type": "object",
+      "description": "Represents a short-form video, similar to YouTube Shorts.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Short entity."
+        },
+        "youtubeVideoId": {
+          "type": "string",
+          "description": "The YouTube video ID for the short."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the short."
+        },
+        "creatorId": {
+          "type": "string",
+          "description": "The ID of the user who created the short."
+        },
+        "channelId": {
+          "type": "string",
+          "description": "The ID of the channel this short belongs to."
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "URL for the short's thumbnail.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time the short was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "youtubeVideoId",
+        "title",
+        "creatorId",
+        "channelId",
+        "createdAt"
+      ]
+    },
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
@@ -316,6 +362,22 @@
           ]
         }
       },
+       {
+        "path": "/shorts/{shortId}",
+        "definition": {
+          "entityName": "Short",
+          "schema": {
+            "$ref": "#/backend/entities/Short"
+          },
+          "description": "Stores all short-form videos for the application.",
+          "params": [
+            {
+              "name": "shortId",
+              "description": "The unique identifier of the short."
+            }
+          ]
+        }
+      },
       {
         "path": "/roles_admin/{userId}",
         "definition": {
@@ -394,4 +456,6 @@
     "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos and Shorts are top-level collections to simplify queries for feeds. The rest of the structure remains segregated for security and clarity."
   }
 }
+    
+
     

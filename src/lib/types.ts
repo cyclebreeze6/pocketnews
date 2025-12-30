@@ -36,6 +36,16 @@ export interface Video {
   createdAt: Timestamp | Date | string;
 }
 
+export interface Short {
+  id: string;
+  youtubeVideoId: string;
+  title: string;
+  thumbnailUrl: string;
+  channelId: string;
+  creatorId: string;
+  createdAt: Timestamp | Date | string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -74,5 +84,7 @@ export interface Report {
     createdAt: Timestamp | Date | string;
     status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
 }
+
+    
 
     

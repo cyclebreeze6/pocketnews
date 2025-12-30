@@ -103,6 +103,11 @@ service cloud.firestore {
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
       allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
     }
+    
+    match /shorts/{shortId} {
+      allow read: if true;
+      allow write: if canCreateContent();
+    }
 
     match /categories/{categoryId} {
       // All signed-in users can view categories
@@ -138,3 +143,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
