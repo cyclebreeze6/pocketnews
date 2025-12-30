@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -299,7 +298,7 @@ export default function Home() {
               ref={playerContainerRef}
               className={cn(
                 'aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4 transition-all duration-300 ease-in-out',
-                isMiniPlayer && 'fixed bottom-4 right-4 w-64 h-auto z-50 rounded-lg shadow-2xl'
+                isMiniPlayer && 'fixed bottom-20 right-4 w-64 h-auto z-50 rounded-lg shadow-2xl'
               )}
             >
               <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
@@ -480,3 +479,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
