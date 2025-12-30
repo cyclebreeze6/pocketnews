@@ -15,6 +15,7 @@ import {
   PlusSquare,
   ListFilter,
   Package,
+  Clapperboard
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -139,6 +140,12 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Search className="h-5 w-5" />
               </Button>
+               <Link href="/shorts" className='hidden sm:inline-flex'>
+                <Button variant="ghost">
+                    <Clapperboard className="h-5 w-5 mr-2" />
+                    Shorts
+                </Button>
+              </Link>
               {hasMounted && (
               <Popover onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>

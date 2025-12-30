@@ -12,6 +12,7 @@ const CreatorSidebar = () => {
   const navItems = [
     { href: '/creator', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/creator/videos', label: 'Videos', icon: Video },
+    { href: '/creator/shorts', label: 'Shorts', icon: Clapperboard },
     { href: '/creator/channels', label: 'Channels', icon: Tv },
     { href: '/creator/curate', label: 'Curate (Search)', icon: Search },
     { href: '/creator/sync', label: 'Curate (Sync)', icon: RefreshCw },

@@ -6,6 +6,7 @@ import { FirebaseClientProvider } from '../firebase';
 import { NetworkStatusIndicator } from '../components/network-status-indicator';
 import Script from 'next/script';
 import { FirebaseMessagingProvider } from '../components/firebase-messaging-provider';
+import MobileNav from '../components/mobile-nav';
 
 export const metadata: Metadata = {
   title: 'Pocketnews TV',
@@ -25,11 +26,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto pb-16 sm:pb-0">
           <FirebaseClientProvider>
             <FirebaseMessagingProvider />
             <NetworkStatusIndicator />
             {children}
+            <MobileNav />
           </FirebaseClientProvider>
           <Toaster />
         </div>
