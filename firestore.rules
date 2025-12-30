@@ -89,8 +89,8 @@ service cloud.firestore {
     }
 
     match /channels/{channelId} {
-      // All signed-in users can view channels
-      allow get, list: if isSignedIn();
+      // All users, including non-authenticated ones, can view channels.
+      allow get, list: if true;
       // Only Admins or Creators can manage channels.
       allow create, update: if canCreateContent();
       allow delete: if isAdmin();
@@ -105,8 +105,8 @@ service cloud.firestore {
     }
     
     match /shorts/{shortId} {
-      allow read: if true;
-      allow write: if canCreateContent();
+      allow get, list: if true;
+      allow create, update, delete: if canCreateContent();
     }
 
     match /categories/{categoryId} {
@@ -126,7 +126,7 @@ service cloud.firestore {
     }
     
     match /email_queue/{emailId} {
-        allow read, write: if isAdmin(); // Only admins (backend) can manage the queue
+        allow read, write: if false; // Only backend can manage the queue
     }
 
     // This rule allows collection group queries on the 'videos' collection.
@@ -143,5 +143,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
