@@ -192,7 +192,6 @@ function ShortsPlayerInner() {
                             <AvatarImage src={currentChannel.logoUrl} />
                             <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <Button size="sm" className='text-xs h-7'>Follow</Button>
                     </div>
                      <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={handleShare}>
                         <Share2 className="h-8 w-8" />
