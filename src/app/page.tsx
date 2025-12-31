@@ -15,7 +15,7 @@ import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHori
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup, getDoc } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -313,24 +313,24 @@ export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
-      <main ref={mainRef} className="flex-1 md:py-8">
-        <div
-          ref={playerContainerRef}
-          className={cn(
-              'z-40 w-full bg-background',
-               isPlayerSticky && isMobile ? 'fixed top-0' : 'relative'
-          )}
-        >
-          <div className="aspect-video">
-            <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
-          </div>
-        </div>
-        {/* Placeholder to prevent content jump when player becomes sticky */}
-        {isPlayerSticky && isMobile && <div className="aspect-video" />}
-
-        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
+      <main ref={mainRef} className="flex-1">
+        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
+            <div
+              ref={playerContainerRef}
+              className={cn(
+                  'z-40 w-full bg-background',
+                  isPlayerSticky && isMobile ? 'fixed top-0 left-0 right-0' : 'relative md:rounded-lg overflow-hidden'
+              )}
+            >
+              <div className="aspect-video">
+                <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
+              </div>
+            </div>
+            {/* Placeholder to prevent content jump when player becomes sticky */}
+            {isPlayerSticky && isMobile && <div className="aspect-video" />}
+
             <div className="px-4 md:px-0 pt-4">
                 <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
 
@@ -499,5 +499,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
