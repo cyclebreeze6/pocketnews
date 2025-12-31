@@ -162,26 +162,26 @@ function ShortsPlayerInner() {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >
-            <div className="absolute top-4 left-4 z-20">
-                <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={() => router.back()}>
-                    <X className="h-6 w-6" />
-                </Button>
-            </div>
-            {/* Desktop scroll buttons */}
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20 hidden md:block">
-                 <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={handlePrev} disabled={currentIndex === 0}>
-                    <ArrowUp className="h-6 w-6" />
-                </Button>
-            </div>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden md:block">
-                 <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={handleNext} disabled={currentIndex === shorts.length - 1}>
-                    <ArrowDown className="h-6 w-6" />
-                </Button>
-            </div>
-
             <div key={currentShort.id} className="relative w-full h-full max-w-md aspect-[9/16] animate-in fade-in">
                 <VideoPlayer youtubeId={currentShort.youtubeVideoId} onEnd={handleNext} />
                 
+                <div className="absolute top-4 left-4 z-20">
+                    <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={() => router.back()}>
+                        <X className="h-6 w-6" />
+                    </Button>
+                </div>
+                {/* Desktop scroll buttons */}
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20 hidden md:block">
+                    <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={handlePrev} disabled={currentIndex === 0}>
+                        <ArrowUp className="h-6 w-6" />
+                    </Button>
+                </div>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden md:block">
+                    <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={handleNext} disabled={currentIndex === shorts.length - 1}>
+                        <ArrowDown className="h-6 w-6" />
+                    </Button>
+                </div>
+
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent text-white">
                     <p className="mt-2 text-sm">{currentShort.title}</p>
                 </div>
