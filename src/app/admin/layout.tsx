@@ -62,20 +62,18 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SidebarProvider>
-        <div className="flex min-h-screen w-full flex-col">
-        <SiteHeader />
-        <div className="flex flex-1">
-            <AdminSidebar />
-            <SidebarInset>
-                <main className="flex-1 p-6 md:p-8">{children}</main>
-            </SidebarInset>
-        </div>
-        </div>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full flex-col">
+    <SiteHeader />
+    <div className="flex flex-1">
+        <AdminSidebar />
+        <SidebarInset>
+            <main className="flex-1 p-6 md:p-8">{children}</main>
+        </SidebarInset>
+    </div>
+    </div>
   );
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    return <AdminLayoutInner>{children}</AdminLayoutInner>
+    return <SidebarProvider><AdminLayoutInner>{children}</AdminLayoutInner></SidebarProvider>
 }
