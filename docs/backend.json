@@ -130,23 +130,6 @@
         "createdAt"
       ]
     },
-    "Like": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Like",
-      "type": "object",
-      "description": "Represents a user's like on a Short.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "The ID of the user who liked the short."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who liked the short."
-        }
-      },
-      "required": ["id", "userId"]
-    },
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
@@ -395,26 +378,6 @@
           ]
         }
       },
-       {
-        "path": "/shorts/{shortId}/likes/{userId}",
-        "definition": {
-          "entityName": "Like",
-          "schema": {
-            "$ref": "#/backend/entities/Like"
-          },
-          "description": "Stores a user's like on a short. The document ID is the user ID.",
-          "params": [
-            {
-              "name": "shortId",
-              "description": "The unique identifier of the short."
-            },
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who liked the short."
-            }
-          ]
-        }
-      },
       {
         "path": "/roles_admin/{userId}",
         "definition": {
@@ -490,9 +453,9 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos and Shorts are top-level collections to simplify queries for feeds. The 'likes' for shorts are stored in a subcollection for scalability. The rest of the structure remains segregated for security and clarity."
+    "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos and Shorts are top-level collections to simplify queries for feeds. The rest of the structure remains segregated for security and clarity."
   }
 }
     
-
     
+

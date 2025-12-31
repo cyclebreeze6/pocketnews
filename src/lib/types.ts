@@ -46,11 +46,6 @@ export interface Short {
   createdAt: Timestamp | Date | string;
 }
 
-export interface Like {
-    id: string;
-    userId: string;
-}
-
 export interface Category {
   id: string;
   name: string;
