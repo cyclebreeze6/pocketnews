@@ -2,9 +2,9 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
-import { useCollection, useFirebase, useMemoFirebase, useDoc } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '../../../firebase';
 import type { Short, Channel } from '../../../lib/types';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { VideoPlayer } from '../../../components/video-player';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
@@ -13,6 +13,7 @@ import { Heart, MessageCircle, Share2, Clapperboard, X, ArrowUp, ArrowDown } fro
 import { cn } from '../../../lib/utils';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { useToast } from '../../../hooks/use-toast';
+import { AuthDialog } from '../../../components/auth-dialog';
 
 function ShortsPlayerSkeleton() {
     return (
@@ -24,6 +25,7 @@ function ShortsPlayerSkeleton() {
 
 function ShortsPlayerInner() {
     const { firestore } = useFirebase();
+    const { user } = useUser();
     const router = useRouter();
     const params = useParams();
     const { toast } = useToast();
@@ -35,9 +37,20 @@ function ShortsPlayerInner() {
     
     const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
     const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
-
+    
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isLiked, setIsLiked] = useState(false);
+    const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+
+    // Like-related state
+    const currentShort = shorts?.[currentIndex];
+    const likesQuery = useMemoFirebase(() => currentShort ? collection(firestore, 'shorts', currentShort.id, 'likes') : null, [currentShort, firestore]);
+    const { data: likes } = useCollection(likesQuery);
+    
+    const userLikeRef = useMemoFirebase(() => (currentShort && user && !user.isAnonymous) ? doc(firestore, 'shorts', currentShort.id, 'likes', user.uid) : null, [currentShort, user, firestore]);
+    const { data: userLike } = useDoc(userLikeRef);
+
+    const isLiked = !!userLike;
+    const likeCount = likes?.length || 0;
 
     useEffect(() => {
         if (shorts && shortId) {
@@ -48,13 +61,7 @@ function ShortsPlayerInner() {
         }
     }, [shorts, shortId]);
     
-    const currentShort = shorts?.[currentIndex];
     const currentChannel = channels?.find(c => c.id === currentShort?.channelId);
-    
-    useEffect(() => {
-        // Reset like state when the video changes
-        setIsLiked(false);
-    }, [currentShort]);
 
     const handleNext = useCallback(() => {
         if (shorts && currentIndex < shorts.length - 1) {
@@ -72,6 +79,25 @@ function ShortsPlayerInner() {
         }
     }, [currentIndex, shorts, router]);
     
+     const handleLike = async () => {
+        if (!user || !currentShort) return;
+
+        if (user.isAnonymous) {
+            setIsAuthDialogOpen(true);
+            return;
+        }
+
+        const likeRef = doc(firestore, 'shorts', currentShort.id, 'likes', user.uid);
+
+        if (isLiked) {
+            // User has already liked, so unlike
+            deleteDocumentNonBlocking(likeRef);
+        } else {
+            // User has not liked, so add a like
+            setDocumentNonBlocking(likeRef, { userId: user.uid }, {});
+        }
+    };
+
     const handleShare = async () => {
         if (!currentShort) return;
         const shareUrl = `${window.location.origin}/shorts/${currentShort.id}`;
@@ -154,6 +180,7 @@ function ShortsPlayerInner() {
     }
 
     if (!currentShort || !currentChannel) {
+        // This can happen briefly when the index changes, show skeleton
         return <ShortsPlayerSkeleton />;
     }
 
@@ -197,9 +224,9 @@ function ShortsPlayerInner() {
                 </div>
 
                 <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4 text-white">
-                    <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={() => setIsLiked(!isLiked)}>
-                        <Heart className={cn("h-8 w-8", isLiked && "fill-red-500 text-red-500")} />
-                        <span className="text-xs">1.2k</span>
+                    <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={handleLike}>
+                        <Heart className={cn("h-8 w-8 transition-colors", isLiked && "fill-red-500 text-red-500")} />
+                        <span className="text-xs">{likeCount > 0 ? likeCount : ''}</span>
                     </Button>
                      <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={handleShare}>
                         <Share2 className="h-8 w-8" />
@@ -207,6 +234,7 @@ function ShortsPlayerInner() {
                     </Button>
                 </div>
             </div>
+            <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
         </div>
     );
 }

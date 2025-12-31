@@ -107,6 +107,12 @@ service cloud.firestore {
     match /shorts/{shortId} {
       allow get, list: if true;
       allow create, update, delete: if canCreateContent();
+      
+      // Allow any signed-in user to like/unlike a short
+      match /likes/{userId} {
+        allow read: if true;
+        allow write, delete: if isOwner(userId);
+      }
     }
 
     match /categories/{categoryId} {
