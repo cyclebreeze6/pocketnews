@@ -165,7 +165,7 @@ function ShortsPlayerInner() {
             <div key={currentShort.id} className="relative w-full h-full max-w-md aspect-[9/16] animate-in fade-in">
                 <VideoPlayer youtubeId={currentShort.youtubeVideoId} onEnd={handleNext} />
                 
-                <div className="absolute top-4 left-4 z-20">
+                 <div className="absolute top-4 left-4 z-20">
                     <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={() => router.back()}>
                         <X className="h-6 w-6" />
                     </Button>
@@ -183,10 +183,18 @@ function ShortsPlayerInner() {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent text-white">
-                    <p className="mt-2 text-sm">{currentShort.title}</p>
+                    <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={currentChannel.logoUrl} />
+                            <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <p className="font-semibold">{currentChannel.name}</p>
+                    </div>
+
+                    <p className="mt-2 text-xs font-semibold [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{currentShort.title}</p>
                 </div>
 
-                <div className="absolute right-2 bottom-12 flex flex-col items-center gap-4 text-white">
+                <div className="absolute right-2 bottom-24 flex flex-col items-center gap-4 text-white">
                     <div className='flex flex-col items-center gap-2'>
                         <Avatar>
                             <AvatarImage src={currentChannel.logoUrl} />
