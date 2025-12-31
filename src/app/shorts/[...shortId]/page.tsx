@@ -183,18 +183,17 @@ function ShortsPlayerInner() {
                 <VideoPlayer youtubeId={currentShort.youtubeVideoId} onEnd={handleNext} />
                 
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent text-white">
-                    <div className='flex items-center gap-3'>
+                    <p className="mt-2 text-sm">{currentShort.title}</p>
+                </div>
+
+                <div className="absolute right-2 bottom-12 flex flex-col items-center gap-4 text-white">
+                    <div className='flex flex-col items-center gap-2'>
                         <Avatar>
                             <AvatarImage src={currentChannel.logoUrl} />
                             <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <h3 className="font-semibold">{currentChannel.name}</h3>
-                        <Button size="sm" className='ml-2'>Follow</Button>
+                        <Button size="sm" className='text-xs h-7'>Follow</Button>
                     </div>
-                    <p className="mt-2 text-sm">{currentShort.title}</p>
-                </div>
-
-                <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4 text-white">
                      <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={handleShare}>
                         <Share2 className="h-8 w-8" />
                         <span className="text-xs">Share</span>
