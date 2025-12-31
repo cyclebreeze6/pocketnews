@@ -29,7 +29,7 @@ function CreatorLoadingSkeleton() {
     )
 }
 
-export default function CreatorLayout({ children }: { children: React.ReactNode }) {
+function CreatorLayoutInner({ children }: { children: React.ReactNode }){
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { firestore } = useFirebase();
@@ -43,10 +43,9 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   const [isLongLoading, setIsLongLoading] = useState(true);
 
   useEffect(() => {
-    // Introduce a minimum loading time to avoid flashing content and ensure auth state is settled.
     const timer = setTimeout(() => {
         setIsLongLoading(false);
-    }, 500); // A short delay of 500ms
+    }, 500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -54,23 +53,17 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   const isLoading = isUserLoading || isProfileLoading || isLongLoading;
 
   useEffect(() => {
-    // This effect runs only when loading is complete.
     if (!isLoading) {
-        // If there's no authenticated user or the user profile doesn't indicate they are a creator or admin,
-        // redirect them to the homepage.
         if (!user || !(userProfile?.isCreator || userProfile?.isAdmin)) {
             router.replace('/');
         }
     }
   }, [user, userProfile, isLoading, router]);
 
-  // While loading is in progress, or if the user is not yet confirmed as a creator,
-  // show the loading skeleton. This prevents rendering creator content prematurely.
   if (isLoading || !(userProfile?.isCreator || userProfile?.isAdmin)) {
     return <CreatorLoadingSkeleton />;
   }
 
-  // Only render the full creator layout if loading is complete AND the user is confirmed as a creator.
   return (
     <SidebarProvider>
         <div className="flex min-h-screen w-full flex-col">
@@ -84,4 +77,9 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
         </div>
     </SidebarProvider>
   );
+}
+
+
+export default function CreatorLayout({ children }: { children: React.ReactNode }) {
+    return <CreatorLayoutInner>{children}</CreatorLayoutInner>;
 }
