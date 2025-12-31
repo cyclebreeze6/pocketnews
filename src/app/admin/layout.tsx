@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useUser, useDoc, useFirebase, useMemoFirebase } from '../../firebase';
@@ -13,26 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { SidebarProvider, SidebarInset } from '../../components/ui/sidebar';
 
 
-function AdminLoadingSkeleton() {
-    return (
-        <div className="flex min-h-screen w-full flex-col">
-            <SiteHeader />
-            <div className="flex flex-1">
-                <main className="flex-1 p-6 md:p-8">
-                    <Skeleton className="h-8 w-1/3 mb-8" />
-                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        <Skeleton className="h-32" />
-                        <Skeleton className="h-32" />
-                        <Skeleton className="h-32" />
-                    </div>
-                </main>
-            </div>
-      </div>
-    )
-}
-
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { firestore } = useFirebase();
@@ -70,21 +50,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // While loading is in progress, or if the user is not yet confirmed as an admin,
   // show the loading skeleton. This prevents rendering admin content prematurely.
   if (isLoading || !userProfile?.isAdmin) {
-    return <AdminLoadingSkeleton />;
+    return (
+        <div className="flex min-h-screen w-full flex-col">
+            <SiteHeader />
+            <div className="flex flex-1">
+                <main className="flex-1 p-6 md:p-8">
+                    <Skeleton className="h-8 w-1/3 mb-8" />
+                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <Skeleton className="h-32" />
+                        <Skeleton className="h-32" />
+                        <Skeleton className="h-32" />
+                    </div>
+                </main>
+            </div>
+      </div>
+    );
   }
 
   // Only render the full admin layout if loading is complete AND the user is confirmed as an admin.
   return (
-    <SidebarProvider>
-        <div className="flex min-h-screen w-full flex-col">
-        <SiteHeader />
-        <div className="flex flex-1">
-            <AdminSidebar />
-            <SidebarInset>
-                <main className="flex-1 p-6 md:p-8">{children}</main>
-            </SidebarInset>
-        </div>
-        </div>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full flex-col">
+    <SiteHeader />
+    <div className="flex flex-1">
+        <AdminSidebar />
+        <SidebarInset>
+            <main className="flex-1 p-6 md:p-8">{children}</main>
+        </SidebarInset>
+    </div>
+    </div>
   );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <SidebarProvider>
+            <AdminLayoutInner>{children}</AdminLayoutInner>
+        </SidebarProvider>
+    )
 }
