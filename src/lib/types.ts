@@ -22,7 +22,8 @@ export interface Channel {
 
 export interface Video {
   id: string;
-  youtubeVideoId: string;
+  youtubeVideoId?: string;
+  videoUrl?: string;
   title: string;
   description: string;
   views: number;
@@ -38,7 +39,8 @@ export interface Video {
 
 export interface Short {
   id: string;
-  youtubeVideoId: string;
+  youtubeVideoId?: string;
+  videoUrl?: string;
   title: string;
   thumbnailUrl: string;
   channelId: string;

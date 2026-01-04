@@ -47,7 +47,7 @@ export default function VideoEditPage() {
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories } = useCollection<Category>(categoriesQuery);
 
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [videoInputUrl, setVideoInputUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [videoDetails, setVideoDetails] = useState<Partial<Video> | null>(null);
@@ -65,7 +65,7 @@ export default function VideoEditPage() {
     // If there's a URL in the query params, set it and fetch details
     const urlFromQuery = searchParams.get('youtubeUrl');
     if (urlFromQuery && isNewVideo) {
-      setYoutubeUrl(urlFromQuery);
+      setVideoInputUrl(urlFromQuery);
       handleFetchDetails(urlFromQuery);
     }
   }, [searchParams, isNewVideo]);
@@ -73,34 +73,55 @@ export default function VideoEditPage() {
   useEffect(() => {
     if (existingVideo) {
       setVideoDetails({ ...existingVideo });
+      if(existingVideo.youtubeVideoId) {
+        setVideoInputUrl(`https://www.youtube.com/watch?v=${existingVideo.youtubeVideoId}`);
+      } else if (existingVideo.videoUrl) {
+        setVideoInputUrl(existingVideo.videoUrl);
+      }
     }
   }, [existingVideo]);
 
   const handleFetchDetails = async (urlToFetch?: string) => {
-    const finalUrl = urlToFetch || youtubeUrl;
+    const finalUrl = urlToFetch || videoInputUrl;
     if (!finalUrl) {
-      toast({ variant: 'destructive', title: 'Please enter a YouTube URL.' });
+      toast({ variant: 'destructive', title: 'Please enter a video URL.' });
       return;
     }
-    setIsFetching(true);
-    try {
-      const videoInfo: YouTubeVideoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
-      if (videoInfo && videoInfo.title) {
+
+    // Only fetch from YouTube if it's a YouTube URL
+    if (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be')) {
+      setIsFetching(true);
+      try {
+        const videoInfo: YouTubeVideoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
+        if (videoInfo && videoInfo.title) {
+          setVideoDetails(prev => ({
+              ...prev,
+              youtubeVideoId: videoInfo.videoId,
+              videoUrl: '', // Clear other url
+              title: videoInfo.title,
+              description: videoInfo.description,
+              thumbnailUrl: videoInfo.thumbnailUrl,
+          }));
+        } else {
+          toast({ variant: 'destructive', title: 'Could not fetch YouTube video details.' });
+        }
+      } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: 'An error occurred while fetching YouTube details.' });
+      } finally {
+        setIsFetching(false);
+      }
+    } else {
+        // For non-YouTube URLs, just set the videoUrl
         setVideoDetails(prev => ({
             ...prev,
-            youtubeVideoId: videoInfo.videoId,
-            title: videoInfo.title,
-            description: videoInfo.description,
-            thumbnailUrl: videoInfo.thumbnailUrl,
+            videoUrl: finalUrl,
+            youtubeVideoId: '', // Clear youtube id
+            title: prev?.title || 'New Video',
+            description: prev?.description || '',
+            thumbnailUrl: prev?.thumbnailUrl || 'https://placehold.co/1280x720/000000/FFFFFF/png?text=Video',
         }));
-      } else {
-        toast({ variant: 'destructive', title: 'Could not fetch video details.' });
-      }
-    } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: 'An error occurred while fetching video details.' });
-    } finally {
-      setIsFetching(false);
+        toast({ title: 'Video URL set', description: 'Enter details manually or provide a thumbnail.' });
     }
   };
   
@@ -199,6 +220,10 @@ export default function VideoEditPage() {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please ensure a title, channel, and category are set.' });
       return;
     }
+    if (!videoDetails.youtubeVideoId && !videoDetails.videoUrl) {
+      toast({ variant: 'destructive', title: 'Missing Video Source', description: 'Please provide either a YouTube URL or a direct video link.' });
+      return;
+    }
     
     setIsSaving(true);
     const dataToSave = {
@@ -256,22 +281,22 @@ export default function VideoEditPage() {
             <CardHeader>
                 <CardTitle>Video Details</CardTitle>
                 <CardDescription>
-                {isNewVideo ? 'Fetch details from a YouTube URL or enter them manually.' : 'Edit the details for this video.'}
+                {isNewVideo ? 'Fetch details from a video URL or enter them manually.' : 'Edit the details for this video.'}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 {isNewVideo && (
                      <div className="grid gap-2">
-                        <Label htmlFor="youtube-url">YouTube URL</Label>
+                        <Label htmlFor="video-url">Video URL (YouTube, .m3u8, etc.)</Label>
                         <div className="flex gap-2">
                             <Input
-                            id="youtube-url"
-                            value={youtubeUrl}
-                            onChange={(e) => setYoutubeUrl(e.target.value)}
-                            placeholder="https://www.youtube.com/watch?v=..."
+                            id="video-url"
+                            value={videoInputUrl}
+                            onChange={(e) => setVideoInputUrl(e.target.value)}
+                            placeholder="https://www.youtube.com/watch?v=... or https://.../video.m3u8"
                             disabled={isFetching}
                             />
-                            <Button onClick={() => handleFetchDetails()} disabled={isFetching || !youtubeUrl}>
+                            <Button onClick={() => handleFetchDetails()} disabled={isFetching || !videoInputUrl}>
                             {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch'}
                             </Button>
                         </div>
@@ -285,6 +310,12 @@ export default function VideoEditPage() {
                         {videoDetails.thumbnailUrl && (
                             <Image src={videoDetails.thumbnailUrl} alt={videoDetails.title || 'Video thumbnail'} width={320} height={180} className="rounded-md mt-2 aspect-video object-cover" />
                         )}
+                         <Input 
+                            className="mt-2 text-xs"
+                            placeholder="Or enter thumbnail URL" 
+                            value={videoDetails.thumbnailUrl || ''} 
+                            onChange={e => setVideoDetails(prev => ({...prev, thumbnailUrl: e.target.value}))}
+                          />
                     </div>
                     <div className="md:col-span-2 space-y-4">
                         <div className="grid gap-2">

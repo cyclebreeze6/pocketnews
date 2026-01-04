@@ -34,7 +34,7 @@ export default function ShortEditPage() {
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels } = useCollection<Channel>(channelsQuery);
 
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [videoInputUrl, setVideoInputUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [shortDetails, setShortDetails] = useState<Partial<Short> | null>(null);
@@ -42,7 +42,7 @@ export default function ShortEditPage() {
   useEffect(() => {
     const urlFromQuery = searchParams.get('youtubeUrl');
     if (urlFromQuery && isNewShort) {
-      setYoutubeUrl(urlFromQuery);
+      setVideoInputUrl(urlFromQuery);
       handleFetchDetails(urlFromQuery);
     }
   }, [searchParams, isNewShort]);
@@ -50,42 +50,58 @@ export default function ShortEditPage() {
   useEffect(() => {
     if (existingShort) {
       setShortDetails({ ...existingShort });
-      const url = `https://www.youtube.com/watch?v=${existingShort.youtubeVideoId}`;
-      setYoutubeUrl(url);
+      if(existingShort.youtubeVideoId) {
+        setVideoInputUrl(`https://www.youtube.com/shorts/${existingShort.youtubeVideoId}`);
+      } else if (existingShort.videoUrl) {
+        setVideoInputUrl(existingShort.videoUrl);
+      }
     }
   }, [existingShort]);
 
   const handleFetchDetails = async (urlToFetch?: string) => {
-    const finalUrl = urlToFetch || youtubeUrl;
+    const finalUrl = urlToFetch || videoInputUrl;
     if (!finalUrl) {
-      toast({ variant: 'destructive', title: 'Please enter a YouTube URL.' });
+      toast({ variant: 'destructive', title: 'Please enter a video URL.' });
       return;
     }
-    setIsFetching(true);
-    try {
-      const videoInfo: YouTubeVideoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
-      if (videoInfo && videoInfo.title) {
+    
+    if (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be')) {
+        setIsFetching(true);
+        try {
+        const videoInfo: YouTubeVideoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
+        if (videoInfo && videoInfo.title) {
+            setShortDetails(prev => ({
+                ...prev,
+                youtubeVideoId: videoInfo.videoId,
+                videoUrl: '',
+                title: videoInfo.title,
+                thumbnailUrl: videoInfo.thumbnailUrl,
+            }));
+        } else {
+            toast({ variant: 'destructive', title: 'Could not fetch video details.' });
+        }
+        } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: 'An error occurred while fetching video details.' });
+        } finally {
+        setIsFetching(false);
+        }
+    } else {
         setShortDetails(prev => ({
             ...prev,
-            youtubeVideoId: videoInfo.videoId,
-            title: videoInfo.title,
-            thumbnailUrl: videoInfo.thumbnailUrl,
+            videoUrl: finalUrl,
+            youtubeVideoId: '',
+            title: prev?.title || 'New Short',
+            thumbnailUrl: prev?.thumbnailUrl || 'https://placehold.co/180x320/000000/FFFFFF/png?text=Short',
         }));
-      } else {
-        toast({ variant: 'destructive', title: 'Could not fetch video details.' });
-      }
-    } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: 'An error occurred while fetching video details.' });
-    } finally {
-      setIsFetching(false);
+        toast({ title: 'Video URL set', description: 'Enter details manually.' });
     }
   };
 
   const handleSaveChanges = async () => {
     if (!user) return;
-    if (!shortDetails?.title || !shortDetails?.channelId || !shortDetails?.youtubeVideoId) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please ensure a title, YouTube ID, and channel are set.' });
+    if (!shortDetails?.title || !shortDetails?.channelId || (!shortDetails.youtubeVideoId && !shortDetails.videoUrl)) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please ensure a title, video source, and channel are set.' });
       return;
     }
     
@@ -130,21 +146,21 @@ export default function ShortEditPage() {
             <CardHeader>
                 <CardTitle>Short Details</CardTitle>
                 <CardDescription>
-                Fetch details from a YouTube URL. The video must be in a vertical (shorts) format.
+                Fetch details from a YouTube URL or provide a direct streaming link. The video should be in a vertical format.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="youtube-url">YouTube URL</Label>
+                  <Label htmlFor="youtube-url">Video URL (YouTube, .m3u8, etc.)</Label>
                   <div className="flex gap-2">
                       <Input
                       id="youtube-url"
-                      value={youtubeUrl}
-                      onChange={(e) => setYoutubeUrl(e.target.value)}
-                      placeholder="https://www.youtube.com/shorts/..."
+                      value={videoInputUrl}
+                      onChange={(e) => setVideoInputUrl(e.target.value)}
+                      placeholder="https://www.youtube.com/shorts/... or https://.../video.m3u8"
                       disabled={isFetching}
                       />
-                      <Button onClick={() => handleFetchDetails()} disabled={isFetching || !youtubeUrl}>
+                      <Button onClick={() => handleFetchDetails()} disabled={isFetching || !videoInputUrl}>
                       {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch'}
                       </Button>
                   </div>
