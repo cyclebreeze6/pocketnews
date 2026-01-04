@@ -162,10 +162,10 @@ function ShortsPlayerInner() {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >
-            <div key={currentShort.id} className="relative w-full h-full max-w-md aspect-[9/16] animate-in fade-in">
+            <div key={currentShort.id} className="relative w-full h-full animate-in fade-in">
                 <VideoPlayer youtubeId={currentShort.youtubeVideoId} onEnd={handleNext} />
                 
-                 <div className="absolute top-4 left-4 z-20">
+                 <div className="absolute top-4 right-4 z-20">
                     <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={() => router.back()}>
                         <X className="h-6 w-6" />
                     </Button>
