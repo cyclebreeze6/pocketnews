@@ -50,6 +50,15 @@ function ShortsPlayerInner() {
             }
         }
     }, [shorts, shortId]);
+
+    useEffect(() => {
+        // Lock body scroll when component mounts
+        document.body.style.overflow = 'hidden';
+        // Unlock body scroll when component unmounts
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, []);
     
     const currentChannel = channels?.find(c => c.id === currentShort?.channelId);
 
@@ -170,15 +179,14 @@ function ShortsPlayerInner() {
                         <X className="h-6 w-6" />
                     </Button>
                 </div>
-                {/* Desktop scroll buttons */}
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20 hidden md:block">
-                    <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={handlePrev} disabled={currentIndex === 0}>
-                        <ArrowUp className="h-6 w-6" />
+                
+                {/* Mobile scroll buttons */}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-4 md:hidden">
+                    <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full h-8 w-8" onClick={handlePrev} disabled={currentIndex === 0}>
+                        <ArrowUp className="h-5 w-5" />
                     </Button>
-                </div>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden md:block">
-                    <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full" onClick={handleNext} disabled={currentIndex === shorts.length - 1}>
-                        <ArrowDown className="h-6 w-6" />
+                    <Button variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/70 rounded-full h-8 w-8" onClick={handleNext} disabled={currentIndex === shorts.length - 1}>
+                        <ArrowDown className="h-5 w-5" />
                     </Button>
                 </div>
 
@@ -191,16 +199,10 @@ function ShortsPlayerInner() {
                         <p className="font-semibold">{currentChannel.name}</p>
                     </div>
 
-                    <p className="mt-2 text-xs font-semibold [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">{currentShort.title}</p>
+                    <p className="mt-2 text-sm font-semibold [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] line-clamp-2">{currentShort.title}</p>
                 </div>
 
                 <div className="absolute right-2 bottom-24 flex flex-col items-center gap-4 text-white">
-                    <div className='flex flex-col items-center gap-2'>
-                        <Avatar>
-                            <AvatarImage src={currentChannel.logoUrl} />
-                            <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                    </div>
                      <Button variant="ghost" size="icon" className="flex flex-col h-auto" onClick={handleShare}>
                         <Share2 className="h-8 w-8" />
                         <span className="text-xs">Share</span>
