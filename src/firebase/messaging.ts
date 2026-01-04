@@ -44,7 +44,7 @@ export async function setupPushNotifications(userId: string): Promise<void> {
       await setDoc(tokenRef, { 
           token: currentToken,
           createdAt: serverTimestamp() 
-      });
+      }, { merge: true });
       console.log('FCM token saved to Firestore.');
     } else {
       console.log('No registration token available. Request permission to generate one.');
