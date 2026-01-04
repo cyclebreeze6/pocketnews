@@ -1,3 +1,5 @@
+
+      
 "use client"
 
 import * as React from "react"
@@ -10,7 +12,7 @@ import { cn } from "../../lib/utils"
 import { Button } from "./button"
 import { Input } from "./input"
 import { Separator } from "./separator"
-import { Sheet, SheetContent } from "./sheet"
+import { Sheet, SheetContent, SheetTitle } from "./sheet"
 import { Skeleton } from "./skeleton"
 import {
   Tooltip,
@@ -206,6 +208,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
+            <SheetTitle className="sr-only">Mobile Sidebar</SheetTitle>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
@@ -766,3 +769,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    
