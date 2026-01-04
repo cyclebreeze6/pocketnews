@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -14,15 +15,16 @@ import { useCollection, useFirebase, useMemoFirebase } from '../../../firebase';
 import type { Category } from '../../../lib/types';
 import { collection } from 'firebase/firestore';
 
-const MAX_SELECTABLE_VIDEOS = 10;
+interface VideoToImport extends NewVideoForImport {
+  category?: string;
+  isSelected?: boolean;
+}
 
 export default function CreatorBulkImportPage() {
   const { firestore } = useFirebase();
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [fetchedVideos, setFetchedVideos] = useState<NewVideoForImport[]>([]);
-  const [selectedVideos, setSelectedVideos] = useState<NewVideoForImport[]>([]);
-  const [assignedCategory, setAssignedCategory] = useState<string>('');
+  const [fetchedVideos, setFetchedVideos] = useState<VideoToImport[]>([]);
   const { toast } = useToast();
 
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
@@ -31,11 +33,10 @@ export default function CreatorBulkImportPage() {
   const handleFetchVideos = async () => {
     setIsFetching(true);
     setFetchedVideos([]);
-    setSelectedVideos([]);
 
     try {
       const results = await fetchNewVideosForBulkImport();
-      setFetchedVideos(results);
+      setFetchedVideos(results.map(v => ({ ...v, isSelected: false })));
       if (results.length === 0) {
         toast({ title: 'No new videos found', description: 'All linked channels are up-to-date.' });
       }
@@ -50,35 +51,30 @@ export default function CreatorBulkImportPage() {
     }
   };
 
-  const handleVideoSelection = (video: NewVideoForImport, isSelected: boolean) => {
-    if (isSelected) {
-      if (selectedVideos.length < MAX_SELECTABLE_VIDEOS) {
-        setSelectedVideos((prev) => [...prev, video]);
-      } else {
-        toast({
-          variant: 'destructive',
-          title: `You can select a maximum of ${MAX_SELECTABLE_VIDEOS} videos.`,
-        });
-      }
-    } else {
-      setSelectedVideos((prev) => prev.filter((v) => v.youtubeVideoId !== video.youtubeVideoId));
-    }
+  const handleVideoSelection = (videoId: string, isSelected: boolean) => {
+    setFetchedVideos(prev =>
+      prev.map(v => (v.youtubeVideoId === videoId ? { ...v, isSelected } : v))
+    );
   };
+  
+  const handleCategoryChange = (videoId: string, category: string) => {
+     setFetchedVideos(prev =>
+      prev.map(v => (v.youtubeVideoId === videoId ? { ...v, category } : v))
+    );
+  }
+
+  const videosReadyForImport = fetchedVideos.filter(v => v.isSelected && v.category);
 
   const handleImport = async () => {
-    if (selectedVideos.length === 0) {
-      toast({ variant: 'destructive', title: 'No videos selected' });
+    if (videosReadyForImport.length === 0) {
+      toast({ variant: 'destructive', title: 'No videos ready for import', description: "Please select videos and assign a category to each." });
       return;
     }
-    if (!assignedCategory) {
-      toast({ variant: 'destructive', title: 'Please assign a category' });
-      return;
-    }
-
+    
     setIsSaving(true);
-    const videosToSave: ImportedVideoSaveData[] = selectedVideos.map(v => ({
+    const videosToSave: ImportedVideoSaveData[] = videosReadyForImport.map(v => ({
       ...v,
-      contentCategory: assignedCategory,
+      contentCategory: v.category!,
       views: Math.floor(Math.random() * 100), // Placeholder
       watchTime: Math.floor(Math.random() * 100), // Placeholder
     }));
@@ -87,12 +83,10 @@ export default function CreatorBulkImportPage() {
       await saveImportedVideos(videosToSave);
       toast({
         title: 'Import Successful!',
-        description: `${selectedVideos.length} videos have been added to your library.`,
+        description: `${videosReadyForImport.length} videos have been added to your library.`,
       });
       // Remove imported videos from the fetched list
-      setFetchedVideos(prev => prev.filter(v => !selectedVideos.some(sv => sv.youtubeVideoId === v.youtubeVideoId)));
-      setSelectedVideos([]);
-      setAssignedCategory('');
+      setFetchedVideos(prev => prev.filter(v => !videosReadyForImport.some(sv => sv.youtubeVideoId === v.youtubeVideoId)));
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Import Failed', description: error.message });
     } finally {
@@ -121,27 +115,14 @@ export default function CreatorBulkImportPage() {
         <Card>
           <CardHeader>
             <CardTitle>Step 2: Select and Import</CardTitle>
-            <CardDescription>Choose up to {MAX_SELECTABLE_VIDEOS} videos, assign a category, and import them all at once.</CardDescription>
+            <CardDescription>Choose videos, assign a category to each, and import them all at once.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="flex-grow grid gap-2">
-                    <label className="text-sm font-medium">Assign Category</label>
-                    <Select onValueChange={setAssignedCategory} value={assignedCategory}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a category for import..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {categories?.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="self-end">
-                    <Button onClick={handleImport} disabled={isSaving || selectedVideos.length === 0 || !assignedCategory}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                        Import {selectedVideos.length > 0 ? `(${selectedVideos.length})` : ''} Selected
-                    </Button>
-                </div>
+             <div className="flex justify-end mb-6">
+                <Button onClick={handleImport} disabled={isSaving || videosReadyForImport.length === 0}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                    Import {videosReadyForImport.length > 0 ? `(${videosReadyForImport.length})` : ''} Selected
+                </Button>
             </div>
 
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -149,9 +130,8 @@ export default function CreatorBulkImportPage() {
                 <div key={video.youtubeVideoId} className="flex items-center gap-4 p-2 border rounded-lg">
                   <Checkbox
                     id={`video-${video.youtubeVideoId}`}
-                    checked={selectedVideos.some((v) => v.youtubeVideoId === video.youtubeVideoId)}
-                    onCheckedChange={(checked) => handleVideoSelection(video, !!checked)}
-                    disabled={!selectedVideos.some(v => v.youtubeVideoId === video.youtubeVideoId) && selectedVideos.length >= MAX_SELECTABLE_VIDEOS}
+                    checked={video.isSelected}
+                    onCheckedChange={(checked) => handleVideoSelection(video.youtubeVideoId, !!checked)}
                   />
                   <label htmlFor={`video-${video.youtubeVideoId}`} className="flex-grow flex items-center gap-4 cursor-pointer">
                     <Image
@@ -166,6 +146,16 @@ export default function CreatorBulkImportPage() {
                       <p className="text-xs text-muted-foreground">{video.channelName}</p>
                     </div>
                   </label>
+                  <div className="w-48">
+                    <Select onValueChange={(value) => handleCategoryChange(video.youtubeVideoId, value)} value={video.category}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select category..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {categories?.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               ))}
             </div>
