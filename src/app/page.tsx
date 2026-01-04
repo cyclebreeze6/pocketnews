@@ -149,6 +149,7 @@ export default function Home() {
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  const [displayedVideos, setDisplayedVideos] = useState<Video[] | null>(null);
   
   // Sticky player state
   const [isPlayerSticky, setIsPlayerSticky] = useState(false);
@@ -184,28 +185,38 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
 
   useEffect(() => {
-    if (videos && videos.length > 0 && !currentVideo) {
-      const videoIdFromUrl = getVideoIdFromPath();
-      const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
-      if (videoToPlay) {
-        setCurrentVideo(videoToPlay);
-      } else if (videoIdFromUrl) {
-        // If a video ID is in the URL but not in our current `videos` list (e.g., from an old link)
-        // we fetch it directly.
-        const videoRef = doc(firestore, 'videos', videoIdFromUrl);
-        getDoc(videoRef).then(docSnap => {
-          if (docSnap.exists()) {
-            setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
-          } else {
-            // Video not found, fall back to the first video in the list
-            setCurrentVideo(videos[0]);
-          }
-        });
-      } else {
-         setCurrentVideo(videos[0]);
+    if (videos && videos.length > 0) {
+      if (!currentVideo) {
+        const videoIdFromUrl = getVideoIdFromPath();
+        const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
+        if (videoToPlay) {
+          setCurrentVideo(videoToPlay);
+        } else if (videoIdFromUrl) {
+          const videoRef = doc(firestore, 'videos', videoIdFromUrl);
+          getDoc(videoRef).then(docSnap => {
+            if (docSnap.exists()) {
+              setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
+            } else {
+              setCurrentVideo(videos[0]);
+            }
+          });
+        } else {
+           setCurrentVideo(videos[0]);
+        }
       }
+
+      // Shuffle the top 5 videos for display
+      const top5 = [...videos.slice(0, 5)];
+      // Fisher-Yates shuffle algorithm
+      for (let i = top5.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [top5[i], top5[j]] = [top5[j], top5[i]];
+      }
+      const restOfVideos = videos.slice(5);
+      setDisplayedVideos([...top5, ...restOfVideos]);
+
     }
-  }, [videos, currentVideo, firestore]);
+  }, [videos]);
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
@@ -229,7 +240,6 @@ export default function Home() {
 
 
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
-  const otherVideos = videos;
 
   useEffect(() => {
     if (currentVideo && user) {
@@ -242,10 +252,10 @@ export default function Home() {
   }, [currentVideo, user, firestore]);
 
   const handleVideoEnd = () => {
-    if (!videos || !currentVideo) return;
-    const currentIndex = videos.findIndex(v => v.id === currentVideo.id);
-    if (currentIndex > -1 && currentIndex < videos.length - 1) {
-      handleSetCurrentVideo(videos[currentIndex + 1]);
+    if (!displayedVideos || !currentVideo) return;
+    const currentIndex = displayedVideos.findIndex(v => v.id === currentVideo.id);
+    if (currentIndex > -1 && currentIndex < displayedVideos.length - 1) {
+      handleSetCurrentVideo(displayedVideos[currentIndex + 1]);
     }
   }
   
@@ -293,7 +303,7 @@ export default function Home() {
   
   const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading;
   
-  if (isLoading || !currentVideo || !currentChannel || !otherVideos) {
+  if (isLoading || !currentVideo || !currentChannel || !displayedVideos) {
     return <HomepageSkeleton />;
   }
 
@@ -403,7 +413,7 @@ export default function Home() {
             <h3 className="text-lg font-semibold text-muted-foreground">My Headlines</h3>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
-                    {otherVideos.map((video) => {
+                    {displayedVideos.map((video) => {
                         const videoChannel = channels.find(c => c.id === video.channelId);
                         const isPlaying = video.id === currentVideo.id;
                         return (
