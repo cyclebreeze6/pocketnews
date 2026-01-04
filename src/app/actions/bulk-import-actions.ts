@@ -1,7 +1,8 @@
+
 'use server';
 
 import { getChannelsForSync } from './get-channels-for-sync';
-import { fetchChannelVideosFlow, type YouTubeVideoDetails } from '../ai/flows/youtube-channel-videos-flow';
+import { fetchChannelVideosFlow, type YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { saveSyncedVideos } from './save-synced-videos';
 
 export interface NewVideoForImport extends Omit<YouTubeVideoDetails, 'videoId' | 'authorName'> {
