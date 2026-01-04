@@ -3,7 +3,7 @@
 import { ai } from '../genkit';
 import { z } from 'zod';
 import 'dotenv/config';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 
