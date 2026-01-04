@@ -142,8 +142,9 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const videosQuery = useMemoFirebase(() => {
+    if (isUserLoading || !user) return null;
     return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore]);
+  }, [firestore, user, isUserLoading]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
