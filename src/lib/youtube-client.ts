@@ -13,7 +13,7 @@ import { getActiveApiKey, rotateApiKey } from '../app/actions/api-key-actions';
  * @throws An error if all API keys are exhausted or a non-quota error occurs.
  */
 async function executeWithRotation(apiCall: (youtubeClient: any) => Promise<any>, retries: number): Promise<any> {
-    const apiKey = getActiveApiKey();
+    const apiKey = await getActiveApiKey();
 
     if (!apiKey) {
         throw new Error('No YouTube API Key is configured. Please add one in Admin > Settings > API Keys.');
@@ -38,7 +38,7 @@ async function executeWithRotation(apiCall: (youtubeClient: any) => Promise<any>
         if (isQuotaError) {
             console.warn(`[YouTube Client] Quota exceeded for API key. Rotating to the next key...`);
             // Rotate to the next key
-            rotateApiKey();
+            await rotateApiKey();
             // Retry the call with the new key and one less retry attempt
             return executeWithRotation(apiCall, retries - 1);
         } else {

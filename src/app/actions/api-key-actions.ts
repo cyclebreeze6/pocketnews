@@ -78,7 +78,7 @@ export async function removeApiKey(keyToRemove: string): Promise<{ success: bool
 }
 
 // These functions are for internal server use by the youtube-client
-export function getActiveApiKey(): string | null {
+export async function getActiveApiKey(): Promise<string | null> {
     const keys = getKeys();
     if (keys.length === 0) return null;
     
@@ -86,7 +86,7 @@ export function getActiveApiKey(): string | null {
     return keys[index % keys.length] || null;
 }
 
-export function rotateApiKey(): string | null {
+export async function rotateApiKey(): Promise<string | null> {
     const keys = getKeys();
     if (keys.length <= 1) {
         // Can't rotate if there's only one or zero keys
