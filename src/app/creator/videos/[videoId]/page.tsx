@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '../../../../components/ui/button';
@@ -119,9 +120,9 @@ export default function VideoEditPage() {
             youtubeVideoId: '', // Clear youtube id
             title: prev?.title || 'New Video',
             description: prev?.description || '',
-            thumbnailUrl: prev?.thumbnailUrl || 'https://placehold.co/1280x720/000000/FFFFFF/png?text=Video',
+            thumbnailUrl: prev?.thumbnailUrl || 'https://picsum.photos/seed/placeholder/1280/720',
         }));
-        toast({ title: 'Video URL set', description: 'Enter details manually or provide a thumbnail.' });
+        toast({ title: 'Direct Video URL set', description: 'Enter details manually or provide a thumbnail.' });
     }
   };
   
@@ -427,3 +428,4 @@ export default function VideoEditPage() {
     </div>
   );
 }
+
