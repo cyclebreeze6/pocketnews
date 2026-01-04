@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -32,7 +33,7 @@ const AdminSidebar = () => {
             const isActive = pathname.startsWith(item.href) && (item.href !== '/admin' || pathname === '/admin');
             return (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} legacyBehavior passHref>
+                <Link href={item.href}>
                   <SidebarMenuButton isActive={isActive}>
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
