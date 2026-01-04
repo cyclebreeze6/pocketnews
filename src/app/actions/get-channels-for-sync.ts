@@ -1,3 +1,4 @@
+
 'use server';
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
@@ -12,7 +13,7 @@ import 'dotenv/config';
  */
 export async function getChannelsForSync(channelId?: string): Promise<{ channelsToSync: Channel[], existingYoutubeIds: string[] }> {
   if (getApps().length === 0) {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY && process.env.FIREBASE_SERVICE_ACCOUNT_KEY.startsWith('{')) {
         try {
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
             initializeApp({
@@ -40,9 +41,13 @@ export async function getChannelsForSync(channelId?: string): Promise<{ channels
             channelsToSync.push({ id: doc.id, ...doc.data() } as Channel);
         }
     } else {
-        const q = channelsRef.where('youtubeChannelUrl', '!=', null).where('youtubeChannelUrl', '!=', '');
+        // Query for channels where youtubeChannelUrl is not null or empty
+        const q = channelsRef.where('youtubeChannelUrl', '!=', null);
         const channelSnapshot = await q.get();
-        channelsToSync = channelSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Channel));
+        channelsToSync = channelSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Channel))
+            // Additional client-side filter for empty string, as Firestore `!= ''` can be tricky
+            .filter(channel => channel.youtubeChannelUrl && channel.youtubeChannelUrl.trim() !== '');
     }
     
     if (channelsToSync.length === 0) {
