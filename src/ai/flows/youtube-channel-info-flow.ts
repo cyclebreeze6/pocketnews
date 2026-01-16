@@ -26,37 +26,40 @@ export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
 /**
  * Extracts a potential channel identifier (handle, custom name, or ID) from a YouTube URL.
+ * This is a more robust implementation.
  * @param url The full YouTube channel URL.
  * @returns A string identifier or null if one cannot be found.
  */
 function getIdentifierFromUrl(url: string): string | null {
     try {
         const urlObj = new URL(url);
-        const pathParts = urlObj.pathname.split('/').filter(p => p); 
+        // pathname can be like /c/Google, /channel/ID, /@Google, /Google
+        const pathParts = urlObj.pathname.split('/').filter(p => p);
 
-        // Check for /channel/UC... format
-        const channelIdIndex = pathParts.indexOf('channel');
-        if (channelIdIndex !== -1 && pathParts[channelIdIndex + 1]?.startsWith('UC')) {
-            return pathParts[channelIdIndex + 1];
+        // Order of checks is important, from most specific to least specific.
+
+        // 1. /channel/UC... (Canonical ID)
+        if (pathParts[0] === 'channel' && pathParts[1]?.startsWith('UC')) {
+            return pathParts[1];
         }
 
-        // Check for @handle format
-        const handle = pathParts.find(p => p.startsWith('@'));
-        if (handle) {
-            return handle; // Return with '@'
+        // 2. /@handle
+        if (pathParts[0]?.startsWith('@')) {
+            return pathParts[0];
+        }
+
+        // 3. /c/customUrl or /user/legacyUsername
+        if ((pathParts[0] === 'c' || pathParts[0] === 'user') && pathParts[1]) {
+            return pathParts[1];
+        }
+
+        // 4. Fallback for root-level vanity names (e.g., youtube.com/Google)
+        // This is the most ambiguous, so it's last.
+        // Make sure it's a single path part and doesn't look like another reserved path.
+        if (pathParts.length === 1 && !['watch', 'results', 'feed', 'playlist', 'shorts'].includes(pathParts[0])) {
+            return pathParts[0];
         }
         
-        // Check for /c/ or /user/ formats
-        const legacyVanityIndex = pathParts.findIndex(p => p === 'c' || p === 'user');
-        if (legacyVanityIndex !== -1 && pathParts[legacyVanityIndex + 1]) {
-            return pathParts[legacyVanityIndex + 1];
-        }
-
-        // As a fallback, take the last part of the path if it seems like a name/handle
-        if (pathParts.length > 0 && !pathParts[pathParts.length - 1].startsWith('UC')) {
-            return pathParts[pathParts.length - 1];
-        }
-
         return null;
     } catch (e) {
         console.error("Invalid URL provided to getIdentifierFromUrl", e);
@@ -76,7 +79,7 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
     const identifier = getIdentifierFromUrl(input.channelUrl);
 
     if (!identifier) {
-        throw new Error('Could not find a valid identifier in the YouTube URL.');
+        throw new Error('Could not find a valid channel identifier in the YouTube URL. Please use a channel URL, not a video URL.');
     }
     
     try {
