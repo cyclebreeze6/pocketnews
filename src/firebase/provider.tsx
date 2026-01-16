@@ -3,11 +3,12 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '../components/FirebaseErrorListener'
 import { setDocumentNonBlocking } from './non-blocking-updates';
+import type { UserProfile } from '../lib/types';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -70,20 +71,18 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
   
   try {
     const docSnap = await getDoc(userRef);
+    const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com' || user.email === 'emmachukwunonye54@gmail.com';
 
     if (!docSnap.exists()) {
-      // Logic to make a specific user an admin automatically.
-      const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com' || user.email === 'emmachukwunonye54@gmail.com';
-
       // Document doesn't exist, so create it.
-      const newUserProfile = {
+      const newUserProfile: UserProfile = {
         id: user.uid,
         email: user.email || '',
         displayName: user.displayName || 'Anonymous User',
         isAdmin: isDesignatedAdmin,
         isCreator: isDesignatedAdmin, // Also make them a creator
         avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
-        preferredCategories: [], // Initialize with empty array
+        preferencesSet: false,
       };
       
       // Use setDoc here to ensure the document exists before proceeding.
@@ -92,9 +91,20 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
       // If they are the designated admin, also add them to the DBAC collection
       if (isDesignatedAdmin) {
         const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-        // Use setDoc here as well for initial setup reliability.
         await setDoc(adminRoleRef, { grantedAt: serverTimestamp() });
       }
+    } else {
+        // Document exists. Check if they should be an admin but aren't yet.
+        const userProfile = docSnap.data() as UserProfile;
+        if (isDesignatedAdmin && (!userProfile.isAdmin || !userProfile.isCreator)) {
+            const batch = writeBatch(firestore);
+            batch.update(userRef, { isAdmin: true, isCreator: true });
+            
+            const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
+            batch.set(adminRoleRef, { grantedAt: serverTimestamp() });
+            
+            await batch.commit();
+        }
     }
   } catch (error) {
     console.error("Error ensuring user document:", error);
