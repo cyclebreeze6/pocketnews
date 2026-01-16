@@ -24,6 +24,32 @@ const YouTubeChannelInfoSchema = z.object({
 });
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
+
+// Helper to get a specific identifier from a YouTube URL
+function getChannelIdentifierFromUrl(url: string): { type: 'id' | 'handle' | 'legacy' | 'unknown', value: string } {
+    const channelIdRegex = /(?:youtube\.com\/channel\/)(UC[\w-]{22})/;
+    const handleRegex = /(?:youtube\.com\/)(@[\w-._]+)/;
+    const legacyRegex = /(?:youtube\.com\/(?:c|user)\/)([\w-]+)/;
+
+    let match = url.match(channelIdRegex);
+    if (match && match[1]) {
+        return { type: 'id', value: match[1] };
+    }
+
+    match = url.match(handleRegex);
+    if (match && match[1]) {
+        return { type: 'handle', value: match[1] };
+    }
+    
+    match = url.match(legacyRegex);
+    if (match && match[1]) {
+        return { type: 'legacy', value: match[1] };
+    }
+
+    return { type: 'unknown', value: url };
+}
+
+
 export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
   {
     name: 'fetchYouTubeChannelInfoFlow',
@@ -32,25 +58,28 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
   },
   async (input) => {
     const youtube = await getYoutubeClient();
-    const identifier = input.channelUrl;
+    
+    let channelId: string | undefined;
+    const identifier = getChannelIdentifierFromUrl(input.channelUrl);
 
     try {
-        // Use the search API as a robust way to find a channel by its handle, custom URL, or even name.
-        // We pass the full URL and let YouTube's search figure it out.
-        const searchResponse = await youtube.search.list({
-            part: ['id'],
-            q: identifier,
-            type: ['channel'],
-            maxResults: 1
-        });
-        
-        const channelId = searchResponse.data.items?.[0]?.id?.channelId;
+        if (identifier.type === 'id') {
+            channelId = identifier.value;
+        } else {
+            // For handles, legacy names, or unknown formats, use the search API.
+            const searchResponse = await youtube.search.list({
+                part: ['id'],
+                q: identifier.value,
+                type: ['channel'],
+                maxResults: 1
+            });
+            channelId = searchResponse.data.items?.[0]?.id?.channelId;
+        }
 
         if (!channelId) {
             throw new Error(`Could not find a YouTube channel matching the provided URL. Please check the URL.`);
         }
 
-        // Now with a confirmed channelId, get the full details.
         const channelResponse = await youtube.channels.list({
             part: ['snippet'],
             id: [channelId]
@@ -84,7 +113,6 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
 
     } catch (error: any) {
         console.error('Error fetching channel info from YouTube API:', error.message);
-        // Provide a more specific error message to the user
         if (error.response?.data?.error?.message) {
              throw new Error(`YouTube API Error: ${error.response.data.error.message}`);
         }

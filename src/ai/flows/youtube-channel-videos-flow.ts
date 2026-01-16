@@ -30,6 +30,29 @@ export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
 export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 
+// Helper to get a specific identifier from a YouTube URL
+function getChannelIdentifierFromUrl(url: string): { type: 'id' | 'handle' | 'legacy' | 'unknown', value: string } {
+    const channelIdRegex = /(?:youtube\.com\/channel\/)(UC[\w-]{22})/;
+    const handleRegex = /(?:youtube\.com\/)(@[\w-._]+)/;
+    const legacyRegex = /(?:youtube\.com\/(?:c|user)\/)([\w-]+)/;
+
+    let match = url.match(channelIdRegex);
+    if (match && match[1]) {
+        return { type: 'id', value: match[1] };
+    }
+
+    match = url.match(handleRegex);
+    if (match && match[1]) {
+        return { type: 'handle', value: match[1] };
+    }
+    
+    match = url.match(legacyRegex);
+    if (match && match[1]) {
+        return { type: 'legacy', value: match[1] };
+    }
+
+    return { type: 'unknown', value: url };
+}
 
 export const fetchChannelVideosFlow = ai.defineFlow(
   {
@@ -39,16 +62,21 @@ export const fetchChannelVideosFlow = ai.defineFlow(
   },
   async (input) => {
     const youtube = await getYoutubeClient();
-    const identifier = input.channelUrl;
     
-    const searchResponse = await youtube.search.list({
-        part: ['id'],
-        q: identifier,
-        type: ['channel'],
-        maxResults: 1
-    });
+    let channelId: string | undefined;
+    const identifier = getChannelIdentifierFromUrl(input.channelUrl);
 
-    const channelId = searchResponse.data.items?.[0]?.id?.channelId;
+    if (identifier.type === 'id') {
+        channelId = identifier.value;
+    } else {
+        const searchResponse = await youtube.search.list({
+            part: ['id'],
+            q: identifier.value,
+            type: ['channel'],
+            maxResults: 1
+        });
+        channelId = searchResponse.data.items?.[0]?.id?.channelId;
+    }
     
     if (!channelId) {
         throw new Error(`Could not determine the YouTube Channel ID from the provided URL. Please make sure the URL is correct.`);
