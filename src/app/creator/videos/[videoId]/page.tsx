@@ -103,6 +103,8 @@ export default function VideoEditPage() {
               title: videoInfo.title,
               description: videoInfo.description,
               thumbnailUrl: videoInfo.thumbnailUrl,
+              language: videoInfo.language || prev?.language,
+              region: videoInfo.region || prev?.region,
           }));
         } else {
           toast({ variant: 'destructive', title: 'Could not fetch YouTube video details.' });
@@ -455,4 +457,3 @@ export default function VideoEditPage() {
     </div>
   );
 }
-
