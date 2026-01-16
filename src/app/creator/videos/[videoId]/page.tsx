@@ -27,6 +27,7 @@ import {
   DialogDescription,
 } from '../../../../components/ui/dialog';
 import { sendNewVideoNotification } from '../../../../ai/flows/send-notification-flow';
+import { LANGUAGES, REGIONS } from '../../../../lib/constants';
 
 export default function VideoEditPage() {
   const { firestore } = useFirebase();
@@ -227,8 +228,10 @@ export default function VideoEditPage() {
     }
     
     setIsSaving(true);
-    const dataToSave = {
+    const dataToSave: Partial<Video> = {
       ...videoDetails,
+      language: videoDetails.language || 'English',
+      region: videoDetails.region || 'Americas',
       views: videoDetails.views || Math.floor(Math.random() * 100000),
       watchTime: videoDetails.watchTime || Math.floor(Math.random() * 2000),
     };
@@ -361,6 +364,30 @@ export default function VideoEditPage() {
                                         <SelectItem value="add_new" className="text-primary">
                                             <PlusCircle className="inline-block mr-2 h-4 w-4" /> Add New Category
                                         </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="language-select">Language</Label>
+                                <Select onValueChange={(value) => setVideoDetails(prev => ({...prev, language: value}))} value={videoDetails.language || ''}>
+                                    <SelectTrigger id="language-select">
+                                        <SelectValue placeholder="Select language..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {LANGUAGES.map(lang => <SelectItem key={lang} value={lang}>{lang}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="region-select">Region</Label>
+                                <Select onValueChange={(value) => setVideoDetails(prev => ({...prev, region: value}))} value={videoDetails.region || ''}>
+                                    <SelectTrigger id="region-select">
+                                        <SelectValue placeholder="Select region..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {REGIONS.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>

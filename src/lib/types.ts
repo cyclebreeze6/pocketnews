@@ -32,6 +32,8 @@ export interface Video {
   uploadDate: Timestamp | Date | string;
   thumbnailUrl: string;
   contentCategory: string;
+  language: string;
+  region: string;
   // compatibility with existing data
   youtubeId?: string;
   createdAt: Timestamp | Date | string;
@@ -56,6 +58,11 @@ export interface Category {
 
 export interface UserProfile extends User {
     preferredCategories?: string[];
+    preferencesSet?: boolean;
+    preferences?: {
+        type: 'all' | 'region' | 'language';
+        value: string;
+    }
 }
 
 export interface WatchHistory {

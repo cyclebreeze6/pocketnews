@@ -41,6 +41,7 @@ import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
+import { PreferenceDialog } from '../components/preference-dialog';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -131,6 +132,7 @@ export default function Home() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
@@ -142,9 +144,23 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || !user) return null;
-    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore, user, isUserLoading]);
+    if (isUserLoading || !user || isProfileLoading) return null; // Wait for profile
+
+    const baseQuery = collection(firestore, 'videos');
+    const prefs = userProfile?.preferences;
+    
+    if (prefs && userProfile.preferencesSet) {
+        if (prefs.type === 'language' && prefs.value) {
+            return query(baseQuery, where('language', '==', prefs.value), orderBy('createdAt', 'desc'), limit(20));
+        }
+        if (prefs.type === 'region' && prefs.value) {
+            return query(baseQuery, where('region', '==', prefs.value), orderBy('createdAt', 'desc'), limit(20));
+        }
+    }
+
+    // Default case: no preferences or 'all'
+    return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
+  }, [firestore, user, isUserLoading, userProfile, isProfileLoading]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -156,6 +172,12 @@ export default function Home() {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0; // The header is no longer sticky
+
+  useEffect(() => {
+    if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet) {
+      setIsPreferenceDialogOpen(true);
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -260,7 +282,7 @@ export default function Home() {
   }
   
   const handleReportSubmit = () => {
-    if (!user || !currentVideo) return;
+    if (!user || currentVideo) return;
 
     const reportRef = doc(collection(firestore, 'reports'));
     const reportData = {
@@ -314,8 +336,11 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
             <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
-              There are currently no videos to display. Please check back later.
+              There are currently no videos that match your preferences. Try adjusting your settings.
             </p>
+            <Link href="/settings/headlines">
+              <Button>Customize Headlines</Button>
+            </Link>
         </main>
       </div>
     );
@@ -458,6 +483,13 @@ export default function Home() {
         Meet the #1 App to Stream News. Watch Free!
       </footer>
        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
+       {user && !user.isAnonymous && (
+            <PreferenceDialog 
+                open={isPreferenceDialogOpen} 
+                onOpenChange={setIsPreferenceDialogOpen} 
+                userId={user.uid} 
+            />
+        )}
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
           <DialogHeader>

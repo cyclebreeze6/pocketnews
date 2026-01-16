@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube Data API.
  *
@@ -21,6 +22,8 @@ export const YouTubeVideoDetailsSchema = z.object({
   description: z.string().describe('The description of the video.'),
   authorName: z.string().describe("The name of the video's author or channel."),
   thumbnailUrl: z.string().url().describe('The URL for the video thumbnail.'),
+  language: z.string().optional().describe('The default language of the video (e.g., "en", "es").'),
+  region: z.string().optional().describe('The location description where the video was recorded.'),
 });
 export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 
@@ -83,7 +86,6 @@ export const fetchChannelVideosFlow = ai.defineFlow(
         throw new Error('Could not find a valid identifier in the YouTube URL.');
     }
     
-    // Use the search API to reliably find the channel ID from the identifier
     const searchResponse = await youtube.search.list({
         part: ['id'],
         q: identifier,
@@ -97,7 +99,6 @@ export const fetchChannelVideosFlow = ai.defineFlow(
         throw new Error(`Could not determine the YouTube Channel ID for "${identifier}". Please make sure the URL is correct.`);
     }
     
-    // 1. Get channel details to find the "uploads" playlist ID and author name
     const channelResponse = await youtube.channels.list({
         part: ['contentDetails', 'snippet'],
         id: [channelId],
@@ -115,31 +116,45 @@ export const fetchChannelVideosFlow = ai.defineFlow(
     
     const authorName = channel.snippet?.title || 'Unknown Channel';
 
-    // 2. Get the most recent videos from the "uploads" playlist
     const playlistResponse = await youtube.playlistItems.list({
         part: ['snippet'],
         playlistId: uploadsPlaylistId,
-        maxResults: 15, // Get the 15 most recent videos
+        maxResults: 15,
     });
 
-    const videos: YouTubeVideoList = [];
     const videoItems = playlistResponse.data.items;
+    if (!videoItems || videoItems.length === 0) {
+        return [];
+    }
+    
+    const videoIds = videoItems.map(item => item.snippet?.resourceId?.videoId).filter((id): id is string => !!id);
 
-    if (videoItems) {
-        for (const item of videoItems) {
-            const snippet = item.snippet;
-            const videoId = snippet?.resourceId?.videoId;
-            
-            if (videoId && snippet?.title && snippet?.thumbnails?.high?.url) {
-                videos.push({
-                    videoId: videoId,
-                    title: snippet.title,
-                    description: snippet.description || '',
-                    authorName: authorName,
-                    // Use high-quality thumbnail if available
-                    thumbnailUrl: snippet.thumbnails.high.url || snippet.thumbnails.default?.url || '',
-                });
-            }
+    // Fetch full video details to get language and region
+    const videoDetailsResponse = await youtube.videos.list({
+        part: ['snippet', 'recordingDetails'],
+        id: videoIds,
+    });
+
+    const videoDetailsMap = new Map(
+      videoDetailsResponse.data.items?.map(item => [item.id!, item]) || []
+    );
+
+    const videos: YouTubeVideoList = [];
+    for (const item of videoItems) {
+        const snippet = item.snippet;
+        const videoId = snippet?.resourceId?.videoId;
+        
+        if (videoId && snippet?.title && snippet?.thumbnails?.high?.url) {
+            const details = videoDetailsMap.get(videoId);
+            videos.push({
+                videoId: videoId,
+                title: snippet.title,
+                description: snippet.description || '',
+                authorName: authorName,
+                thumbnailUrl: snippet.thumbnails.high.url || snippet.thumbnails.default?.url || '',
+                language: details?.snippet?.defaultLanguage || details?.snippet?.defaultAudioLanguage,
+                region: details?.recordingDetails?.locationDescription,
+            });
         }
     }
     

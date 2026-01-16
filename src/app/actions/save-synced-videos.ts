@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -13,6 +14,8 @@ type NewVideoData = {
   thumbnailUrl: string;
   channelId: string;
   contentCategory: string;
+  language?: string;
+  region?: string;
   views: number;
   watchTime: number;
 };
@@ -62,6 +65,8 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
     const videoDoc = {
       id: newDocRef.id,
       ...videoData,
+      language: videoData.language || 'English',
+      region: videoData.region || 'Americas',
       createdAt: FieldValue.serverTimestamp(),
       uploadDate: new Date().toISOString(), // Set upload date to now
     };

@@ -82,8 +82,11 @@ export async function getYoutubeClient() {
         playlistItems: {
             list: (params: youtube_v3.Params$Resource$Playlistitems$List) =>
                 executeWithRotation(client => client.playlistItems.list(params), initialRetries)
+        },
+        videos: {
+            list: (params: youtube_v3.Params$Resource$Videos$List) =>
+                executeWithRotation(client => client.videos.list(params), initialRetries)
         }
-        // Add other methods here as needed, e.g., videos.list
     };
 }
 
@@ -94,4 +97,3 @@ export async function getYoutubeClient() {
 async function getApiKeysAsString(): Promise<string> {
     return process.env.YOUTUBE_API_KEYS || '';
 }
-

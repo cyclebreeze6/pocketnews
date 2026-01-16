@@ -5,10 +5,12 @@ import { getChannelsForSync } from './get-channels-for-sync';
 import { fetchChannelVideosFlow, type YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { saveSyncedVideos } from './save-synced-videos';
 
-export interface NewVideoForImport extends Omit<YouTubeVideoDetails, 'videoId' | 'authorName' | 'channelTitle'> {
+export interface NewVideoForImport extends Omit<YouTubeVideoDetails, 'videoId' | 'authorName'> {
     youtubeVideoId: string;
     channelId: string;
     channelName: string;
+    language?: string;
+    region?: string;
 }
 
 export interface ImportedVideoSaveData extends NewVideoForImport {
@@ -43,6 +45,8 @@ export async function fetchNewVideosForBulkImport(): Promise<NewVideoForImport[]
                     thumbnailUrl: video.thumbnailUrl,
                     channelId: channel.id,
                     channelName: channel.name,
+                    language: video.language,
+                    region: video.region,
                 }));
             
             allNewVideos.push(...newVideos);
