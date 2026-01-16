@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '../../../components/ui/button';
@@ -22,6 +21,7 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
 import { fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
+import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
 import type { YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { useRouter } from 'next/navigation';
@@ -47,12 +47,35 @@ export default function CreatorChannelsPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingChannelId, setSyncingChannelId] = useState<string | null>(null);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [videosToImport, setVideosToImport] = useState<YouTubeVideoDetails[]>([]);
 
+  const handleFetchChannelInfo = async () => {
+    if (!youtubeChannelUrl) {
+      toast({ variant: 'destructive', title: 'Please enter a YouTube Channel URL.' });
+      return;
+    }
+    setIsFetchingInfo(true);
+    try {
+      const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
+      setChannelName(info.name);
+      setChannelDescription(info.description || '');
+      setChannelLanguage(info.language || '');
+      setChannelRegion(info.region || '');
+      setLogoPreview(info.logoUrl);
+      setLogoFile(null); // Clear file if we fetched a new logo URL
+      toast({ title: "Channel info populated!" });
+    } catch (error: any) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Failed to fetch info', description: error.message });
+    } finally {
+      setIsFetchingInfo(false);
+    }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -112,7 +135,7 @@ export default function CreatorChannelsPage() {
         const channelData = {
           name: channelName,
           description: channelDescription,
-          youtubeChannelUrl: youtubeChannelUrl,
+          youtubeChannelUrl: youtubeChannelUrl.trim(),
           logoUrl: finalLogoUrl,
           language: channelLanguage,
           region: channelRegion,
@@ -202,12 +225,18 @@ export default function CreatorChannelsPage() {
             <div className="md:col-span-2 grid gap-4">
                <div className="grid gap-2">
                  <Label htmlFor="youtube-url">YouTube Channel URL</Label>
-                 <Input 
-                     id="youtube-url" 
-                     placeholder="https://www.youtube.com/channel/..." 
-                     value={youtubeChannelUrl} 
-                     onChange={(e) => setYoutubeChannelUrl(e.target.value)}
-                 />
+                 <div className="flex gap-2">
+                    <Input 
+                        id="youtube-url" 
+                        placeholder="https://www.youtube.com/channel/..." 
+                        value={youtubeChannelUrl} 
+                        onChange={(e) => setYoutubeChannelUrl(e.target.value)}
+                        disabled={isFetchingInfo}
+                    />
+                    <Button onClick={handleFetchChannelInfo} disabled={isFetchingInfo || !youtubeChannelUrl}>
+                      {isFetchingInfo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch Info'}
+                    </Button>
+                 </div>
                  <p className="text-xs text-muted-foreground">Optional. Used for syncing videos from this channel.</p>
                 </div>
                <div className="grid gap-2">
@@ -381,5 +410,3 @@ export default function CreatorChannelsPage() {
     </div>
   );
 }
-
-    
