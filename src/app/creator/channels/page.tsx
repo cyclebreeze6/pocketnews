@@ -105,7 +105,7 @@ export default function CreatorChannelsPage() {
     }
     setIsFetchingInfo(true);
     try {
-        const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
+        const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl.trim() });
         if (info) {
             setChannelName(info.name);
             setChannelDescription(info.description || '');
