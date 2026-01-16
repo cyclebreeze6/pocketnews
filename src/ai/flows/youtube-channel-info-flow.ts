@@ -19,6 +19,8 @@ const YouTubeChannelInfoSchema = z.object({
   name: z.string().describe("The name of the channel."),
   logoUrl: z.string().url().describe("The URL for the channel's logo."),
   description: z.string().optional().describe("The channel's description."),
+  language: z.string().optional().describe('The default language of the channel.'),
+  region: z.string().optional().describe('The country associated with the channel.'),
 });
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
@@ -105,11 +107,23 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
         
         const { snippet } = channel;
 
+        const languageMap: { [key: string]: string } = {
+            en: 'English',
+            fr: 'French',
+            ar: 'Arabic',
+            es: 'Spanish',
+            pt: 'Portuguese',
+            sw: 'Swahili',
+            de: 'German',
+        };
+        const detectedLanguage = snippet.defaultLanguage ? languageMap[snippet.defaultLanguage.split('-')[0]] : undefined;
+
         return {
             name: snippet.title || 'Unknown Channel',
             description: snippet.description || '',
-            // Prefer high quality thumbnail
             logoUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
+            language: detectedLanguage,
+            region: snippet.country,
         };
 
     } catch (error: any) {

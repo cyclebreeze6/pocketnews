@@ -25,6 +25,8 @@ import { fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
 import type { YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { useRouter } from 'next/navigation';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { LANGUAGES, REGIONS } from '../../../lib/constants';
 
 
 export default function CreatorChannelsPage() {
@@ -39,6 +41,8 @@ export default function CreatorChannelsPage() {
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
+  const [channelLanguage, setChannelLanguage] = useState('');
+  const [channelRegion, setChannelRegion] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [fetchedLogoUrl, setFetchedLogoUrl] = useState<string | null>(null);
@@ -69,6 +73,8 @@ export default function CreatorChannelsPage() {
     setChannelName('');
     setChannelDescription('');
     setYoutubeChannelUrl('');
+    setChannelLanguage('');
+    setChannelRegion('');
     setLogoFile(null);
     setLogoPreview(null);
     setFetchedLogoUrl(null);
@@ -81,6 +87,8 @@ export default function CreatorChannelsPage() {
       setChannelName(channel.name);
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
+      setChannelLanguage(channel.language || '');
+      setChannelRegion(channel.region || '');
       setLogoPreview(channel.logoUrl || null);
       setFetchedLogoUrl(channel.logoUrl || null);
       setLogoFile(null);
@@ -103,6 +111,8 @@ export default function CreatorChannelsPage() {
             setChannelDescription(info.description || '');
             setLogoPreview(info.logoUrl);
             setFetchedLogoUrl(info.logoUrl);
+            if (info.language) setChannelLanguage(info.language);
+            if (info.region) setChannelRegion(info.region);
             toast({ title: "Channel info fetched!", description: `Found info for ${info.name}.` });
         }
     } catch (error: any) {
@@ -139,6 +149,8 @@ export default function CreatorChannelsPage() {
           description: channelDescription,
           youtubeChannelUrl: youtubeChannelUrl,
           logoUrl: finalLogoUrl,
+          language: channelLanguage,
+          region: channelRegion,
         };
 
         if (editingChannel) {
@@ -248,6 +260,30 @@ export default function CreatorChannelsPage() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="language-select">Language</Label>
+                    <Select onValueChange={setChannelLanguage} value={channelLanguage}>
+                        <SelectTrigger id="language-select">
+                            <SelectValue placeholder="Select language..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {LANGUAGES.map(lang => <SelectItem key={lang} value={lang}>{lang}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="region-select">Region</Label>
+                    <Select onValueChange={setChannelRegion} value={channelRegion}>
+                        <SelectTrigger id="region-select">
+                            <SelectValue placeholder="Select region..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {REGIONS.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                </div>
             </div>
             <div className="grid gap-2 content-start">
                 <Label htmlFor="logo">Channel Logo</Label>
@@ -292,6 +328,8 @@ export default function CreatorChannelsPage() {
                 <TableHead>Logo</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Language</TableHead>
+                <TableHead>Region</TableHead>
                 <TableHead>YouTube URL</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -309,6 +347,8 @@ export default function CreatorChannelsPage() {
                   </TableCell>
                   <TableCell className="font-medium">{channel.name}</TableCell>
                   <TableCell className="line-clamp-2">{channel.description}</TableCell>
+                  <TableCell>{channel.language}</TableCell>
+                  <TableCell>{channel.region}</TableCell>
                   <TableCell className="text-xs text-muted-foreground line-clamp-1">{channel.youtubeChannelUrl}</TableCell>
                   <TableCell>
                     <DropdownMenu>

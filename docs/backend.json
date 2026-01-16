@@ -28,6 +28,14 @@
           "type": "string",
           "description": "URL for the channel's logo.",
           "format": "uri"
+        },
+        "language": {
+            "type": "string",
+            "description": "The default language of the channel."
+        },
+        "region": {
+            "type": "string",
+            "description": "The default region/country of the channel."
         }
       },
       "required": [

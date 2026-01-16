@@ -18,6 +18,8 @@ export interface Channel {
   createdAt?: Timestamp | Date | string;
   logoUrl?: string;
   youtubeChannelUrl?: string; // For auto-syncing
+  language?: string;
+  region?: string;
 }
 
 export interface Video {
