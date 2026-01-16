@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '../../../components/ui/button';
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, DownloadCloud, RefreshCw, UploadCloud } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, RefreshCw, UploadCloud } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +21,6 @@ import { useToast } from '../../../hooks/use-toast';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
-import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
 import { fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
 import type { YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
@@ -45,10 +45,8 @@ export default function CreatorChannelsPage() {
   const [channelRegion, setChannelRegion] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [fetchedLogoUrl, setFetchedLogoUrl] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingChannelId, setSyncingChannelId] = useState<string | null>(null);
@@ -60,7 +58,6 @@ export default function CreatorChannelsPage() {
     const file = event.target.files?.[0];
     if (file) {
       setLogoFile(file);
-      setFetchedLogoUrl(null); // User upload takes precedence
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
@@ -77,7 +74,6 @@ export default function CreatorChannelsPage() {
     setChannelRegion('');
     setLogoFile(null);
     setLogoPreview(null);
-    setFetchedLogoUrl(null);
     setEditingChannel(null);
   };
 
@@ -90,39 +86,12 @@ export default function CreatorChannelsPage() {
       setChannelLanguage(channel.language || '');
       setChannelRegion(channel.region || '');
       setLogoPreview(channel.logoUrl || null);
-      setFetchedLogoUrl(channel.logoUrl || null);
       setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       resetForm();
     }
   };
-  
-  const handleFetchChannelInfo = async () => {
-    if (!youtubeChannelUrl) {
-        toast({ variant: 'destructive', title: 'URL is empty', description: 'Please paste a YouTube channel URL first.' });
-        return;
-    }
-    setIsFetchingInfo(true);
-    try {
-        const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl.trim() });
-        if (info) {
-            setChannelName(info.name);
-            setChannelDescription(info.description || '');
-            setLogoPreview(info.logoUrl);
-            setFetchedLogoUrl(info.logoUrl);
-            if (info.language) setChannelLanguage(info.language);
-            if (info.region) setChannelRegion(info.region);
-            toast({ title: "Channel info fetched!", description: `Found info for ${info.name}.` });
-        }
-    } catch (error: any) {
-        console.error("Failed to fetch channel info:", error);
-        toast({ variant: 'destructive', title: 'Could not fetch info', description: 'Please check the URL and try again. ' + error.message });
-    } finally {
-        setIsFetchingInfo(false);
-    }
-  };
-
 
   const handleSaveChanges = async () => {
     if (!channelName || !channelDescription) {
@@ -135,13 +104,9 @@ export default function CreatorChannelsPage() {
     try {
         let finalLogoUrl = editingChannel?.logoUrl || '';
 
-        // If a new file is explicitly uploaded, use it.
         if (logoFile) {
             const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
             finalLogoUrl = await uploadFile(storage, logoFile, filePath);
-        } else if (fetchedLogoUrl) {
-            // Otherwise, if we have a fetched logo, use that.
-            finalLogoUrl = fetchedLogoUrl;
         }
 
         const channelData = {
@@ -237,20 +202,13 @@ export default function CreatorChannelsPage() {
             <div className="md:col-span-2 grid gap-4">
                <div className="grid gap-2">
                  <Label htmlFor="youtube-url">YouTube Channel URL</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                        id="youtube-url" 
-                        placeholder="https://www.youtube.com/channel/..." 
-                        value={youtubeChannelUrl} 
-                        onChange={(e) => setYoutubeChannelUrl(e.target.value)}
-                        disabled={isFetchingInfo}
-                    />
-                    <Button variant="outline" onClick={handleFetchChannelInfo} disabled={isFetchingInfo || !youtubeChannelUrl}>
-                        {isFetchingInfo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-                        Fetch Info
-                    </Button>
-                  </div>
-                   <p className="text-xs text-muted-foreground">Optional. Used for syncing videos and auto-fetching info.</p>
+                 <Input 
+                     id="youtube-url" 
+                     placeholder="https://www.youtube.com/channel/..." 
+                     value={youtubeChannelUrl} 
+                     onChange={(e) => setYoutubeChannelUrl(e.target.value)}
+                 />
+                 <p className="text-xs text-muted-foreground">Optional. Used for syncing videos from this channel.</p>
                 </div>
                <div className="grid gap-2">
                   <Label htmlFor="name">Channel Name</Label>
@@ -293,11 +251,6 @@ export default function CreatorChannelsPage() {
                     ) : (
                         <Tv className="w-16 h-16" />
                     )}
-                    {isFetchingInfo && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                            <Loader2 className="w-8 h-8 animate-spin text-white" />
-                        </div>
-                    )}
                 </div>
                 <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
                 <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 1MB.</p>
@@ -313,7 +266,7 @@ export default function CreatorChannelsPage() {
                 </Button>
               )}
             </div>
-            <Button onClick={handleSaveChanges} disabled={isSaving || isFetchingInfo}>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSaving ? 'Saving...' : (editingChannel ? 'Update Channel' : 'Add Channel')}
             </Button>
@@ -428,3 +381,5 @@ export default function CreatorChannelsPage() {
     </div>
   );
 }
+
+    
