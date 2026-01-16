@@ -73,7 +73,7 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
 
     if (!docSnap.exists()) {
       // Logic to make a specific user an admin automatically.
-      const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com';
+      const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com' || user.email === 'emmachukwunonye54@gmail.com';
 
       // Document doesn't exist, so create it.
       const newUserProfile = {
