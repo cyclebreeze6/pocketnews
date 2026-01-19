@@ -71,23 +71,10 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
         
         const { snippet } = channel;
 
-        const languageMap: { [key: string]: string } = {
-            en: 'English',
-            fr: 'French',
-            ar: 'Arabic',
-            es: 'Spanish',
-            pt: 'Portuguese',
-            sw: 'Swahili',
-            de: 'German',
-        };
-        const detectedLanguage = snippet.defaultLanguage ? languageMap[snippet.defaultLanguage.split('-')[0]] : undefined;
-
         return {
             name: snippet.title || 'Unknown Channel',
             description: snippet.description || '',
             logoUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
-            language: detectedLanguage,
-            region: snippet.country,
         };
 
     } catch (error: any) {
