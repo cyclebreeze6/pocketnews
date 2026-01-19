@@ -95,7 +95,7 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
         if (error.response?.data?.error?.message) {
              throw new Error(`YouTube API Error: ${error.response.data.error.message}`);
         }
-        throw new Error('Could not extract channel information. The API may be unavailable or the URL is incorrect.');
+        throw new Error(error.message || 'Could not extract channel information. The API may be unavailable or the URL is incorrect.');
     }
   }
 );
