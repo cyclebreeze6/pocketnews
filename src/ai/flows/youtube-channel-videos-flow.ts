@@ -30,29 +30,6 @@ export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
 export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 
-// Helper to get a specific identifier from a YouTube URL
-function getChannelIdentifierFromUrl(url: string): { type: 'id' | 'handle' | 'legacy' | 'unknown', value: string } {
-    const channelIdRegex = /(?:youtube\.com\/channel\/)(UC[\w-]{22})/;
-    const handleRegex = /(?:youtube\.com\/)(@[\w-._]+)/;
-    const legacyRegex = /(?:youtube\.com\/(?:c|user)\/)([\w-]+)/;
-
-    let match = url.match(channelIdRegex);
-    if (match && match[1]) {
-        return { type: 'id', value: match[1] };
-    }
-
-    match = url.match(handleRegex);
-    if (match && match[1]) {
-        return { type: 'handle', value: match[1] };
-    }
-    
-    match = url.match(legacyRegex);
-    if (match && match[1]) {
-        return { type: 'legacy', value: match[1] };
-    }
-
-    return { type: 'unknown', value: url };
-}
 
 export const fetchChannelVideosFlow = ai.defineFlow(
   {
@@ -62,16 +39,21 @@ export const fetchChannelVideosFlow = ai.defineFlow(
   },
   async (input) => {
     const youtube = await getYoutubeClient();
-    
     let channelId: string | undefined;
-    const identifier = getChannelIdentifierFromUrl(input.channelUrl);
 
-    if (identifier.type === 'id') {
-        channelId = identifier.value;
+    const trimmedUrl = input.channelUrl.trim();
+    // Regex for standard Channel ID (UC..., HC..., KC...)
+    const channelIdRegex = /(?:youtube\.com\/channel\/)([\w-]{24})/;
+    const match = trimmedUrl.match(channelIdRegex);
+
+    if (match && match[1]) {
+        // If we find a standard channel ID, use it directly.
+        channelId = match[1];
     } else {
+        // For all other URL types (@handle, /c/name, /user/name), use the search API.
         const searchResponse = await youtube.search.list({
             part: ['id'],
-            q: identifier.value,
+            q: trimmedUrl,
             type: ['channel'],
             maxResults: 1
         });
