@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -43,13 +42,16 @@ export function PreferenceDialog({
   const { toast } = useToast();
 
   const [selectedRegion, setSelectedRegion] = useState('Global');
-  const [selectedLanguage, setSelectedLanguage] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('all-languages'); // Using a proxy value
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userProfile?.preferences) {
       setSelectedRegion(userProfile.preferences.region || 'Global');
-      setSelectedLanguage(userProfile.preferences.language || '');
+      setSelectedLanguage(userProfile.preferences.language || 'all-languages');
+    } else {
+      setSelectedRegion('Global');
+      setSelectedLanguage('all-languages');
     }
   }, [userProfile, open]);
 
@@ -59,7 +61,8 @@ export function PreferenceDialog({
     
     const preferencesToSave = {
         region: selectedRegion,
-        language: selectedLanguage,
+        // Convert proxy value back to empty string for storage
+        language: selectedLanguage === 'all-languages' ? '' : selectedLanguage,
     };
 
     updateDocumentNonBlocking(userRef, {
@@ -107,7 +110,7 @@ export function PreferenceDialog({
                   <SelectValue placeholder="All Languages" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Languages</SelectItem>
+                  <SelectItem value="all-languages">All Languages</SelectItem>
                   {LANGUAGES.map(lang => (
                     <SelectItem key={lang} value={lang}>{lang}</SelectItem>
                   ))}
