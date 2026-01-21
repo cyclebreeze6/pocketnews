@@ -144,22 +144,34 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || !user || isProfileLoading) return null;
+    if (isUserLoading || !user || isProfileLoading || channelsLoading) return null;
 
     const baseQuery = collection(firestore, 'videos');
     const prefs = userProfile?.preferences;
     
-    if (prefs && userProfile.preferencesSet) {
+    if (prefs && userProfile.preferencesSet && channels) {
+        let preferredChannelIds: string[] | null = null;
+
         if (prefs.type === 'language' && prefs.value) {
-            return query(baseQuery, where('language', '==', prefs.value), limit(20));
+            preferredChannelIds = channels.filter(c => c.language === prefs.value).map(c => c.id);
         }
         if (prefs.type === 'region' && prefs.value) {
-            return query(baseQuery, where('region', '==', prefs.value), limit(20));
+            preferredChannelIds = channels.filter(c => c.region === prefs.value).map(c => c.id);
+        }
+
+        if (preferredChannelIds) {
+            if (preferredChannelIds.length === 0) {
+                // No channels match the preference, so query for something that will return no results.
+                return query(baseQuery, where('id', '==', 'no-results-for-preference'));
+            }
+            // Use 'in' query. Limited to 30 IDs.
+            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)), limit(20));
         }
     }
 
+    // Default query if no preference is set or type is 'all'
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore, user, isUserLoading, userProfile, isProfileLoading]);
+  }, [firestore, user, isUserLoading, userProfile, isProfileLoading, channels, channelsLoading]);
   
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -218,7 +230,7 @@ export default function Home() {
             if (docSnap.exists()) {
               setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
             } else {
-              setCurrentVideo(videos[0]);
+               setCurrentVideo(videos[0]);
             }
           });
         } else {
@@ -236,6 +248,9 @@ export default function Home() {
       const restOfVideos = videos.slice(5);
       setDisplayedVideos([...top5, ...restOfVideos]);
 
+    } else if (videos && videos.length === 0) {
+      setCurrentVideo(null);
+      setDisplayedVideos([]);
     }
   }, [videos]);
 
@@ -324,11 +339,11 @@ export default function Home() {
   
   const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading;
   
-  if (isLoading || (videos && !currentVideo) || (videos && !displayedVideos) || (videos && currentVideo && !currentChannel)) {
+  if (isLoading || !videos || !displayedVideos) {
       return <HomepageSkeleton />;
   }
 
-  if (!videos || videos.length === 0) {
+  if (videos.length === 0) {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <SiteHeader />
@@ -399,6 +414,10 @@ export default function Home() {
         </Dialog>
       </div>
     );
+  }
+  
+  if (!currentVideo || !currentChannel) {
+      return <HomepageSkeleton />;
   }
 
   return (
