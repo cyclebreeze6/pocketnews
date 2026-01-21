@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2, Loader2, X } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2, Loader2, X, Globe } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
@@ -144,7 +144,7 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || !user || isProfileLoading) return null; // Wait for profile
+    if (isUserLoading || !user || isProfileLoading) return null;
 
     const baseQuery = collection(firestore, 'videos');
     const prefs = userProfile?.preferences;
@@ -158,7 +158,6 @@ export default function Home() {
         }
     }
 
-    // Default case: no preferences or 'all'
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
   }, [firestore, user, isUserLoading, userProfile, isProfileLoading]);
   
@@ -282,7 +281,7 @@ export default function Home() {
   }
   
   const handleReportSubmit = () => {
-    if (!user || currentVideo) return;
+    if (!user || !currentVideo) return;
 
     const reportRef = doc(collection(firestore, 'reports'));
     const reportData = {
@@ -325,8 +324,8 @@ export default function Home() {
   
   const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading;
   
-  if (isLoading || !currentVideo || !currentChannel || !displayedVideos) {
-    return <HomepageSkeleton />;
+  if (isLoading || (videos && !currentVideo) || (videos && !displayedVideos) || (videos && currentVideo && !currentChannel)) {
+      return <HomepageSkeleton />;
   }
 
   if (!videos || videos.length === 0) {
@@ -336,12 +335,68 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
             <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
-              There are currently no videos that match your preferences. Try adjusting your settings.
+              There are currently no videos for this region or language.
             </p>
-            <Link href="/settings/headlines">
-              <Button>Customize Headlines</Button>
-            </Link>
+            <Button onClick={() => setIsPreferenceDialogOpen(true)}>Change Preferences</Button>
         </main>
+         <footer className="py-4 text-center text-sm text-muted-foreground">
+            Meet the #1 App to Stream News. Watch Free!
+        </footer>
+        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
+        {user && !user.isAnonymous && (
+            <PreferenceDialog 
+                open={isPreferenceDialogOpen} 
+                onOpenChange={setIsPreferenceDialogOpen} 
+                userId={user.uid} 
+            />
+        )}
+        <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
+            <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
+                <DialogDescription>
+                Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
+            </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+            <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Report Video</DialogTitle>
+                <DialogDescription>
+                Why are you reporting this video? Your report is anonymous.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="report-reason">Reason</Label>
+                    <Select onValueChange={setReportReason} value={reportReason}>
+                        <SelectTrigger id="report-reason">
+                            <SelectValue placeholder="Select a reason..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Copyright">Copyright</SelectItem>
+                            <SelectItem value="Wrong Information">Wrong Information</SelectItem>
+                            <SelectItem value="False News">False News</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="report-details">Details (optional)</Label>
+                    <Textarea id="report-details" value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder="Provide additional details..." />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleReportSubmit}>Report Video</Button>
+            </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </div>
     );
   }
