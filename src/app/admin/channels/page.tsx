@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from '../../../components/ui/dropdown-menu';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -27,6 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { LANGUAGES, REGIONS } from '../../../lib/constants';
+import { Badge } from '../../../components/ui/badge';
 
 
 export default function AdminChannelsPage() {
@@ -42,7 +44,7 @@ export default function AdminChannelsPage() {
   const [channelDescription, setChannelDescription] = useState('');
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
   const [channelLanguage, setChannelLanguage] = useState('');
-  const [channelRegion, setChannelRegion] = useState('');
+  const [channelRegions, setChannelRegions] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
@@ -65,7 +67,7 @@ export default function AdminChannelsPage() {
       setChannelName(info.name);
       setChannelDescription(info.description || '');
       setChannelLanguage('');
-      setChannelRegion('');
+      setChannelRegions([]);
       setLogoPreview(info.logoUrl);
       setLogoFile(null); // Clear file if we fetched a new logo URL
       toast({ title: "Channel info populated! Please select Language and Region." });
@@ -94,7 +96,7 @@ export default function AdminChannelsPage() {
     setChannelDescription('');
     setYoutubeChannelUrl('');
     setChannelLanguage('');
-    setChannelRegion('');
+    setChannelRegions([]);
     setLogoFile(null);
     setLogoPreview(null);
     setEditingChannel(null);
@@ -107,7 +109,7 @@ export default function AdminChannelsPage() {
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
       setChannelLanguage(channel.language || '');
-      setChannelRegion(channel.region || '');
+      setChannelRegions(channel.region || []);
       setLogoPreview(channel.logoUrl || null);
       setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -140,8 +142,8 @@ export default function AdminChannelsPage() {
           description: channelDescription,
           youtubeChannelUrl: youtubeChannelUrl.trim(),
           logoUrl: finalLogoUrl,
-          language: channelLanguage,
-          region: channelRegion,
+          language: channelLanguage || 'English',
+          region: channelRegions.length > 0 ? channelRegions : ['Global'],
         };
 
         if (editingChannel) {
@@ -263,15 +265,34 @@ export default function AdminChannelsPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="region-select">Region</Label>
-                    <Select onValueChange={setChannelRegion} value={channelRegion}>
-                        <SelectTrigger id="region-select">
-                            <SelectValue placeholder="Select region..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {REGIONS.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <Label htmlFor="region-select">Region(s)</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button id="region-select" variant="outline" className="w-full justify-start font-normal">
+                          <div className="line-clamp-1 text-left">
+                            {channelRegions.length > 0 ? channelRegions.join(', ') : 'Select regions...'}
+                          </div>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-60 max-h-60 overflow-y-auto" align="start">
+                        {REGIONS.map(region => (
+                          <DropdownMenuCheckboxItem
+                            key={region}
+                            checked={channelRegions.includes(region)}
+                            onSelect={(e) => e.preventDefault()}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setChannelRegions(prev => [...prev, region]);
+                              } else {
+                                setChannelRegions(prev => prev.filter(r => r !== region));
+                              }
+                            }}
+                          >
+                            {region}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
             </div>
@@ -333,7 +354,11 @@ export default function AdminChannelsPage() {
                   <TableCell className="font-medium">{channel.name}</TableCell>
                   <TableCell className="line-clamp-2">{channel.description}</TableCell>
                   <TableCell>{channel.language}</TableCell>
-                  <TableCell>{channel.region}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                        {channel.region?.map(r => <Badge key={r} variant="outline">{r}</Badge>)}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground line-clamp-1">{channel.youtubeChannelUrl}</TableCell>
                   <TableCell>
                     <DropdownMenu>

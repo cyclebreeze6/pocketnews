@@ -17,6 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from './ui/dropdown-menu';
 import { useState, useEffect } from 'react';
 import { useFirebase, updateDocumentNonBlocking } from '../firebase';
 import { doc } from 'firebase/firestore';
@@ -41,18 +47,18 @@ export function PreferenceDialog({
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  const [selectedRegion, setSelectedRegion] = useState('Global');
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState('all-languages'); // Using a proxy value
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userProfile?.preferences) {
-      setSelectedRegion(userProfile.preferences.region || 'Global');
+      setSelectedRegions(userProfile.preferences.region || []);
       // Use proxy value for empty string from firestore
       setSelectedLanguage(userProfile.preferences.language || 'all-languages');
     } else {
       // Default values if no preferences are set
-      setSelectedRegion('Global');
+      setSelectedRegions([]);
       setSelectedLanguage('all-languages');
     }
   }, [userProfile, open]);
@@ -62,7 +68,7 @@ export function PreferenceDialog({
     const userRef = doc(firestore, 'users', userId);
     
     const preferencesToSave = {
-        region: selectedRegion,
+        region: selectedRegions,
         // Convert proxy value back to empty string for storage
         language: selectedLanguage === 'all-languages' ? '' : selectedLanguage,
     };
@@ -94,16 +100,33 @@ export function PreferenceDialog({
         <div className="space-y-4 py-4">
            <div className="grid gap-2">
               <Label htmlFor="region-select">Filter by Region</Label>
-              <Select onValueChange={setSelectedRegion} value={selectedRegion}>
-                <SelectTrigger id="region-select">
-                  <SelectValue placeholder="Choose a region..." />
-                </SelectTrigger>
-                <SelectContent>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button id="region-select" variant="outline" className="w-full justify-start font-normal">
+                    <div className="line-clamp-1 text-left">
+                      {selectedRegions.length > 0 ? selectedRegions.join(', ') : 'Select regions...'}
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64 max-h-60 overflow-y-auto" align="start">
                   {REGIONS.map(region => (
-                    <SelectItem key={region} value={region}>{region}</SelectItem>
+                    <DropdownMenuCheckboxItem
+                      key={region}
+                      checked={selectedRegions.includes(region)}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedRegions(prev => [...prev, region]);
+                        } else {
+                          setSelectedRegions(prev => prev.filter(r => r !== region));
+                        }
+                      }}
+                    >
+                      {region}
+                    </DropdownMenuCheckboxItem>
                   ))}
-                </SelectContent>
-              </Select>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="language-select">Filter by Language</Label>

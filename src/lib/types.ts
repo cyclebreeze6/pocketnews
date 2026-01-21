@@ -19,7 +19,7 @@ export interface Channel {
   logoUrl?: string;
   youtubeChannelUrl?: string; // For auto-syncing
   language?: string;
-  region?: string;
+  region?: string[];
 }
 
 export interface Video {
@@ -35,7 +35,7 @@ export interface Video {
   thumbnailUrl: string;
   contentCategory: string;
   language: string;
-  region: string;
+  region: string[];
   // compatibility with existing data
   youtubeId?: string;
   createdAt: Timestamp | Date | string;
@@ -62,7 +62,7 @@ export interface UserProfile extends User {
     preferredCategories?: string[];
     preferencesSet?: boolean;
     preferences?: {
-        region?: string;
+        region?: string[];
         language?: string;
     }
 }

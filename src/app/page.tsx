@@ -151,9 +151,12 @@ export default function Home() {
     
     if (prefs && userProfile.preferencesSet && channels) {
         let filteredChannels = [...channels];
+        const preferredRegions = prefs.region || [];
 
-        if (prefs.region && prefs.region !== 'Global') {
-            filteredChannels = filteredChannels.filter(c => c.region === prefs.region);
+        if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
+          filteredChannels = filteredChannels.filter(c => 
+              c.region && c.region.some(channelRegion => preferredRegions.includes(channelRegion))
+          );
         }
 
         if (prefs.language) { // empty string means all languages
@@ -164,7 +167,7 @@ export default function Home() {
 
         if (preferredChannelIds.length > 0) {
             // Use 'in' query. Limited to 30 IDs.
-            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)), limit(20));
+            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
         } else {
             // No channels match the preference, so query for something that will return no results.
             return query(baseQuery, where('id', '==', 'no-results-for-preference'));

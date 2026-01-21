@@ -15,7 +15,7 @@ type NewVideoData = {
   channelId: string;
   contentCategory: string;
   language?: string;
-  region?: string;
+  region?: string[];
   views: number;
   watchTime: number;
 };
@@ -66,7 +66,7 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
       id: newDocRef.id,
       ...videoData,
       language: videoData.language || 'English',
-      region: videoData.region || 'Americas',
+      region: videoData.region && videoData.region.length > 0 ? videoData.region : ['Global'],
       createdAt: FieldValue.serverTimestamp(),
       uploadDate: new Date().toISOString(), // Set upload date to now
     };

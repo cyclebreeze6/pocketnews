@@ -34,8 +34,11 @@
             "description": "The default language of the channel."
         },
         "region": {
-            "type": "string",
-            "description": "The default region/country of the channel."
+            "type": "array",
+            "description": "The default regions/countries of the channel.",
+            "items": {
+                "type": "string"
+            }
         }
       },
       "required": [
@@ -87,26 +90,29 @@
           "enum": ["English", "French", "Arabic", "Spanish", "Portuguese", "Swahili", "German"]
         },
         "region": {
-          "type": "string",
-          "description": "The geographical region the video is relevant to.",
-          "enum": [
-            "Global",
-            "Africa",
-            "Central Africa",
-            "Eastern Africa",
-            "North Africa",
-            "Southern Africa",
-            "Western Africa",
-            "Americas",
-            "Southern America",
-            "Asia",
-            "Central Asia",
-            "Europe",
-            "Eastern Europe",
-            "Northern Europe",
-            "Southern Europe",
-            "Western Europe"
-          ]
+          "type": "array",
+          "description": "The geographical regions the video is relevant to.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Global",
+              "Africa",
+              "Central Africa",
+              "Eastern Africa",
+              "North Africa",
+              "Southern Africa",
+              "Western Africa",
+              "Americas",
+              "Southern America",
+              "Asia",
+              "Central Asia",
+              "Europe",
+              "Eastern Europe",
+              "Northern Europe",
+              "Southern Europe",
+              "Western Europe"
+            ]
+          }
         }
       },
       "required": [
@@ -203,8 +209,9 @@
           "description": "User's content filtering preferences.",
           "properties": {
             "region": {
-              "type": "string",
-              "description": "The specific region to filter by."
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "The specific regions to filter by."
             },
             "language": {
               "type": "string",

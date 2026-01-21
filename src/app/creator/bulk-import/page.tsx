@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from '../../../components/ui/dropdown-menu';
 import { useToast } from '../../../hooks/use-toast';
 import { Loader2, DownloadCloud, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
@@ -18,8 +19,6 @@ import { LANGUAGES, REGIONS } from '../../../lib/constants';
 
 interface VideoToImport extends NewVideoForImport {
   category?: string;
-  language?: string;
-  region?: string;
   isSelected?: boolean;
 }
 
@@ -60,11 +59,25 @@ export default function CreatorBulkImportPage() {
     );
   };
   
-  const handleDetailChange = (videoId: string, field: 'category' | 'language' | 'region', value: string) => {
+  const handleDetailChange = (videoId: string, field: 'category' | 'language', value: string) => {
      setFetchedVideos(prev =>
       prev.map(v => (v.youtubeVideoId === videoId ? { ...v, [field]: value } : v))
     );
   }
+
+  const handleRegionChange = (videoId: string, region: string, checked: boolean) => {
+    setFetchedVideos(prev =>
+      prev.map(v => {
+        if (v.youtubeVideoId === videoId) {
+          const currentRegions = v.region || [];
+          const newRegions = checked ? [...currentRegions, region] : currentRegions.filter(r => r !== region);
+          return { ...v, region: newRegions };
+        }
+        return v;
+      })
+    );
+  };
+
 
   const videosReadyForImport = fetchedVideos.filter(v => v.isSelected && v.category);
 
@@ -82,6 +95,8 @@ export default function CreatorBulkImportPage() {
     const videosToSave: ImportedVideoSaveData[] = videosReadyForImport.map(v => ({
       ...v,
       contentCategory: v.category!,
+      language: v.language || 'English',
+      region: v.region && v.region.length > 0 ? v.region : ['Global'],
       views: Math.floor(Math.random() * 100), // Placeholder
       watchTime: Math.floor(Math.random() * 100), // Placeholder
     }));
@@ -175,14 +190,27 @@ export default function CreatorBulkImportPage() {
                         </Select>
                     </div>
                     <div className="w-40">
-                        <Select onValueChange={(value) => handleDetailChange(video.youtubeVideoId, 'region', value)} value={video.region}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Region..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {REGIONS.map(reg => <SelectItem key={reg} value={reg}>{reg}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start font-normal">
+                              <div className="line-clamp-1 text-left">
+                                {(video.region && video.region.length > 0) ? video.region.join(', ') : 'Region...'}
+                              </div>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
+                            {REGIONS.map(region => (
+                              <DropdownMenuCheckboxItem
+                                key={region}
+                                checked={video.region?.includes(region) || false}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={(checked) => handleRegionChange(video.youtubeVideoId, region, !!checked)}
+                              >
+                                {region}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                   </div>
                 </div>
