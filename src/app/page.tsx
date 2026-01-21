@@ -154,9 +154,11 @@ export default function Home() {
         const preferredRegions = prefs.region || [];
 
         if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
-          filteredChannels = filteredChannels.filter(c => 
-              c.region && c.region.some(channelRegion => preferredRegions.includes(channelRegion))
-          );
+          filteredChannels = filteredChannels.filter(c => {
+              if (!c.region) return false;
+              const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+              return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
+          });
         }
 
         if (prefs.language) { // empty string means all languages
