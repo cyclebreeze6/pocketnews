@@ -185,13 +185,13 @@
           "type": "object",
           "description": "User's content filtering preferences.",
           "properties": {
-            "type": {
+            "region": {
               "type": "string",
-              "enum": ["all", "region", "language"]
+              "description": "The specific region to filter by."
             },
-            "value": {
+            "language": {
               "type": "string",
-              "description": "The specific region or language to filter by."
+              "description": "The specific language to filter by."
             }
           }
         }

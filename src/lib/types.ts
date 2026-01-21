@@ -62,8 +62,8 @@ export interface UserProfile extends User {
     preferredCategories?: string[];
     preferencesSet?: boolean;
     preferences?: {
-        type: 'all' | 'region' | 'language';
-        value: string;
+        region?: string;
+        language?: string;
     }
 }
 

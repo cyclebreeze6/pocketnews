@@ -150,22 +150,24 @@ export default function Home() {
     const prefs = userProfile?.preferences;
     
     if (prefs && userProfile.preferencesSet && channels) {
-        let preferredChannelIds: string[] | null = null;
+        let filteredChannels = [...channels];
 
-        if (prefs.type === 'language' && prefs.value) {
-            preferredChannelIds = channels.filter(c => c.language === prefs.value).map(c => c.id);
-        }
-        if (prefs.type === 'region' && prefs.value) {
-            preferredChannelIds = channels.filter(c => c.region === prefs.value).map(c => c.id);
+        if (prefs.region && prefs.region !== 'Global') {
+            filteredChannels = filteredChannels.filter(c => c.region === prefs.region);
         }
 
-        if (preferredChannelIds) {
-            if (preferredChannelIds.length === 0) {
-                // No channels match the preference, so query for something that will return no results.
-                return query(baseQuery, where('id', '==', 'no-results-for-preference'));
-            }
+        if (prefs.language) { // empty string means all languages
+            filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
+        }
+
+        const preferredChannelIds = filteredChannels.map(c => c.id);
+
+        if (preferredChannelIds.length > 0) {
             // Use 'in' query. Limited to 30 IDs.
             return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)), limit(20));
+        } else {
+            // No channels match the preference, so query for something that will return no results.
+            return query(baseQuery, where('id', '==', 'no-results-for-preference'));
         }
     }
 
@@ -363,6 +365,7 @@ export default function Home() {
                 open={isPreferenceDialogOpen} 
                 onOpenChange={setIsPreferenceDialogOpen} 
                 userId={user.uid} 
+                userProfile={userProfile}
             />
         )}
         <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
@@ -562,6 +565,7 @@ export default function Home() {
                 open={isPreferenceDialogOpen} 
                 onOpenChange={setIsPreferenceDialogOpen} 
                 userId={user.uid} 
+                userProfile={userProfile}
             />
         )}
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>

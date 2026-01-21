@@ -11,7 +11,6 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -19,45 +18,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFirebase, updateDocumentNonBlocking } from '../firebase';
 import { doc } from 'firebase/firestore';
 import { LANGUAGES, REGIONS } from '../lib/constants';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import type { UserProfile } from '../lib/types';
 
 interface PreferenceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  userProfile?: UserProfile | null;
 }
-
-type PreferenceType = 'all' | 'region' | 'language';
 
 export function PreferenceDialog({
   open,
   onOpenChange,
   userId,
+  userProfile,
 }: PreferenceDialogProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  const [preferenceType, setPreferenceType] = useState<PreferenceType>('all');
-  const [selectedValue, setSelectedValue] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('Global');
+  const [selectedLanguage, setSelectedLanguage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async () => {
-    if ((preferenceType === 'language' || preferenceType === 'region') && !selectedValue) {
-        toast({ variant: 'destructive', title: 'Please select an option.' });
-        return;
+  useEffect(() => {
+    if (userProfile?.preferences) {
+      setSelectedRegion(userProfile.preferences.region || 'Global');
+      setSelectedLanguage(userProfile.preferences.language || '');
     }
+  }, [userProfile, open]);
+
+  const handleSave = async () => {
     setIsSaving(true);
     const userRef = doc(firestore, 'users', userId);
     
     const preferencesToSave = {
-        type: preferenceType,
-        value: preferenceType === 'all' ? '' : selectedValue,
-    }
+        region: selectedRegion,
+        language: selectedLanguage,
+    };
 
     updateDocumentNonBlocking(userRef, {
         preferences: preferencesToSave,
@@ -66,6 +69,10 @@ export function PreferenceDialog({
     
     setIsSaving(false);
     onOpenChange(false);
+    toast({
+        title: 'Preferences Updated!',
+        description: 'Your content feed will now be personalized.',
+    });
     // Reload the page to apply the new preferences
     window.location.reload();
   };
@@ -76,50 +83,13 @@ export function PreferenceDialog({
         <DialogHeader>
           <DialogTitle>Personalize Your Feed</DialogTitle>
           <DialogDescription>
-            Choose the content you want to see. You can change this later in settings.
+            Choose the content you want to see. You can change this later.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
-          <RadioGroup
-            value={preferenceType}
-            onValueChange={(value: PreferenceType) => {
-              setPreferenceType(value);
-              setSelectedValue(''); // Reset value when type changes
-            }}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="all" id="all" />
-              <Label htmlFor="all">All Content</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="language" id="language" />
-              <Label htmlFor="language">By Language</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="region" id="region" />
-              <Label htmlFor="region">By Region</Label>
-            </div>
-          </RadioGroup>
-
-          {preferenceType === 'language' && (
-            <div className="grid gap-2 animate-in fade-in">
-              <Label htmlFor="language-select">Select Language</Label>
-              <Select onValueChange={setSelectedValue} value={selectedValue}>
-                <SelectTrigger id="language-select">
-                  <SelectValue placeholder="Choose a language..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGES.map(lang => (
-                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {preferenceType === 'region' && (
-            <div className="grid gap-2 animate-in fade-in">
-              <Label htmlFor="region-select">Select Region</Label>
-              <Select onValueChange={setSelectedValue} value={selectedValue}>
+        <div className="space-y-4 py-4">
+           <div className="grid gap-2">
+              <Label htmlFor="region-select">Filter by Region</Label>
+              <Select onValueChange={setSelectedRegion} value={selectedRegion}>
                 <SelectTrigger id="region-select">
                   <SelectValue placeholder="Choose a region..." />
                 </SelectTrigger>
@@ -130,7 +100,20 @@ export function PreferenceDialog({
                 </SelectContent>
               </Select>
             </div>
-          )}
+            <div className="grid gap-2">
+              <Label htmlFor="language-select">Filter by Language</Label>
+              <Select onValueChange={setSelectedLanguage} value={selectedLanguage}>
+                <SelectTrigger id="language-select">
+                  <SelectValue placeholder="All Languages" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Languages</SelectItem>
+                  {LANGUAGES.map(lang => (
+                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
         <DialogFooter>
           <Button type="button" onClick={handleSave} disabled={isSaving}>

@@ -172,17 +172,13 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                   <PopoverContent className="w-80">
                       <div className="grid gap-4">
                           <div className="space-y-2">
-                              <h4 className="font-medium leading-none">Current Preference</h4>
-                              <p className="text-sm text-muted-foreground">
-                                  Your content feed is set to: <br/>
-                                  <span className="font-bold text-foreground">
-                                      {userProfile?.preferences?.type === 'language' && `Language: ${userProfile.preferences.value}`}
-                                      {userProfile?.preferences?.type === 'region' && `Region: ${userProfile.preferences.value}`}
-                                      {(!userProfile?.preferences || userProfile?.preferences?.type === 'all') && 'All Content'}
-                                  </span>
-                              </p>
+                              <h4 className="font-medium leading-none">Current Preferences</h4>
+                               <div className="grid gap-1 text-sm">
+                                  <p className="text-muted-foreground">Region: <span className="font-semibold text-foreground">{userProfile?.preferences?.region || 'Global'}</span></p>
+                                  <p className="text-muted-foreground">Language: <span className="font-semibold text-foreground">{userProfile?.preferences?.language || 'All Languages'}</span></p>
+                              </div>
                           </div>
-                          <Button onClick={() => setIsPreferenceDialogOpen(true)}>Edit Preference</Button>
+                          <Button onClick={() => setIsPreferenceDialogOpen(true)}>Edit Preferences</Button>
                       </div>
                   </PopoverContent>
                 </Popover>
@@ -336,6 +332,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
             open={isPreferenceDialogOpen}
             onOpenChange={setIsPreferenceDialogOpen}
             userId={user.uid}
+            userProfile={userProfile}
         />
       )}
     </>
