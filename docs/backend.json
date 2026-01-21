@@ -89,7 +89,24 @@
         "region": {
           "type": "string",
           "description": "The geographical region the video is relevant to.",
-          "enum": ["Europe", "Americas", "North Africa", "Southern Africa", "Western Africa", "Central Africa", "Eastern Africa", "Central Asia", "Asia", "Southern America"]
+          "enum": [
+            "Global",
+            "Africa",
+            "Central Africa",
+            "Eastern Africa",
+            "North Africa",
+            "Southern Africa",
+            "Western Africa",
+            "Americas",
+            "Southern America",
+            "Asia",
+            "Central Asia",
+            "Europe",
+            "Eastern Europe",
+            "Northern Europe",
+            "Southern Europe",
+            "Western Europe"
+          ]
         }
       },
       "required": [
