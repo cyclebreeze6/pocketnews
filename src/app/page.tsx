@@ -151,10 +151,10 @@ export default function Home() {
     
     if (prefs && userProfile.preferencesSet) {
         if (prefs.type === 'language' && prefs.value) {
-            return query(baseQuery, where('language', '==', prefs.value), orderBy('createdAt', 'desc'), limit(20));
+            return query(baseQuery, where('language', '==', prefs.value), limit(20));
         }
         if (prefs.type === 'region' && prefs.value) {
-            return query(baseQuery, where('region', '==', prefs.value), orderBy('createdAt', 'desc'), limit(20));
+            return query(baseQuery, where('region', '==', prefs.value), limit(20));
         }
     }
 
