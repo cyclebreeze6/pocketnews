@@ -48,8 +48,10 @@ export function PreferenceDialog({
   useEffect(() => {
     if (userProfile?.preferences) {
       setSelectedRegion(userProfile.preferences.region || 'Global');
+      // Use proxy value for empty string from firestore
       setSelectedLanguage(userProfile.preferences.language || 'all-languages');
     } else {
+      // Default values if no preferences are set
       setSelectedRegion('Global');
       setSelectedLanguage('all-languages');
     }
