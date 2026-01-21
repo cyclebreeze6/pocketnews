@@ -16,7 +16,8 @@ import {
   ListFilter,
   Package,
   Clapperboard,
-  Menu
+  Menu,
+  Globe,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -54,6 +55,7 @@ import {
 } from './ui/dialog';
 import { SidebarTrigger } from './ui/sidebar';
 import { usePathname } from 'next/navigation';
+import { PreferenceDialog } from './preference-dialog';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -69,6 +71,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   const router = useRouter(); 
   const pathname = usePathname();
 
@@ -159,6 +162,11 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                     Shorts
                 </Button>
               </Link>
+              {user && !user.isAnonymous && (
+                <Button variant="ghost" size="icon" onClick={() => setIsPreferenceDialogOpen(true)}>
+                    <Globe className="h-5 w-5" />
+                </Button>
+              )}
               {hasMounted && (
               <Popover onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>
@@ -290,19 +298,26 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         {!hideCategoryNav && <CategoryNav />}
       </header>
       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={handleLoginSuccess} />
-        <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
-            <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
-                <DialogDescription>
-                Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
-                </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-                <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
-            </DialogFooter>
-            </DialogContent>
-        </Dialog>
+      <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
+        <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
+            <DialogDescription>
+            Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
+            </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+            <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
+        </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {user && !user.isAnonymous && (
+        <PreferenceDialog
+            open={isPreferenceDialogOpen}
+            onOpenChange={setIsPreferenceDialogOpen}
+            userId={user.uid}
+        />
+      )}
     </>
   );
 }

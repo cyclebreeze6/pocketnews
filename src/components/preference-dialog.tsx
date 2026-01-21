@@ -65,8 +65,9 @@ export function PreferenceDialog({
     });
     
     setIsSaving(false);
-    toast({ title: 'Preferences Saved!', description: "Your feed will now be personalized."});
     onOpenChange(false);
+    // Reload the page to apply the new preferences
+    window.location.reload();
   };
 
   return (
