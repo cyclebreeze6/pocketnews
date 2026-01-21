@@ -41,8 +41,8 @@ export default function CreatorChannelsPage() {
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
-  const [channelLanguage, setChannelLanguage] = useState('');
-  const [channelRegion, setChannelRegion] = useState('');
+  const [channelLanguage, setChannelLanguage] = useState('English');
+  const [channelRegion, setChannelRegion] = useState('Global');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
@@ -64,8 +64,8 @@ export default function CreatorChannelsPage() {
       const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
       setChannelName(info.name);
       setChannelDescription(info.description || '');
-      setChannelLanguage(info.language || '');
-      setChannelRegion(info.region || '');
+      setChannelLanguage(info.language || 'English');
+      setChannelRegion(info.region || 'Global');
       setLogoPreview(info.logoUrl);
       setLogoFile(null); // Clear file if we fetched a new logo URL
       toast({ title: "Channel info populated!" });
@@ -93,8 +93,8 @@ export default function CreatorChannelsPage() {
     setChannelName('');
     setChannelDescription('');
     setYoutubeChannelUrl('');
-    setChannelLanguage('');
-    setChannelRegion('');
+    setChannelLanguage('English');
+    setChannelRegion('Global');
     setLogoFile(null);
     setLogoPreview(null);
     setEditingChannel(null);
@@ -106,8 +106,8 @@ export default function CreatorChannelsPage() {
       setChannelName(channel.name);
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
-      setChannelLanguage(channel.language || '');
-      setChannelRegion(channel.region || '');
+      setChannelLanguage(channel.language || 'English');
+      setChannelRegion(channel.region || 'Global');
       setLogoPreview(channel.logoUrl || null);
       setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });

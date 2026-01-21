@@ -163,9 +163,29 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                 </Button>
               </Link>
               {user && !user.isAnonymous && (
-                <Button variant="ghost" size="icon" onClick={() => setIsPreferenceDialogOpen(true)}>
-                    <Globe className="h-5 w-5" />
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <Globe className="h-5 w-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                      <div className="grid gap-4">
+                          <div className="space-y-2">
+                              <h4 className="font-medium leading-none">Current Preference</h4>
+                              <p className="text-sm text-muted-foreground">
+                                  Your content feed is set to: <br/>
+                                  <span className="font-bold text-foreground">
+                                      {userProfile?.preferences?.type === 'language' && `Language: ${userProfile.preferences.value}`}
+                                      {userProfile?.preferences?.type === 'region' && `Region: ${userProfile.preferences.value}`}
+                                      {(!userProfile?.preferences || userProfile?.preferences?.type === 'all') && 'All Content'}
+                                  </span>
+                              </p>
+                          </div>
+                          <Button onClick={() => setIsPreferenceDialogOpen(true)}>Edit Preference</Button>
+                      </div>
+                  </PopoverContent>
+                </Popover>
               )}
               {hasMounted && (
               <Popover onOpenChange={handlePopoverOpen}>

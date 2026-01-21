@@ -10,6 +10,7 @@ export const LANGUAGES = [
 ];
 
 export const REGIONS = [
+  'Global',
   'Europe',
   'Americas',
   'North Africa',
