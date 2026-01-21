@@ -41,8 +41,8 @@ export default function CreatorChannelsPage() {
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
-  const [channelLanguage, setChannelLanguage] = useState('English');
-  const [channelRegion, setChannelRegion] = useState('Global');
+  const [channelLanguage, setChannelLanguage] = useState('');
+  const [channelRegion, setChannelRegion] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
@@ -64,11 +64,11 @@ export default function CreatorChannelsPage() {
       const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
       setChannelName(info.name);
       setChannelDescription(info.description || '');
-      setChannelLanguage(info.language || 'English');
-      setChannelRegion(info.region || 'Global');
+      setChannelLanguage('');
+      setChannelRegion('');
       setLogoPreview(info.logoUrl);
       setLogoFile(null); // Clear file if we fetched a new logo URL
-      toast({ title: "Channel info populated!" });
+      toast({ title: "Channel info populated! Please select Language and Region." });
     } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Failed to fetch info', description: error.message });
@@ -93,8 +93,8 @@ export default function CreatorChannelsPage() {
     setChannelName('');
     setChannelDescription('');
     setYoutubeChannelUrl('');
-    setChannelLanguage('English');
-    setChannelRegion('Global');
+    setChannelLanguage('');
+    setChannelRegion('');
     setLogoFile(null);
     setLogoPreview(null);
     setEditingChannel(null);
@@ -106,8 +106,8 @@ export default function CreatorChannelsPage() {
       setChannelName(channel.name);
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
-      setChannelLanguage(channel.language || 'English');
-      setChannelRegion(channel.region || 'Global');
+      setChannelLanguage(channel.language || '');
+      setChannelRegion(channel.region || '');
       setLogoPreview(channel.logoUrl || null);
       setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -130,6 +130,9 @@ export default function CreatorChannelsPage() {
         if (logoFile) {
             const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
             finalLogoUrl = await uploadFile(storage, logoFile, filePath);
+        } else if (logoPreview && !logoFile && (!editingChannel || editingChannel.logoUrl !== logoPreview)) {
+            // This case handles when a logo is fetched from youtube info or is different from original
+            finalLogoUrl = logoPreview;
         }
 
         const channelData = {
