@@ -34,8 +34,6 @@ export interface Video {
   uploadDate: Timestamp | Date | string;
   thumbnailUrl: string;
   contentCategory: string;
-  language: string;
-  region: string[];
   // compatibility with existing data
   youtubeId?: string;
   createdAt: Timestamp | Date | string;
@@ -84,6 +82,8 @@ export interface Report {
     createdAt: Timestamp | Date | string;
     status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
 }
+
+    
 
     
 

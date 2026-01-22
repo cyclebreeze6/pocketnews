@@ -83,36 +83,6 @@
           "type": "string",
           "description": "The date and time the video was uploaded.",
           "format": "date-time"
-        },
-        "language": {
-          "type": "string",
-          "description": "The language of the video content.",
-          "enum": ["English", "French", "Arabic", "Spanish", "Portuguese", "Swahili", "German"]
-        },
-        "region": {
-          "type": "array",
-          "description": "The geographical regions the video is relevant to.",
-          "items": {
-            "type": "string",
-            "enum": [
-              "Global",
-              "Africa",
-              "Central Africa",
-              "Eastern Africa",
-              "North Africa",
-              "Southern Africa",
-              "Western Africa",
-              "Americas",
-              "Southern America",
-              "Asia",
-              "Central Asia",
-              "Europe",
-              "Eastern Europe",
-              "Northern Europe",
-              "Southern Europe",
-              "Western Europe"
-            ]
-          }
         }
       },
       "required": [
@@ -122,9 +92,7 @@
         "title",
         "description",
         "thumbnailUrl",
-        "uploadDate",
-        "language",
-        "region"
+        "uploadDate"
       ]
     },
     "Short": {
@@ -519,4 +487,6 @@
   }
 }
     
+    
+
     

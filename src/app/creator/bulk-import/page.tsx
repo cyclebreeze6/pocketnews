@@ -6,7 +6,6 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from '../../../components/ui/dropdown-menu';
 import { useToast } from '../../../hooks/use-toast';
 import { Loader2, DownloadCloud, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
@@ -15,7 +14,6 @@ import type { NewVideoForImport, ImportedVideoSaveData } from '../../actions/bul
 import { useCollection, useFirebase, useMemoFirebase } from '../../../firebase';
 import type { Category } from '../../../lib/types';
 import { collection } from 'firebase/firestore';
-import { LANGUAGES, REGIONS } from '../../../lib/constants';
 
 interface VideoToImport extends NewVideoForImport {
   category?: string;
@@ -59,25 +57,11 @@ export default function CreatorBulkImportPage() {
     );
   };
   
-  const handleDetailChange = (videoId: string, field: 'category' | 'language', value: string) => {
+  const handleCategoryChange = (videoId: string, value: string) => {
      setFetchedVideos(prev =>
-      prev.map(v => (v.youtubeVideoId === videoId ? { ...v, [field]: value } : v))
+      prev.map(v => (v.youtubeVideoId === videoId ? { ...v, category: value } : v))
     );
   }
-
-  const handleRegionChange = (videoId: string, region: string, checked: boolean) => {
-    setFetchedVideos(prev =>
-      prev.map(v => {
-        if (v.youtubeVideoId === videoId) {
-          const currentRegions = v.region || [];
-          const newRegions = checked ? [...currentRegions, region] : currentRegions.filter(r => r !== region);
-          return { ...v, region: newRegions };
-        }
-        return v;
-      })
-    );
-  };
-
 
   const videosReadyForImport = fetchedVideos.filter(v => v.isSelected && v.category);
 
@@ -95,8 +79,6 @@ export default function CreatorBulkImportPage() {
     const videosToSave: ImportedVideoSaveData[] = videosReadyForImport.map(v => ({
       ...v,
       contentCategory: v.category!,
-      language: v.language || 'English',
-      region: v.region && v.region.length > 0 ? v.region : ['Global'],
       views: Math.floor(Math.random() * 100), // Placeholder
       watchTime: Math.floor(Math.random() * 100), // Placeholder
     }));
@@ -137,7 +119,7 @@ export default function CreatorBulkImportPage() {
         <Card>
           <CardHeader>
             <CardTitle>Step 2: Select and Import</CardTitle>
-            <CardDescription>Choose up to 10 videos, assign a category, language, and region to each, then import them all at once.</CardDescription>
+            <CardDescription>Choose up to 10 videos, assign a category to each, then import them all at once.</CardDescription>
           </CardHeader>
           <CardContent>
              <div className="flex justify-end mb-6">
@@ -170,7 +152,7 @@ export default function CreatorBulkImportPage() {
                   </label>
                   <div className="flex gap-2 flex-wrap">
                     <div className="w-40">
-                        <Select onValueChange={(value) => handleDetailChange(video.youtubeVideoId, 'category', value)} value={video.category}>
+                        <Select onValueChange={(value) => handleCategoryChange(video.youtubeVideoId, value)} value={video.category}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Category..." />
                             </SelectTrigger>
@@ -178,39 +160,6 @@ export default function CreatorBulkImportPage() {
                                 {categories?.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                    </div>
-                    <div className="w-40">
-                        <Select onValueChange={(value) => handleDetailChange(video.youtubeVideoId, 'language', value)} value={video.language}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Language..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {LANGUAGES.map(lang => <SelectItem key={lang} value={lang}>{lang}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="w-40">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start font-normal">
-                              <div className="line-clamp-1 text-left">
-                                {(video.region && video.region.length > 0) ? video.region.join(', ') : 'Region...'}
-                              </div>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
-                            {REGIONS.map(region => (
-                              <DropdownMenuCheckboxItem
-                                key={region}
-                                checked={video.region?.includes(region) || false}
-                                onSelect={(e) => e.preventDefault()}
-                                onCheckedChange={(checked) => handleRegionChange(video.youtubeVideoId, region, !!checked)}
-                              >
-                                {region}
-                              </DropdownMenuCheckboxItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                     </div>
                   </div>
                 </div>
@@ -222,3 +171,5 @@ export default function CreatorBulkImportPage() {
     </div>
   );
 }
+
+    

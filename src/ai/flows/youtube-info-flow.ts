@@ -21,8 +21,6 @@ export const YouTubeVideoInfoSchema = z.object({
   description: z.string().describe('The description of the video.'),
   authorName: z.string().describe("The name of the video's author or channel."),
   thumbnailUrl: z.string().url().describe('The URL for the video thumbnail.'),
-  language: z.string().optional().describe('The language of the video.'),
-  region: z.string().optional().describe('The region relevant to the video.'),
 });
 export type YouTubeVideoInfo = z.infer<typeof YouTubeVideoInfoSchema>;
 
@@ -49,7 +47,7 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
     
     try {
         const response = await youtube.videos.list({
-            part: ['snippet', 'recordingDetails'],
+            part: ['snippet'],
             id: [videoId],
         });
 
@@ -59,15 +57,6 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
         }
         
         const snippet = video.snippet;
-        const recordingDetails = video.recordingDetails;
-
-        const languageMap: { [key: string]: string } = {
-            en: 'English', fr: 'French', ar: 'Arabic', es: 'Spanish',
-            pt: 'Portuguese', sw: 'Swahili', de: 'German'
-        };
-        const detectedLanguage = snippet.defaultLanguage ? languageMap[snippet.defaultLanguage.split('-')[0]] : undefined;
-        
-        const detectedRegion = recordingDetails?.locationDescription;
 
         return {
             videoId: videoId,
@@ -75,8 +64,6 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
             description: snippet.description || '',
             authorName: snippet.channelTitle || 'Unknown Author',
             thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
-            language: detectedLanguage,
-            region: detectedRegion,
         };
 
     } catch (error: any) {
@@ -88,3 +75,5 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
     }
   }
 );
+
+    

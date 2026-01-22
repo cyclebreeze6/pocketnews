@@ -26,14 +26,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '../../../../components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-} from '../../../../components/ui/dropdown-menu';
 import { sendNewVideoNotification } from '../../../../ai/flows/send-notification-flow';
-import { LANGUAGES, REGIONS } from '../../../../lib/constants';
 
 export default function VideoEditPage() {
   const { firestore } = useFirebase();
@@ -109,8 +102,6 @@ export default function VideoEditPage() {
               title: videoInfo.title,
               description: videoInfo.description,
               thumbnailUrl: videoInfo.thumbnailUrl,
-              language: videoInfo.language || prev?.language,
-              region: videoInfo.region ? [videoInfo.region] : (prev?.region || []),
           }));
         } else {
           toast({ variant: 'destructive', title: 'Could not fetch YouTube video details.' });
@@ -238,8 +229,6 @@ export default function VideoEditPage() {
     setIsSaving(true);
     const dataToSave: Partial<Video> = {
       ...videoDetails,
-      language: videoDetails.language || 'English',
-      region: videoDetails.region && videoDetails.region.length > 0 ? videoDetails.region : ['Global'],
       views: videoDetails.views || Math.floor(Math.random() * 100000),
       watchTime: videoDetails.watchTime || Math.floor(Math.random() * 2000),
     };
@@ -376,47 +365,6 @@ export default function VideoEditPage() {
                                 </Select>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="language-select">Language</Label>
-                                <Select onValueChange={(value) => setVideoDetails(prev => ({...prev, language: value}))} value={videoDetails.language || ''}>
-                                    <SelectTrigger id="language-select">
-                                        <SelectValue placeholder="Select language..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {LANGUAGES.map(lang => <SelectItem key={lang} value={lang}>{lang}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="region-select">Region(s)</Label>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button id="region-select" variant="outline" className="w-full justify-start font-normal">
-                                      <div className="line-clamp-1 text-left">
-                                        {(videoDetails.region && videoDetails.region.length > 0) ? videoDetails.region.join(', ') : 'Select regions...'}
-                                      </div>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent className="w-60 max-h-60 overflow-y-auto" align="start">
-                                    {REGIONS.map(region => (
-                                      <DropdownMenuCheckboxItem
-                                        key={region}
-                                        checked={videoDetails.region?.includes(region) || false}
-                                        onSelect={(e) => e.preventDefault()}
-                                        onCheckedChange={(checked) => {
-                                          const currentRegions = videoDetails.region || [];
-                                          const newRegions = checked ? [...currentRegions, region] : currentRegions.filter(r => r !== region);
-                                          setVideoDetails(prev => ({...prev, region: newRegions}));
-                                        }}
-                                      >
-                                        {region}
-                                      </DropdownMenuCheckboxItem>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 )}
@@ -480,3 +428,5 @@ export default function VideoEditPage() {
     </div>
   );
 }
+
+    

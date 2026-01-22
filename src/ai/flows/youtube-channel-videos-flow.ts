@@ -22,8 +22,6 @@ export const YouTubeVideoDetailsSchema = z.object({
   description: z.string().describe('The description of the video.'),
   authorName: z.string().describe("The name of the video's author or channel."),
   thumbnailUrl: z.string().url().describe('The URL for the video thumbnail.'),
-  language: z.string().optional().describe('The default language of the video (e.g., "en", "es").'),
-  region: z.string().optional().describe('The location description where the video was recorded.'),
 });
 export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 
@@ -92,33 +90,18 @@ export const fetchChannelVideosFlow = ai.defineFlow(
         return [];
     }
     
-    const videoIds = videoItems.map(item => item.snippet?.resourceId?.videoId).filter((id): id is string => !!id);
-
-    // Fetch full video details to get language and region
-    const videoDetailsResponse = await youtube.videos.list({
-        part: ['snippet', 'recordingDetails'],
-        id: videoIds,
-    });
-
-    const videoDetailsMap = new Map(
-      videoDetailsResponse.data.items?.map(item => [item.id!, item]) || []
-    );
-
     const videos: YouTubeVideoList = [];
     for (const item of videoItems) {
         const snippet = item.snippet;
         const videoId = snippet?.resourceId?.videoId;
         
         if (videoId && snippet?.title && snippet?.thumbnails?.high?.url) {
-            const details = videoDetailsMap.get(videoId);
             videos.push({
                 videoId: videoId,
                 title: snippet.title,
                 description: snippet.description || '',
                 authorName: authorName,
                 thumbnailUrl: snippet.thumbnails.high.url || snippet.thumbnails.default?.url || '',
-                language: details?.snippet?.defaultLanguage || details?.snippet?.defaultAudioLanguage,
-                region: details?.recordingDetails?.locationDescription,
             });
         }
     }
@@ -126,3 +109,5 @@ export const fetchChannelVideosFlow = ai.defineFlow(
     return videos;
   }
 );
+
+    

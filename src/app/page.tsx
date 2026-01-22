@@ -17,7 +17,7 @@ import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup, getDoc } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -144,7 +144,7 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || !user || isProfileLoading || channelsLoading) return null;
+    if (isUserLoading || !user || isProfileLoading || !channels) return null;
 
     const baseQuery = collection(firestore, 'videos');
     const prefs = userProfile?.preferences;
@@ -161,14 +161,14 @@ export default function Home() {
           });
         }
 
-        if (prefs.language) { // empty string means all languages
+        if (prefs.language && prefs.language !== 'all-languages') {
             filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
         }
 
         const preferredChannelIds = filteredChannels.map(c => c.id);
 
         if (preferredChannelIds.length > 0) {
-            // Use 'in' query. Limited to 30 IDs.
+            // Use 'in' query. Limited to 30 IDs. Cannot be combined with orderBy on a different field without a composite index.
             return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
         } else {
             // No channels match the preference, so query for something that will return no results.
@@ -178,10 +178,16 @@ export default function Home() {
 
     // Default query if no preference is set or type is 'all'
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore, user, isUserLoading, userProfile, isProfileLoading, channels, channelsLoading]);
+  }, [firestore, user, isUserLoading, userProfile, isProfileLoading, channels]);
   
-  const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+  const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
+  const videos = useMemo(() => {
+    if (!videosFromHook) return null;
+    // Sort videos by creation date since we can't do it in the Firestore query when using an 'in' filter.
+    return [...videosFromHook].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
+  }, [videosFromHook]);
+
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [displayedVideos, setDisplayedVideos] = useState<Video[] | null>(null);
   
@@ -625,3 +631,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
