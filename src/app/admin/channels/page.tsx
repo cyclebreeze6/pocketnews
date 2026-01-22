@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '../../../components/ui/button';
@@ -109,7 +110,7 @@ export default function AdminChannelsPage() {
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
       setChannelLanguage(channel.language || '');
-      setChannelRegions(channel.region || []);
+      setChannelRegions(Array.isArray(channel.region) ? channel.region : (channel.region ? [channel.region] : []));
       setLogoPreview(channel.logoUrl || null);
       setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -356,7 +357,7 @@ export default function AdminChannelsPage() {
                   <TableCell>{channel.language}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1 max-w-xs">
-                        {channel.region?.map(r => <Badge key={r} variant="outline">{r}</Badge>)}
+                        {channel.region && (Array.isArray(channel.region) ? channel.region : [channel.region]).map(r => <Badge key={r} variant="outline">{r}</Badge>)}
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground line-clamp-1">{channel.youtubeChannelUrl}</TableCell>
