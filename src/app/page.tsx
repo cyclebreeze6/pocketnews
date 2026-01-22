@@ -149,9 +149,9 @@ export default function Home() {
     const baseQuery = collection(firestore, 'videos');
     const prefs = userProfile?.preferences;
     
-    if (prefs && userProfile.preferencesSet && channels) {
+    if (prefs && channels) {
         let filteredChannels = [...channels];
-        const preferredRegions = prefs.region || [];
+        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
 
         if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
           filteredChannels = filteredChannels.filter(c => {
