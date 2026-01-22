@@ -53,7 +53,10 @@ export function PreferenceDialog({
 
   useEffect(() => {
     if (userProfile?.preferences) {
-      setSelectedRegions(userProfile.preferences.region || []);
+      const regionPref = userProfile.preferences.region || [];
+      // Ensure region preference is always an array for state
+      setSelectedRegions(Array.isArray(regionPref) ? regionPref : [regionPref]);
+      
       // Use proxy value for empty string from firestore
       setSelectedLanguage(userProfile.preferences.language || 'all-languages');
     } else {

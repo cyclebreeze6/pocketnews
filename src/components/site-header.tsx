@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import Link from 'next/link';
@@ -127,6 +125,17 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const handleLogout = () => {
     auth.signOut();
   };
+  
+  const regionDisplay = (() => {
+    const regionPref = userProfile?.preferences?.region;
+    if (!regionPref || (Array.isArray(regionPref) && regionPref.length === 0)) {
+      return 'Global';
+    }
+    if (Array.isArray(regionPref)) {
+      return regionPref.join(', ');
+    }
+    return regionPref;
+  })();
 
   return (
     <>
@@ -174,7 +183,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                           <div className="space-y-2">
                               <h4 className="font-medium leading-none">Current Preferences</h4>
                                <div className="grid gap-1 text-sm">
-                                  <p className="text-muted-foreground">Region: <span className="font-semibold text-foreground">{userProfile?.preferences?.region || 'Global'}</span></p>
+                                  <p className="text-muted-foreground">Region: <span className="font-semibold text-foreground">{regionDisplay}</span></p>
                                   <p className="text-muted-foreground">Language: <span className="font-semibold text-foreground">{userProfile?.preferences?.language || 'All Languages'}</span></p>
                               </div>
                           </div>
