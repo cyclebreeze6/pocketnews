@@ -143,6 +143,11 @@ export default function Home() {
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
+  const breakingNewsQuery = useMemoFirebase(() => {
+    return query(collection(firestore, 'videos'), where('contentCategory', '==', 'Breaking News'), orderBy('createdAt', 'desc'), limit(5));
+  }, [firestore]);
+  const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
+
   const videosQuery = useMemoFirebase(() => {
     if (isUserLoading || !user || isProfileLoading || !channels) return null;
 
@@ -184,10 +189,20 @@ export default function Home() {
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
   const videos = useMemo(() => {
-    if (!videosFromHook) return null;
-    // Sort videos by creation date since we can't do it in the Firestore query when using an 'in' filter.
-    return [...videosFromHook].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
-  }, [videosFromHook]);
+    if (!videosFromHook && !breakingNewsVideos) return null;
+    
+    // Combine breaking news and the regular feed
+    const combined = [
+        ...(breakingNewsVideos || []),
+        ...(videosFromHook || [])
+    ];
+
+    // Remove duplicates, giving priority to the version from breaking news (which comes first)
+    const uniqueVideos = Array.from(new Map(combined.map(v => [v.id, v])).values());
+    
+    // Sort all videos by creation date
+    return uniqueVideos.sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
+  }, [videosFromHook, breakingNewsVideos]);
 
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [displayedVideos, setDisplayedVideos] = useState<Video[] | null>(null);
@@ -206,9 +221,10 @@ export default function Home() {
 
   useEffect(() => {
     const handleScroll = () => {
-        if (!playerContainerRef.current || !isMobile) return;
+        const container = playerContainerRef.current?.parentElement;
+        if (!container || !isMobile) return;
 
-        const playerTop = playerContainerRef.current.getBoundingClientRect().top;
+        const playerTop = container.getBoundingClientRect().top;
         
         // Stick when the player's top edge scrolls up to the header's height
         if (playerTop <= HEADER_HEIGHT && !isPlayerSticky) {
@@ -266,12 +282,13 @@ export default function Home() {
       setCurrentVideo(null);
       setDisplayedVideos([]);
     }
-  }, [videos]);
+  }, [videos, currentVideo, firestore]);
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
-    if(isPlayerSticky) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    const container = playerContainerRef.current?.parentElement;
+    if(isPlayerSticky && container) {
+        container.scrollIntoView({ behavior: 'smooth' });
     }
     window.history.pushState({}, '', `/watch/${video.id}`);
   }, [isPlayerSticky]);
@@ -351,7 +368,7 @@ export default function Home() {
     }
   };
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading;
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || breakingNewsLoading;
   
   if (isLoading || !videos || !displayedVideos) {
       return <HomepageSkeleton />;
@@ -442,8 +459,9 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div ref={playerContainerRef} className="relative md:rounded-lg overflow-hidden">
+            <div className="relative md:rounded-lg overflow-hidden">
               <div
+                ref={playerContainerRef}
                 className={cn(
                   'z-40 w-full bg-background',
                   isPlayerSticky && isMobile
@@ -639,5 +657,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
