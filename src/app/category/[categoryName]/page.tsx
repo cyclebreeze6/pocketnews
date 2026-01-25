@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, useDoc } from '../../../firebase';
 import SiteHeader from '../../../components/site-header';
 import { VideoPlayer } from '../../../components/video-player';
 import { Badge } from '../../../components/ui/badge';
@@ -13,10 +13,10 @@ import { Button } from '../../../components/ui/button';
 import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardContent } from '../../../components/ui/card';
-import type { Video, Channel } from '../../../lib/types';
-import { collection, query, where, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
+import type { Video, Channel, UserProfile } from '../../../lib/types';
+import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -55,7 +55,7 @@ const WhatsAppIcon = (props: any) => (
 
 export default function CategoryPage() {
   const { firestore } = useFirebase();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
@@ -63,20 +63,62 @@ export default function CategoryPage() {
   
   const categoryName = decodeURIComponent(params.categoryName as string);
 
-  const videosQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName)),
-    [firestore, categoryName]
-  );
-  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
+  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+
+  const videosQuery = useMemoFirebase(() => {
+    if (isUserLoading || !user || isProfileLoading || !channels) return null;
+
+    const baseQuery = query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName));
+    const prefs = userProfile?.preferences;
+    
+    if (prefs && channels) {
+        let filteredChannels = [...channels];
+        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
+
+        if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
+          filteredChannels = filteredChannels.filter(c => {
+              if (!c.region) return false;
+              const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+              return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
+          });
+        }
+
+        if (prefs.language && prefs.language !== 'all-languages') {
+            filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
+        }
+
+        const preferredChannelIds = filteredChannels.map(c => c.id);
+
+        if (preferredChannelIds.length > 0) {
+            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+        } else {
+            return query(baseQuery, where('id', '==', 'no-results-for-preference'));
+        }
+    }
+    
+    // Default query if no preference is set or type is 'all'
+    return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
+  }, [firestore, categoryName, user, isUserLoading, userProfile, isProfileLoading, channels]);
+  
+  const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+
+  const videos = useMemo(() => {
+    if (!videosFromHook) return null;
+    // Sort videos by creation date since we can't do it in the Firestore query when using an 'in' filter.
+    return [...videosFromHook].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
+  }, [videosFromHook]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
   useEffect(() => {
     if (videos && videos.length > 0) {
       setCurrentVideo(videos[0]);
+    } else if (videos && videos.length === 0) {
+        setCurrentVideo(null);
     }
   }, [videos]);
   
@@ -120,7 +162,9 @@ export default function CategoryPage() {
         }
     };
 
-  if (videosLoading || channelsLoading) {
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading;
+
+  if (isLoading) {
     return <div>Loading...</div>;
   }
   
@@ -132,7 +176,7 @@ export default function CategoryPage() {
                 <h2 className="text-2xl font-bold tracking-tight mb-4">
                     No videos in {categoryName}
                 </h2>
-                <p>No videos found in this category yet. Check back later!</p>
+                <p>No videos found in this category for your preferences. Check back later!</p>
             </main>
         </div>
      )
