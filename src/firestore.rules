@@ -92,10 +92,16 @@ service cloud.firestore {
     // Admin & System Collections
     // --------------------------------
     match /roles_admin/{userId} {
-      // Only admins can manage admin roles.
-      allow read, write: if isAdmin();
-      // Allow initial self-promotion for designated admin emails.
-      allow create: if isOwner(userId) && (request.auth.token.email == 'valentinoboss18@gmail.com' || request.auth.token.email == 'emmachukwunonye54@gmail.com');
+      // A user must be able to check for their own admin document's existence to break recursion in isAdmin().
+      // Other admins can also read it, or list all admins.
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      // Only admins can modify other admin roles.
+      allow update, delete: if isAdmin();
+
+      // An admin can be created by another admin, or by the user themselves if they are a designated first admin.
+      allow create: if isAdmin() || (isOwner(userId) && (request.auth.token.email == 'valentinoboss18@gmail.com' || request.auth.token.email == 'emmachukwunonye54@gmail.com'));
     }
 
     match /reports/{reportId} {
