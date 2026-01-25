@@ -156,6 +156,7 @@ export default function Home() {
         if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
           filteredChannels = filteredChannels.filter(c => {
               if (!c.region) return false;
+              // Handle both string and array for backward compatibility
               const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
               return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
           });
@@ -441,19 +442,26 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div
-              ref={playerContainerRef}
-              className={cn(
+            <div ref={playerContainerRef} className="relative md:rounded-lg overflow-hidden">
+              <div
+                className={cn(
                   'z-40 w-full bg-background',
-                  isPlayerSticky && isMobile ? 'fixed top-0 left-0 right-0' : 'relative md:rounded-lg overflow-hidden'
-              )}
-            >
-              <div className="aspect-video">
-                <VideoPlayer youtubeId={currentVideo.youtubeVideoId} onEnd={handleVideoEnd} key={currentVideo.id} />
+                  isPlayerSticky && isMobile
+                    ? 'fixed top-0 left-0 right-0'
+                    : 'relative'
+                )}
+              >
+                <div className="aspect-video">
+                  <VideoPlayer
+                    youtubeId={currentVideo.youtubeVideoId}
+                    onEnd={handleVideoEnd}
+                    key={currentVideo.id}
+                  />
+                </div>
               </div>
+              {/* Placeholder to prevent content jump when player becomes sticky */}
+              {isPlayerSticky && isMobile && <div className="aspect-video" />}
             </div>
-            {/* Placeholder to prevent content jump when player becomes sticky */}
-            {isPlayerSticky && isMobile && <div className="aspect-video" />}
 
             <div className="px-4 md:px-0 pt-4">
                 <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
