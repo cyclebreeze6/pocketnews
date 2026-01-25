@@ -4,7 +4,7 @@
 import { Button } from '../../../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../../components/ui/card';
 import Link from 'next/link';
-import { BellRing, KeyRound, Image as ImageIcon } from 'lucide-react';
+import { BellRing, KeyRound, Image as ImageIcon, RefreshCw } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   return (
@@ -52,6 +52,25 @@ export default function AdminSettingsPage() {
                         <p className="text-sm text-muted-foreground">Configure your Firebase credentials to send notifications.</p>
                     </div>
                     <Button variant="secondary">Configure</Button>
+                </div>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Syncing</CardTitle>
+            <CardDescription>Manage automated content synchronization tasks.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <Link href="/admin/settings/sync-status" className="block">
+                <div className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                    <RefreshCw className="h-8 w-8 text-muted-foreground" />
+                    <div className="flex-grow">
+                        <h3 className="font-semibold">Sync Status</h3>
+                        <p className="text-sm text-muted-foreground">Check the status of the "Breaking News" sync and trigger it manually.</p>
+                    </div>
+                    <Button variant="secondary">Manage</Button>
                 </div>
             </Link>
           </CardContent>
