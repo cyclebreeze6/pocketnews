@@ -110,7 +110,7 @@ service cloud.firestore {
 
     match /channels/{channelId} {
       // All users, including non-authenticated ones, can view channels.
-      allow get, list: if true;
+      allow read: if true;
       // Only Admins or Creators can manage channels.
       allow create, update: if canCreateContent();
       allow delete: if isAdmin();
@@ -118,20 +118,20 @@ service cloud.firestore {
     
     match /videos/{videoId} {
       // All users, including non-authenticated ones, can view videos
-      allow get, list: if true;
+      allow read: if true;
       allow create: if canCreateContent();
       allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
       allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
     }
     
     match /shorts/{shortId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create, update, delete: if canCreateContent();
     }
 
     match /categories/{categoryId} {
       // All users, including non-authenticated ones, can view categories
-      allow get, list: if true;
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
     
