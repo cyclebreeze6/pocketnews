@@ -16,9 +16,9 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Admin role is determined by a boolean flag on the user's profile.
-      // This avoids a cross-collection get that could lead to recursion.
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      // Admin role is determined by the existence of a document in the roles_admin collection.
+      // This is safer than a get() which can lead to recursion.
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
     
     function isCreator() {
@@ -93,8 +93,7 @@ service cloud.firestore {
     // Admin & System Collections
     // --------------------------------
     match /roles_admin/{userId} {
-      // This collection is now only used to bootstrap the first admin.
-      // The primary source of truth for admin status is the `isAdmin` flag on the user document.
+      // The existence of a document here grants admin privileges.
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow update, delete: if isAdmin();
