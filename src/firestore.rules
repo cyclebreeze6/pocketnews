@@ -4,8 +4,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for reusable logic
-
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
     function isSignedIn() {
       return request.auth != null;
     }
@@ -15,146 +16,100 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // Admin role is determined by the existence of a document in the 'roles_admin' collection.
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
     
     function isCreator() {
+        // Creator role is determined by a boolean flag on the user's profile.
         return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isCreator == true;
     }
     
-    function canCreateContent() {
+    function canWriteContent() {
+        // Only admins or creators can write content.
         return isAdmin() || isCreator();
     }
 
-    function isExistingDoc() {
-      return resource != null;
+    // --------------------------------
+    // Public Content Collections
+    // --------------------------------
+    match /channels/{channelId} {
+      // Anyone can read channels.
+      allow get, list: if true;
+      // Only admins and creators can write.
+      allow write: if canWriteContent();
     }
 
-    function isExistingOwner(userId) {
-      return isOwner(userId) && isExistingDoc();
-    }
-
-    function isExistingAdmin() {
-      return isAdmin() && isExistingDoc();
-    }
-
-    function userHasConsistentId(userId) {
-      return request.resource.data.id == userId;
-    }
-
-    function isDesignatedAdmin(email) {
-      return email == 'valentinoboss18@gmail.com' || email == 'emmachukwunonye54@gmail.com';
+    match /videos/{videoId} {
+      // Anyone can read videos.
+      allow get, list: if true;
+      // Only admins and creators can write.
+      allow write: if canWriteContent();
     }
     
-    function isSelfPromotingToAdmin() {
-        let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
-        let allowedPromotionKeys = ['isAdmin', 'isCreator'];
-        
-        // Ensure we are only changing the allowed promotion keys
-        let isOnlyChangingPromotionKeys = changedKeys.hasOnly(allowedPromotionKeys);
-        
-        // Ensure the keys are being set to true
-        let isSettingAdminTrue = request.resource.data.isAdmin == true;
-        let isSettingCreatorTrue = request.resource.data.isCreator == true;
-        
-        return isOnlyChangingPromotionKeys && isSettingAdminTrue && isSettingCreatorTrue;
+    match /shorts/{shortId} {
+      // Anyone can read shorts.
+      allow get, list: if true;
+      // Only admins and creators can write.
+      allow write: if canWriteContent();
     }
 
-    function userCanUpdateSelf() {
-        // List of fields a user is allowed to update on their own profile.
-        let allowedFields = ['displayName', 'avatar', 'preferredCategories', 'preferences', 'preferencesSet'];
-        let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
-        return changedKeys.hasOnly(allowedFields);
+    match /categories/{categoryId} {
+      // Anyone can read categories.
+      allow get, list: if true;
+      // Only admins can write categories.
+      allow write: if isAdmin();
     }
 
-    function videoChannelIsImmutable() {
-      return request.resource.data.channelId == resource.data.channelId;
-    }
-    
-    function isReportOwner(reportId) {
-        return isSignedIn() && get(/databases/$(database)/documents/reports/$(reportId)).data.userId == request.auth.uid;
-    }
-
-    function isSanitizedString(text) {
-      // Allow empty strings, but if text is not empty, sanitize it.
-      return text == "" || !text.matches('[<>&;{}]');
-    }
-
-    // Security rules for collections
-
+    // --------------------------------
+    // User-specific Collections
+    // --------------------------------
     match /users/{userId} {
+      // Users can read their own profile, admins can read any profile.
       allow get: if isOwner(userId) || isAdmin();
+      // Only admins can list all users.
       allow list: if isAdmin();
-      allow create: if isOwner(userId) && userHasConsistentId(userId);
-      // An admin can update any user's document.
-      // A user can update their own profile with limitations.
-      // A designated admin can promote themselves.
-      allow update: if isExistingAdmin() || 
-                    (isExistingOwner(userId) && userCanUpdateSelf()) ||
-                    (isExistingOwner(userId) && isDesignatedAdmin(request.auth.token.email) && isSelfPromotingToAdmin());
-      allow delete: if isExistingOwner(userId) || isExistingAdmin();
+      // Users can create their own profile.
+      allow create: if isOwner(userId);
+      // Users can update their own profile, admins can update any.
+      allow update: if isOwner(userId) || isAdmin();
+      // Users can delete their own profile, admins can delete any.
+      allow delete: if isOwner(userId) || isAdmin();
 
-      match /history/{videoId} {
+      // Subcollections for a user are only accessible by that user.
+      match /history/{docId} {
          allow read, write, delete: if isOwner(userId);
       }
-      
-      // Users can manage their own FCM tokens.
       match /fcmTokens/{tokenId} {
         allow read, write, delete: if isOwner(userId);
       }
-       // Users can manage their own collections
       match /collections/{collectionId} {
         allow read, write, delete: if isOwner(userId);
       }
     }
-
-    match /channels/{channelId} {
-      // All users, including non-authenticated ones, can view channels.
-      allow read: if true;
-      // Only Admins or Creators can manage channels.
-      allow create, update: if canCreateContent();
-      allow delete: if isAdmin();
-    }
     
-    match /videos/{videoId} {
-      // All users, including non-authenticated ones, can view videos
-      allow read: if true;
-      allow create: if canCreateContent();
-      allow update: if (isAdmin() || isCreator()) && isExistingDoc() && videoChannelIsImmutable();
-      allow delete: if (isAdmin() || isCreator()) && isExistingDoc();
-    }
-    
-    match /shorts/{shortId} {
-      allow read: if true;
-      allow create, update, delete: if canCreateContent();
+    // --------------------------------
+    // Admin & System Collections
+    // --------------------------------
+    match /roles_admin/{userId} {
+      // Only admins can manage admin roles.
+      allow read, write: if isAdmin();
+      // Allow initial self-promotion for designated admin emails.
+      allow create: if isOwner(userId) && (request.auth.token.email == 'valentinoboss18@gmail.com' || request.auth.token.email == 'emmachukwunonye54@gmail.com');
     }
 
-    match /categories/{categoryId} {
-      // All users, including non-authenticated ones, can view categories
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    
     match /reports/{reportId} {
-        allow get, list: if isAdmin();
-        // Any signed-in user can create a report, with data validation.
-        allow create: if isSignedIn()
-                      && request.resource.data.userId == request.auth.uid
-                      && isSanitizedString(request.resource.data.details);
-        allow update: if isAdmin();
-        allow delete: if isAdmin() || isReportOwner(reportId);
+      // Only admins can view reports.
+      allow get, list: if isAdmin();
+      // Any signed-in user can create a report.
+      allow create: if isSignedIn();
+      // Only admins can modify or delete reports.
+      allow update, delete: if isAdmin();
     }
     
     match /email_queue/{emailId} {
-        allow read, write: if false; // Only backend can manage the queue
-    }
-
-    match /roles_admin/{userId} {
-      // For bootstrapping, a user can make themselves an admin if they are designated.
-      // An existing admin can also grant or revoke admin status for any user.
-      allow create: if (isOwner(userId) && isDesignatedAdmin(request.auth.token.email)) || isAdmin();
-      allow delete: if isAdmin();
-      allow read, update: if false;
+      // No client access to the email queue.
+      allow read, write: if false;
     }
   }
 }
