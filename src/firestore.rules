@@ -35,28 +35,28 @@ service cloud.firestore {
     // --------------------------------
     match /channels/{channelId} {
       // Anyone can read (get, list) channels. This is required for preference filtering to work.
-      allow read: if true;
+      allow get, list: if true;
       // Only admins and creators can write.
       allow write: if canWriteContent();
     }
 
     match /videos/{videoId} {
       // Anyone can read (get, list) videos. This is required for the main video feeds.
-      allow read: if true;
+      allow get, list: if true;
       // Only admins and creators can write.
       allow write: if canWriteContent();
     }
     
     match /shorts/{shortId} {
       // Anyone can read (get, list) shorts.
-      allow read: if true;
+      allow get, list: if true;
       // Only admins and creators can write.
       allow write: if canWriteContent();
     }
 
     match /categories/{categoryId} {
       // Anyone can read (get, list) categories. This is required for navigation and filtering.
-      allow read: if true;
+      allow get, list: if true;
       // Only admins can write categories.
       allow write: if isAdmin();
     }
