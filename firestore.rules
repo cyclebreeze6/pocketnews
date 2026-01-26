@@ -16,8 +16,8 @@ service cloud.firestore {
     }
 
     // Admin role is determined by the `isAdmin` flag on the user's own profile document.
-    // This is safe because a user can only write to their own profile (or an admin can).
     function isAdmin() {
+      // This is safe because the rule for /users/{userId} explicitly allows a user to read their own document.
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
     
@@ -35,30 +35,22 @@ service cloud.firestore {
     // Public Content Collections
     // --------------------------------
     match /channels/{channelId} {
-      // Anyone can read (get, list) channels. This is required for preference filtering to work.
       allow get, list: if true;
-      // Only admins and creators can write.
       allow write: if canWriteContent();
     }
 
     match /videos/{videoId} {
-      // Anyone can read (get, list) videos. This is required for the main video feeds.
       allow get, list: if true;
-      // Only admins and creators can write.
       allow write: if canWriteContent();
     }
     
     match /shorts/{shortId} {
-      // Anyone can read (get, list) shorts.
       allow get, list: if true;
-      // Only admins and creators can write.
       allow write: if canWriteContent();
     }
 
     match /categories/{categoryId} {
-      // Anyone can read (get, list) categories. This is required for navigation and filtering.
       allow get, list: if true;
-      // Only admins can write categories.
       allow write: if isAdmin();
     }
 
@@ -66,16 +58,15 @@ service cloud.firestore {
     // User-specific Collections
     // --------------------------------
     match /users/{userId} {
-      // A user can read their own profile. An admin can read any profile.
-      allow get: if isOwner(userId) || isAdmin();
-      // Only admins can list all users.
-      allow list: if isAdmin();
-      // A user can create their own profile.
+      // A user can create their own profile document.
       allow create: if isOwner(userId);
-      // A user can update their own profile. An admin can update any profile.
-      allow update: if isOwner(userId) || isAdmin();
-      // A user can delete their own profile. An admin can delete any profile.
-      allow delete: if isOwner(userId) || isAdmin();
+      
+      // A user can always read, update, and delete their own profile.
+      // This explicit rule for owners is critical to prevent a recursive loop in the isAdmin() function.
+      allow get, update, delete: if isOwner(userId);
+      
+      // An admin can read, list, update, and delete any user's profile.
+      allow get, list, update, delete: if isAdmin();
 
       // Subcollections for a user are only accessible by that user.
       match /history/{docId} {
@@ -93,16 +84,12 @@ service cloud.firestore {
     // Admin & System Collections
     // --------------------------------
     match /reports/{reportId} {
-      // Only admins can view reports.
       allow get, list: if isAdmin();
-      // Any signed-in user can create a report.
       allow create: if isSignedIn();
-      // Only admins can modify or delete reports.
       allow update, delete: if isAdmin();
     }
     
     match /email_queue/{emailId} {
-      // No client access to the email queue.
       allow read, write: if false;
     }
   }
