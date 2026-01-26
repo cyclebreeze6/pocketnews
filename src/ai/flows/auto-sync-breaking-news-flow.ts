@@ -52,7 +52,7 @@ const autoSyncBreakingNewsFlow = ai.defineFlow(
       if (!channel.youtubeChannelUrl) continue;
 
       try {
-        const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl });
+        const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
         
         // Get the single latest video
         const latestVideo = fetchedVideos?.[0];

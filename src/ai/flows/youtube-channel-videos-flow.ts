@@ -13,6 +13,7 @@ import { getYoutubeClient } from '../../lib/youtube-client';
 
 const YouTubeChannelVideosInputSchema = z.object({
   channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
+  maxResults: z.number().optional().default(15).describe('The maximum number of videos to fetch.'),
 });
 export type YouTubeChannelVideosInput = z.infer<typeof YouTubeChannelVideosInputSchema>;
 
@@ -82,7 +83,7 @@ export const fetchChannelVideosFlow = ai.defineFlow(
     const playlistResponse = await youtube.playlistItems.list({
         part: ['snippet'],
         playlistId: uploadsPlaylistId,
-        maxResults: 15,
+        maxResults: input.maxResults,
     });
 
     const videoItems = playlistResponse.data.items;
