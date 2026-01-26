@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -455,16 +456,12 @@ export default function Home() {
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
-                        <Link href={`/channels/${currentChannel.id}`}>
-                            <Avatar>
-                                <AvatarImage src={currentChannel?.logoUrl || `https://picsum.photos/seed/${currentChannel?.id}/40/40`} alt={currentChannel?.name} />
-                                <AvatarFallback>{currentChannel?.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        </Link>
+                        <Avatar>
+                            <AvatarImage src={currentChannel?.logoUrl || `https://picsum.photos/seed/${currentChannel?.id}/40/40`} alt={currentChannel?.name} />
+                            <AvatarFallback>{currentChannel?.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
                         <div>
-                             <Link href={`/channels/${currentChannel.id}`}>
-                                <p className="font-semibold hover:text-primary transition-colors">{currentChannel?.name}</p>
-                            </Link>
+                            <p className="font-semibold">{currentChannel?.name}</p>
                             <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>
                     </div>
@@ -511,9 +508,9 @@ export default function Home() {
                 
                 <div className="flex items-center gap-2 mt-4">
                     <p className="text-sm font-medium">Related topics</p>
-                    <Link href="/category/News"><Badge variant="outline">#news</Badge></Link>
-                    <Link href="/category/Technology"><Badge variant="outline">#technology</Badge></Link>
-                    <Link href="/category/Sports"><Badge variant="outline">#sports</Badge></Link>
+                    <Badge variant="outline">#news</Badge>
+                    <Badge variant="outline">#technology</Badge>
+                    <Badge variant="outline">#sports</Badge>
                 </div>
             </div>
 
