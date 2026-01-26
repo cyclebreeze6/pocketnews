@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 const AutoSyncResultSchema = z.object({
   newVideosAdded: z.number().describe("The total number of new videos added as Breaking News."),
@@ -23,6 +24,22 @@ const autoSyncBreakingNewsFlow = ai.defineFlow(
   async () => {
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
     
+    // Ensure 'Breaking News' category exists to make the feature robust.
+    const firestore = getFirestore();
+    const categoriesRef = firestore.collection('categories');
+    const categoryQuery = categoriesRef.where('name', '==', 'Breaking News');
+    const categorySnapshot = await categoryQuery.get();
+
+    if (categorySnapshot.empty) {
+        const newCategoryRef = categoriesRef.doc();
+        await newCategoryRef.set({
+            id: newCategoryRef.id,
+            name: 'Breaking News',
+            createdAt: FieldValue.serverTimestamp(),
+        });
+        console.log('[Auto Sync Flow] "Breaking News" category did not exist and was created.');
+    }
+
     if (channelsToSync.length === 0) {
       return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are configured for syncing."] };
     }
