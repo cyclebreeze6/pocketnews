@@ -149,42 +149,10 @@ export default function Home() {
   const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || !user || isProfileLoading || !channels) return null;
-
+    // TEMPORARY FIX: Revert to a simple query to avoid permission errors.
     const baseQuery = collection(firestore, 'videos');
-    const prefs = userProfile?.preferences;
-    
-    if (prefs && channels) {
-        let filteredChannels = [...channels];
-        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
-
-        if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
-          filteredChannels = filteredChannels.filter(c => {
-              if (!c.region) return false;
-              // Handle both string and array for backward compatibility
-              const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-              return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
-          });
-        }
-
-        if (prefs.language && prefs.language !== 'all-languages') {
-            filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
-        }
-
-        const preferredChannelIds = filteredChannels.map(c => c.id);
-
-        if (preferredChannelIds.length > 0) {
-            // Use 'in' query. Limited to 30 IDs. Cannot be combined with orderBy on a different field without a composite index.
-            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
-        } else {
-            // No channels match the preference, so query for something that will return no results.
-            return query(baseQuery, where('id', '==', 'no-results-for-preference'));
-        }
-    }
-
-    // Default query if no preference is set or type is 'all'
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore, user, isUserLoading, userProfile, isProfileLoading, channels]);
+  }, [firestore]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
