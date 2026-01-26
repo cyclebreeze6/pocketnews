@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -187,7 +188,13 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                                   <p className="text-muted-foreground">Language: <span className="font-semibold text-foreground">{userProfile?.preferences?.language || 'All Languages'}</span></p>
                               </div>
                           </div>
-                          <Button onClick={() => setIsPreferenceDialogOpen(true)}>Edit Preferences</Button>
+                          <Button onClick={() => setIsPreferenceDialogOpen(true)} className="relative">
+                            Edit Preferences
+                            <span className="absolute top-0 right-0 -mr-1 -mt-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                            </span>
+                          </Button>
                       </div>
                   </PopoverContent>
                 </Popover>
