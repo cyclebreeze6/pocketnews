@@ -33,53 +33,24 @@ export default function AdminUsersPage() {
     const userRef = doc(firestore, 'users', user.id);
     const newStatus = !user[role];
 
-    if (role === 'isAdmin') {
-        const batch = writeBatch(firestore);
-        batch.set(userRef, { isAdmin: newStatus }, { merge: true });
-        const adminRoleRef = doc(firestore, 'roles_admin', user.id);
-        if (newStatus) {
-            batch.set(adminRoleRef, { grantedAt: new Date() });
-        } else {
-            batch.delete(adminRoleRef);
-        }
-        batch.commit().then(() => {
-            toast({
-                title: `Admin role updated`,
-                description: `${user.displayName} is now ${newStatus ? 'an admin' : 'not an admin'}.`,
-            });
-        }).catch(err => {
-            console.error("Error updating admin status:", err);
-            toast({ variant: 'destructive', title: 'Error updating role' });
-        });
-    } else { // isCreator
-        setDocumentNonBlocking(userRef, { isCreator: newStatus }, { merge: true });
-        toast({
-            title: `Creator role updated`,
-            description: `${user.displayName} is now ${newStatus ? 'a creator' : 'not a creator'}.`,
-        });
-    }
+    setDocumentNonBlocking(userRef, { [role]: newStatus }, { merge: true });
+    
+    toast({
+        title: `${role === 'isAdmin' ? 'Admin' : 'Creator'} role updated`,
+        description: `${user.displayName} is now ${newStatus ? `an ${role === 'isAdmin' ? 'admin' : 'a creator'}` : `not an ${role === 'isAdmin' ? 'admin' : 'a creator'}`}.`,
+    });
   };
 
 
   const handleDeleteUser = () => {
     if (userToDelete) {
-      const batch = writeBatch(firestore);
       const userRef = doc(firestore, 'users', userToDelete.id);
-      batch.delete(userRef);
-
-      const adminRoleRef = doc(firestore, 'roles_admin', userToDelete.id);
-      batch.delete(adminRoleRef);
-
-      batch.commit().then(() => {
-        toast({
-          title: 'User deleted',
-          description: `${userToDelete.displayName} has been removed.`,
-        });
-        setUserToDelete(null);
-      }).catch(err => {
-        console.error("Error deleting user:", err);
-        toast({ variant: 'destructive', title: 'Error deleting user' });
+      deleteDocumentNonBlocking(userRef);
+      toast({
+        title: 'User deleted',
+        description: `${userToDelete.displayName} has been removed.`,
       });
+      setUserToDelete(null);
     }
   };
 
@@ -111,13 +82,8 @@ export default function AdminUsersPage() {
         return;
       }
 
-      const batch = writeBatch(firestore);
       const userRef = doc(firestore, 'users', userToPromote.id);
-      batch.set(userRef, { isAdmin: true }, { merge: true });
-      const adminRoleRef = doc(firestore, 'roles_admin', userToPromote.id);
-      batch.set(adminRoleRef, { grantedAt: new Date() });
-
-      await batch.commit();
+      await setDoc(userRef, { isAdmin: true }, { merge: true });
 
       toast({
         title: 'User Promoted!',

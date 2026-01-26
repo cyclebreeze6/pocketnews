@@ -15,15 +15,15 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Admin role is determined by the `isAdmin` flag on the user's own profile document.
+    // This is safe because a user can only write to their own profile (or an admin can).
     function isAdmin() {
-      // Admin role is determined by the existence of a document in the roles_admin collection.
-      // This is safer than a get() which can lead to recursion.
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
     
+    // Creator role is determined by a boolean flag on the user's profile.
     function isCreator() {
-        // Creator role is determined by a boolean flag on the user's profile.
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isCreator == true;
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isCreator == true;
     }
     
     function canWriteContent() {
@@ -66,15 +66,15 @@ service cloud.firestore {
     // User-specific Collections
     // --------------------------------
     match /users/{userId} {
-      // Users can read their own profile, admins can read any profile.
+      // A user can read their own profile. An admin can read any profile.
       allow get: if isOwner(userId) || isAdmin();
       // Only admins can list all users.
       allow list: if isAdmin();
-      // Users can create their own profile.
+      // A user can create their own profile.
       allow create: if isOwner(userId);
-      // Users can update their own profile, admins can update any.
+      // A user can update their own profile. An admin can update any profile.
       allow update: if isOwner(userId) || isAdmin();
-      // Users can delete their own profile, admins can delete any.
+      // A user can delete their own profile. An admin can delete any profile.
       allow delete: if isOwner(userId) || isAdmin();
 
       // Subcollections for a user are only accessible by that user.
@@ -92,21 +92,6 @@ service cloud.firestore {
     // --------------------------------
     // Admin & System Collections
     // --------------------------------
-    match /roles_admin/{userId} {
-      // A user must be able to check for the existence of their own admin role doc
-      // for the isAdmin() helper to work correctly. Admins can get any role doc.
-      allow get: if isOwner(userId) || isAdmin();
-
-      // Only admins should be able to see the list of all admins.
-      allow list: if isAdmin();
-      
-      // Admins can create, update, or delete roles.
-      // A user can also create their own role document if they are a designated admin email.
-      // This is for bootstrapping the first admin.
-      allow create: if isAdmin() || (isOwner(userId) && (request.auth.token.email == 'valentinoboss18@gmail.com' || request.auth.token.email == 'emmachukwunonye54@gmail.com'));
-      allow update, delete: if isAdmin();
-    }
-
     match /reports/{reportId} {
       // Only admins can view reports.
       allow get, list: if isAdmin();

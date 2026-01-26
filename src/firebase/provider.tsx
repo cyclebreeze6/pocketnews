@@ -61,7 +61,7 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 
 /**
  * Ensures a user document exists in Firestore. Creates it if it doesn't.
- * Includes special logic to grant admin rights to the first user.
+ * Includes special logic to grant admin rights to designated first-time users.
  * @param firestore - The Firestore instance.
  * @param user - The Firebase Auth user object.
  */
@@ -79,7 +79,7 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
         id: user.uid,
         email: user.email || '',
         displayName: user.displayName || 'Anonymous User',
-        isAdmin: isDesignatedAdmin,
+        isAdmin: isDesignatedAdmin, // Grant admin status if they are the designated user
         isCreator: isDesignatedAdmin, // Also make them a creator
         avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
         preferencesSet: false,
@@ -87,23 +87,13 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
       
       // Use setDoc here to ensure the document exists before proceeding.
       await setDoc(userRef, newUserProfile, { merge: true });
-
-      // If they are the designated admin, also add them to the DBAC collection
-      if (isDesignatedAdmin) {
-        const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-        await setDoc(adminRoleRef, { grantedAt: serverTimestamp() });
-      }
+      
     } else {
         // Document exists. Check if they should be an admin but aren't yet.
         const userProfile = docSnap.data() as UserProfile;
         if (isDesignatedAdmin && (!userProfile.isAdmin || !userProfile.isCreator)) {
-            const batch = writeBatch(firestore);
-            batch.update(userRef, { isAdmin: true, isCreator: true });
-            
-            const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-            batch.set(adminRoleRef, { grantedAt: serverTimestamp() });
-            
-            await batch.commit();
+            // Update the existing document to grant admin/creator roles
+            await setDoc(userRef, { isAdmin: true, isCreator: true }, { merge: true });
         }
     }
   } catch (error) {
