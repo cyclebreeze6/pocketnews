@@ -9,6 +9,9 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import type { Channel, Video } from '../../../lib/types';
 import { Tv } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/skeleton';
+import { useState } from 'react';
+import { Button } from '../../../components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 
 function ChannelPageSkeleton() {
   return (
@@ -56,6 +59,8 @@ export default function ChannelPage() {
   const channelId = params.channelId as string;
   const { firestore } = useFirebase();
 
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+
   const channelRef = useMemoFirebase(() => doc(firestore, 'channels', channelId), [firestore, channelId]);
   const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), where('channelId', '==', channelId)), [firestore, channelId]);
 
@@ -84,9 +89,14 @@ export default function ChannelPage() {
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none font-headline">
                   {channel.name}
                 </h1>
-                <p className="mx-auto max-w-[700px] text-card-foreground/80 md:text-xl">
-                  {channel.description}
-                </p>
+                <div className="mx-auto max-w-[700px] text-sm text-card-foreground/80">
+                  <p className="line-clamp-1">
+                    {channel.description}
+                  </p>
+                  <Button variant="link" className="p-0 h-auto" onClick={() => setIsDescriptionOpen(true)}>
+                    read more
+                  </Button>
+                </div>
               </div>
             </div>
           </section>
@@ -107,6 +117,16 @@ export default function ChannelPage() {
           </div>
         </section>
       </main>
+      <Dialog open={isDescriptionOpen} onOpenChange={setIsDescriptionOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{channel.name}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto pr-6 text-sm" style={{ whiteSpace: 'pre-wrap' }}>
+            {channel.description}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
