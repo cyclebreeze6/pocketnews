@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { autoSyncBreakingNewsFlow } from '../../../../ai/flows/auto-sync-breaking-news-flow';
+import { runAutoSyncBreakingNewsFlow } from '../../../../ai/flows/auto-sync-breaking-news-flow';
 
 export const dynamic = 'force-dynamic'; // Prevent caching
 
 export async function GET() {
   try {
-    const result = await autoSyncBreakingNewsFlow();
+    const result = await runAutoSyncBreakingNewsFlow();
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Error running auto-sync breaking news flow:', error);

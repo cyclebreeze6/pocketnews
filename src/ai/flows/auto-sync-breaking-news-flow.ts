@@ -8,14 +8,14 @@ import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 
-export const AutoSyncResultSchema = z.object({
+const AutoSyncResultSchema = z.object({
   newVideosAdded: z.number().describe("The total number of new videos added as Breaking News."),
   syncedChannels: z.number().describe("The number of channels that were processed."),
   errors: z.array(z.string()).optional().describe('A list of errors encountered during the sync process.'),
 });
 export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
 
-export const autoSyncBreakingNewsFlow = ai.defineFlow(
+const autoSyncBreakingNewsFlow = ai.defineFlow(
   {
     name: 'autoSyncBreakingNewsFlow',
     outputSchema: AutoSyncResultSchema,
@@ -76,3 +76,8 @@ export const autoSyncBreakingNewsFlow = ai.defineFlow(
     };
   }
 );
+
+
+export async function runAutoSyncBreakingNewsFlow(): Promise<AutoSyncResult> {
+  return autoSyncBreakingNewsFlow();
+}
