@@ -93,11 +93,18 @@ service cloud.firestore {
     // Admin & System Collections
     // --------------------------------
     match /roles_admin/{userId} {
-      // The existence of a document here grants admin privileges.
+      // A user must be able to check for the existence of their own admin role doc
+      // for the isAdmin() helper to work correctly. Admins can get any role doc.
       allow get: if isOwner(userId) || isAdmin();
+
+      // Only admins should be able to see the list of all admins.
       allow list: if isAdmin();
-      allow update, delete: if isAdmin();
+      
+      // Admins can create, update, or delete roles.
+      // A user can also create their own role document if they are a designated admin email.
+      // This is for bootstrapping the first admin.
       allow create: if isAdmin() || (isOwner(userId) && (request.auth.token.email == 'valentinoboss18@gmail.com' || request.auth.token.email == 'emmachukwunonye54@gmail.com'));
+      allow update, delete: if isAdmin();
     }
 
     match /reports/{reportId} {
