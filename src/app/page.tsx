@@ -144,14 +144,17 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const breakingNewsQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'videos'), where('contentCategory', '==', 'Breaking News'), orderBy('createdAt', 'desc'), limit(5));
+    // REMOVED orderBy to prevent requiring a composite index which causes permission errors if missing.
+    // The useMemo for `videos` below will handle sorting.
+    return query(collection(firestore, 'videos'), where('contentCategory', '==', 'Breaking News'), limit(5));
   }, [firestore]);
   const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    // TEMPORARY FIX: Revert to a simple query to avoid permission errors.
+    // This is now a simple query that should not cause permission errors.
     const baseQuery = collection(firestore, 'videos');
-    return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
+    // REMOVED orderBy to prevent requiring a composite index. Sorting is handled client-side.
+    return query(baseQuery, limit(20));
   }, [firestore]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
@@ -168,7 +171,7 @@ export default function Home() {
     // Remove duplicates, giving priority to the version from breaking news (which comes first)
     const uniqueVideos = Array.from(new Map(combined.map(v => [v.id, v])).values());
     
-    // Sort all videos by creation date
+    // Sort all videos by creation date, since we removed it from the query
     return uniqueVideos.sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
   }, [videosFromHook, breakingNewsVideos]);
 
