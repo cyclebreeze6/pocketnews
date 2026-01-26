@@ -2,31 +2,32 @@
 'use server';
 
 import { google, youtube_v3 } from 'googleapis';
-import { getActiveApiKey, rotateApiKey } from '../app/actions/api-key-actions';
-
-// This is the new, more robust implementation of the YouTube client with API key rotation.
+import { getApiKeys } from '../app/actions/api-key-actions';
 
 /**
  * Executes a YouTube API request with automatic API key rotation on quota errors.
  *
  * @param apiCall - A function that takes a fresh YouTube API client and executes the desired call.
- * @param retries - The number of remaining retries, which should be the number of available API keys.
+ * @param keys - An array of API keys to try.
+ * @param keyIndex - The index of the current key to use from the array.
  * @returns The result of the API call.
  * @throws An error if all API keys are exhausted or a non-quota error occurs.
  */
 async function executeWithRotation(
     apiCall: (youtubeClient: youtube_v3.Youtube) => Promise<any>,
-    retries: number
+    keys: string[],
+    keyIndex: number
 ): Promise<any> {
-    const apiKey = await getActiveApiKey();
-    if (!apiKey) {
-        throw new Error('No YouTube API Key is configured. Please add one in Admin > Settings > API Keys.');
-    }
-    
-    if (retries < 0) {
+    if (keyIndex >= keys.length) {
         throw new Error('All available YouTube API keys have exceeded their quota.');
     }
 
+    const apiKey = keys[keyIndex];
+    if (!apiKey) {
+         // This case should ideally not be hit if the keys array is filtered for empty strings.
+        throw new Error('Encountered an empty API key.');
+    }
+    
     // Create a new client for each attempt with the current active key.
     const youtubeClient = google.youtube({
         version: 'v3',
@@ -38,14 +39,12 @@ async function executeWithRotation(
         return await apiCall(youtubeClient);
     } catch (error: any) {
         // Check if the error is a quota error.
-        const isQuotaError = error.errors?.some((e: any) => e.reason === 'quotaExceeded') || error.message.includes('quota');
+        const isQuotaError = error.errors?.some((e: any) => e.reason === 'quotaExceeded') || (error.message && error.message.includes('quota'));
 
         if (isQuotaError) {
-            console.warn(`[YouTube Client] Quota exceeded for API key. Rotating to the next key...`);
-            // Rotate to the next key.
-            await rotateApiKey();
-            // Retry the call with the new key and one less retry attempt.
-            return executeWithRotation(apiCall, retries - 1);
+            console.warn(`[YouTube Client] Quota exceeded for API key at index ${keyIndex}. Rotating to the next key...`);
+            // Retry the call with the next key.
+            return executeWithRotation(apiCall, keys, keyIndex + 1);
         } else {
             // If it's not a quota error, re-throw it immediately.
             console.error('[YouTube Client] A non-quota API error occurred:', error.message);
@@ -64,36 +63,29 @@ async function executeWithRotation(
  * @returns A YouTube client-like object.
  */
 export async function getYoutubeClient() {
-    const keysString = await getApiKeysAsString();
-    const keys = keysString.split(',').filter(Boolean);
-    const initialRetries = keys.length > 0 ? keys.length -1 : 0;
+    const keys = await getApiKeys();
+    if (!keys || keys.length === 0) {
+        throw new Error('No YouTube API Key is configured. Please add one in Admin > Settings.');
+    }
 
     // This object mimics the structure of the googleapis youtube client.
     // Each function we need is wrapped with the rotation logic.
     return {
         search: {
             list: (params: youtube_v3.Params$Resource$Search$List) => 
-                executeWithRotation(client => client.search.list(params), initialRetries)
+                executeWithRotation(client => client.search.list(params), keys, 0)
         },
         channels: {
             list: (params: youtube_v3.Params$Resource$Channels$List) => 
-                executeWithRotation(client => client.channels.list(params), initialRetries)
+                executeWithRotation(client => client.channels.list(params), keys, 0)
         },
         playlistItems: {
             list: (params: youtube_v3.Params$Resource$Playlistitems$List) =>
-                executeWithRotation(client => client.playlistItems.list(params), initialRetries)
+                executeWithRotation(client => client.playlistItems.list(params), keys, 0)
         },
         videos: {
             list: (params: youtube_v3.Params$Resource$Videos$List) =>
-                executeWithRotation(client => client.videos.list(params), initialRetries)
+                executeWithRotation(client => client.videos.list(params), keys, 0)
         }
     };
-}
-
-
-// A helper to get keys from the environment variable. This is needed because
-// we can't call server actions directly from this file if they are not async.
-// Since getApiKeys() is a server action now, we'll make a small helper.
-async function getApiKeysAsString(): Promise<string> {
-    return process.env.YOUTUBE_API_KEYS || '';
 }

@@ -9,26 +9,24 @@ import { Loader2, KeyRound } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../../../../components/ui/alert';
 
 export default function AdminApiKeysPage() {
-  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchKey = async () => {
+  const fetchKeys = async () => {
     setIsLoading(true);
     try {
       const keys = await getApiKeys();
-      if (keys.length > 0) {
-        setApiKey(keys[0]);
-      }
+      setApiKeys(keys);
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Could not load API key.' });
+      toast({ variant: 'destructive', title: 'Could not load API keys.' });
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchKey();
+    fetchKeys();
   }, []);
 
   const maskApiKey = (key: string) => {
@@ -41,32 +39,36 @@ export default function AdminApiKeysPage() {
       <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">API Key Management</h1>
       
       <Alert variant="default" className="mb-8 max-w-4xl">
-        <AlertTitle>Hardcoded API Key</AlertTitle>
+        <AlertTitle>Hardcoded API Keys with Automatic Rotation</AlertTitle>
         <AlertDescription>
-          The YouTube Data API key is currently hardcoded to prevent it from being lost between server sessions. To change it, the source code must be edited directly.
+          The YouTube Data API keys are hardcoded for persistence and will automatically rotate if one key's quota is exhausted. To change them, the source code must be edited directly.
         </AlertDescription>
       </Alert>
 
       <Card className="max-w-4xl">
         <CardHeader>
-          <CardTitle>Active API Key</CardTitle>
+          <CardTitle>Active API Keys</CardTitle>
           <CardDescription>
-            This is the YouTube Data API v3 key being used for all requests.
+            These are the YouTube Data API v3 keys being used for all requests, in order of preference.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
              <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Loading key...</span>
+                <span>Loading keys...</span>
              </div>
-          ) : apiKey ? (
-            <div className="flex items-center space-x-2">
-                <KeyRound className="h-5 w-5 text-muted-foreground" />
-                <span className="font-mono text-sm p-2 border rounded-md bg-muted">{maskApiKey(apiKey)}</span>
+          ) : apiKeys.length > 0 ? (
+            <div className="flex flex-col space-y-2">
+              {apiKeys.map((key, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                    <KeyRound className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-mono text-sm p-2 border rounded-md bg-muted">{maskApiKey(key)}</span>
+                </div>
+              ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No API key is configured.</p>
+            <p className="text-sm text-muted-foreground">No API keys are configured.</p>
           )}
         </CardContent>
       </Card>
