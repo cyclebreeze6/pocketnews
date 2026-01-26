@@ -13,36 +13,44 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    function isCreatorOrAdmin() {
+      // Allow read of own user document to check for roles
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isCreator == true 
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
 
     // --------------------------------
     // Public Content Collections
     // --------------------------------
     match /channels/{channelId} {
       allow get, list: if true;
-      allow write: if isSignedIn(); // Simplified for debugging
+      allow write: if isCreatorOrAdmin();
     }
     match /videos/{videoId} {
       allow get, list: if true;
-      allow write: if isSignedIn(); // Simplified for debugging
+      allow write: if isCreatorOrAdmin();
     }
     match /shorts/{shortId} {
       allow get, list: if true;
-      allow write: if isSignedIn(); // Simplified for debugging
+      allow write: if isCreatorOrAdmin();
     }
     match /categories/{categoryId} {
       allow get, list: if true;
-      allow write: if isSignedIn(); // Simplified for debugging
+      allow write: if isCreatorOrAdmin();
     }
 
     // --------------------------------
     // User-specific Collections
     // --------------------------------
     match /users/{userId} {
-      // A user can always manage their own document.
-      allow get, create, update, delete: if isOwner(userId);
+      // A user can always get their own document (needed for role checks).
+      allow get: if isOwner(userId);
+      // A user can create, update, and delete their own document.
+      allow create, update, delete: if isOwner(userId);
       
-      // Allow any signed-in user to list users for now to avoid read errors.
-      allow list: if isSignedIn();
+      // Allow admins to list users.
+      allow list: if isCreatorOrAdmin();
 
       // Subcollections are private to the owner.
       match /history/{docId}        { allow read, write, delete: if isOwner(userId); }
@@ -55,7 +63,7 @@ service cloud.firestore {
     // --------------------------------
     match /reports/{reportId} {
       allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn(); // Simplified for debugging
+      allow read, update, delete: if isCreatorOrAdmin();
     }
     
     match /email_queue/{emailId} {
