@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '../../../components/ui/button';
@@ -17,7 +16,7 @@ import {
 } from '../../../components/ui/dropdown-menu';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '../../../hooks/use-toast';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
@@ -51,6 +50,9 @@ export default function AdminChannelsPage() {
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingInfo, setIsFetchingInfo] = useState(false);
+
+  const [languageFilter, setLanguageFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingChannelId, setSyncingChannelId] = useState<string | null>(null);
@@ -212,6 +214,15 @@ export default function AdminChannelsPage() {
     setIsSyncDialogOpen(false); // Close the dialog after initiating import
   };
 
+  const filteredChannels = useMemo(() => {
+    if (!channels) return [];
+    return channels.filter(channel => {
+      const languageMatch = !languageFilter || channel.language === languageFilter;
+      const regionMatch = !regionFilter || (Array.isArray(channel.region) ? channel.region.includes(regionFilter) : channel.region === regionFilter);
+      return languageMatch && regionMatch;
+    });
+  }, [channels, languageFilter, regionFilter]);
+
 
   return (
     <div>
@@ -328,7 +339,37 @@ export default function AdminChannelsPage() {
       </Card>
 
       <Card>
-        <CardContent className="mt-6">
+        <CardHeader>
+          <CardTitle>All Channels</CardTitle>
+          <CardDescription>View, filter, and manage all channels in the system.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="grid gap-2">
+                <Label htmlFor="language-filter">Language</Label>
+                <Select onValueChange={(value) => setLanguageFilter(value === 'all' ? '' : value)} value={languageFilter || 'all'}>
+                    <SelectTrigger id="language-filter" className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Languages</SelectItem>
+                        {LANGUAGES.map(lang => <SelectItem key={lang} value={lang}>{lang}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="region-filter">Region</Label>
+                  <Select onValueChange={(value) => setRegionFilter(value === 'all' ? '' : value)} value={regionFilter || 'all'}>
+                    <SelectTrigger id="region-filter" className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Regions</SelectItem>
+                        {REGIONS.map(region => <SelectItem key={region} value={region}>{region}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -344,7 +385,7 @@ export default function AdminChannelsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {channels?.map((channel) => (
+              {filteredChannels.map((channel) => (
                 <TableRow key={channel.id}>
                   <TableCell>
                      <Avatar>
