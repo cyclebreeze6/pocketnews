@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -52,17 +53,34 @@ export function PreferenceDialog({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (userProfile?.preferences) {
-      const regionPref = userProfile.preferences.region || [];
-      // Ensure region preference is always an array for state
-      setSelectedRegions(Array.isArray(regionPref) ? regionPref : [regionPref]);
-      
-      // Use proxy value for empty string from firestore
-      setSelectedLanguage(userProfile.preferences.language || 'all-languages');
-    } else {
-      // Default values if no preferences are set
-      setSelectedRegions([]);
-      setSelectedLanguage('all-languages');
+    if (open) {
+      if (userProfile?.preferencesSet && userProfile.preferences) {
+        const regionPref = userProfile.preferences.region || [];
+        setSelectedRegions(Array.isArray(regionPref) ? regionPref : [regionPref]);
+        setSelectedLanguage(userProfile.preferences.language || 'all-languages');
+      } else {
+        // Default values for new users
+        setSelectedRegions(['Global']);
+
+        // Suggest language based on browser settings
+        const langMap: { [key: string]: string } = {
+          en: 'English',
+          fr: 'French',
+          ar: 'Arabic',
+          es: 'Spanish',
+          pt: 'Portuguese',
+          sw: 'Swahili',
+          de: 'German',
+        };
+        const browserLangCode = navigator.language.split('-')[0];
+        const suggestedLanguage = langMap[browserLangCode];
+
+        if (suggestedLanguage && LANGUAGES.includes(suggestedLanguage)) {
+          setSelectedLanguage(suggestedLanguage);
+        } else {
+          setSelectedLanguage('all-languages');
+        }
+      }
     }
   }, [userProfile, open]);
 
