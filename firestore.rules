@@ -15,81 +15,55 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Admin role is determined by the `isAdmin` flag on the user's own profile document.
+    // This function is safe to call because any signed-in user
+    // is explicitly allowed to `get` their own user document.
     function isAdmin() {
-      // This is safe because the rule for /users/{userId} explicitly allows a user to read their own document.
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
     
-    // Creator role is determined by a boolean flag on the user's profile.
     function isCreator() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isCreator == true;
     }
     
     function canWriteContent() {
-        // Only admins or creators can write content.
         return isAdmin() || isCreator();
     }
 
     // --------------------------------
     // Public Content Collections
     // --------------------------------
-    match /channels/{channelId} {
-      allow get, list: if true;
-      allow write: if canWriteContent();
-    }
-
-    match /videos/{videoId} {
-      allow get, list: if true;
-      allow write: if canWriteContent();
-    }
-    
-    match /shorts/{shortId} {
-      allow get, list: if true;
-      allow write: if canWriteContent();
-    }
-
-    match /categories/{categoryId} {
-      allow get, list: if true;
-      allow write: if isAdmin();
-    }
+    match /channels/{channelId}   { allow read: if true; allow write: if canWriteContent(); }
+    match /videos/{videoId}       { allow read: if true; allow write: if canWriteContent(); }
+    match /shorts/{shortId}       { allow read: if true; allow write: if canWriteContent(); }
+    match /categories/{categoryId}{ allow read: if true; allow write: if isAdmin(); }
 
     // --------------------------------
     // User-specific Collections
     // --------------------------------
     match /users/{userId} {
-      // A user can create their own profile document.
-      allow create: if isOwner(userId);
+      // A user can ALWAYS get their own document. This is critical to making isAdmin() safe.
+      allow get, create, update, delete: if isOwner(userId);
       
-      // A user can always read, update, and delete their own profile.
-      // This explicit rule for owners is critical to prevent a recursive loop in the isAdmin() function.
-      allow get, update, delete: if isOwner(userId);
-      
-      // An admin can read, list, update, and delete any user's profile.
-      allow get, list, update, delete: if isAdmin();
+      // An admin can list users for the admin panel. This is a separate rule.
+      allow list: if isAdmin();
 
-      // Subcollections for a user are only accessible by that user.
-      match /history/{docId} {
-         allow read, write, delete: if isOwner(userId);
-      }
-      match /fcmTokens/{tokenId} {
-        allow read, write, delete: if isOwner(userId);
-      }
-      match /collections/{collectionId} {
-        allow read, write, delete: if isOwner(userId);
-      }
+      // Subcollections are private to the owner.
+      match /history/{docId}        { allow read, write, delete: if isOwner(userId); }
+      match /fcmTokens/{tokenId}    { allow read, write, delete: if isOwner(userId); }
+      match /collections/{collectionId} { allow read, write, delete: if isOwner(userId); }
     }
     
     // --------------------------------
     // Admin & System Collections
     // --------------------------------
     match /reports/{reportId} {
-      allow get, list: if isAdmin();
+      allow read: if isAdmin(); // read = get + list
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
     
     match /email_queue/{emailId} {
+      // Only backend processes can access this collection.
       allow read, write: if false;
     }
   }
