@@ -175,8 +175,14 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
               {user && !user.isAnonymous && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" className="relative">
                         <Globe className="h-5 w-5" />
+                        {userProfile && !userProfile.preferencesSet && (
+                            <span className="absolute top-1 right-1 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                            </span>
+                        )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80">
@@ -190,10 +196,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                           </div>
                           <Button onClick={() => setIsPreferenceDialogOpen(true)} className="relative">
                             Edit Preferences
-                            <span className="absolute top-0 right-0 -mr-1 -mt-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-                            </span>
                           </Button>
                       </div>
                   </PopoverContent>
