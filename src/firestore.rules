@@ -14,10 +14,17 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+    
+    function isCreator() {
+      // A get on one's own user document is permitted.
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isCreator', false) == true;
+    }
+
     function isCreatorOrAdmin() {
-      // Allow read of own user document to check for roles
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isCreator == true 
-          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return isCreator() || isAdmin();
     }
 
     // --------------------------------
@@ -44,13 +51,13 @@ service cloud.firestore {
     // User-specific Collections
     // --------------------------------
     match /users/{userId} {
-      // A user can always get their own document (needed for role checks).
-      allow get: if isOwner(userId) || isCreatorOrAdmin();
+      // Admins can get any user's profile. Others can only get their own.
+      allow get: if isOwner(userId) || isAdmin();
       // A user can create, update, and delete their own document.
       allow create, update, delete: if isOwner(userId);
       
       // Allow admins to list users.
-      allow list: if isCreatorOrAdmin();
+      allow list: if isAdmin();
 
       // Subcollections are private to the owner.
       match /history/{docId}        { allow read, write, delete: if isOwner(userId); }
@@ -66,6 +73,12 @@ service cloud.firestore {
       allow read, update, delete: if isCreatorOrAdmin();
     }
     
+    match /roles_admin/{userId} {
+      // Only admins can modify roles. Users can read their own role doc.
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
     match /email_queue/{emailId} {
       // Only backend processes can access this collection.
       allow read, write: if false;

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -68,39 +69,53 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 const ensureUserDocument = async (firestore: Firestore, user: User) => {
   if (!user) return;
   const userRef = doc(firestore, 'users', user.uid);
+  const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
   
   try {
-    const docSnap = await getDoc(userRef);
+    const userDocSnap = await getDoc(userRef);
     const isDesignatedAdmin = user.email === 'valentinoboss18@gmail.com' || user.email === 'emmachukwunonye54@gmail.com';
 
-    if (!docSnap.exists()) {
+    const batch = writeBatch(firestore);
+    let needsCommit = false;
+
+    if (!userDocSnap.exists()) {
       // Document doesn't exist, so create it.
       const newUserProfile: UserProfile = {
         id: user.uid,
         email: user.email || '',
         displayName: user.displayName || 'Anonymous User',
-        isAdmin: isDesignatedAdmin, // Grant admin status if they are the designated user
-        isCreator: isDesignatedAdmin, // Also make them a creator
+        isAdmin: isDesignatedAdmin,
+        isCreator: isDesignatedAdmin,
         avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
         preferencesSet: false,
       };
-      
-      // Use setDoc here to ensure the document exists before proceeding.
-      await setDoc(userRef, newUserProfile, { merge: true });
-      
+      batch.set(userRef, newUserProfile);
+      if (isDesignatedAdmin) {
+        batch.set(adminRoleRef, { createdAt: serverTimestamp() });
+      }
+      needsCommit = true;
     } else {
-        // Document exists. Check if they should be an admin but aren't yet.
-        const userProfile = docSnap.data() as UserProfile;
-        if (isDesignatedAdmin && (!userProfile.isAdmin || !userProfile.isCreator)) {
-            // Update the existing document to grant admin/creator roles
-            await setDoc(userRef, { isAdmin: true, isCreator: true }, { merge: true });
+      // Document exists. Check if they should be an admin but aren't yet.
+      const userProfile = userDocSnap.data() as UserProfile;
+      if (isDesignatedAdmin && (!userProfile.isAdmin || !userProfile.isCreator)) {
+        const adminRoleDoc = await getDoc(adminRoleRef);
+        batch.update(userRef, { isAdmin: true, isCreator: true });
+        if (!adminRoleDoc.exists()) {
+          batch.set(adminRoleRef, { createdAt: serverTimestamp() });
         }
+        needsCommit = true;
+      }
     }
+
+    if (needsCommit) {
+      await batch.commit();
+    }
+
   } catch (error) {
     console.error("Error ensuring user document:", error);
-    // Handle or log the error appropriately
   }
 };
+
 
 
 /**

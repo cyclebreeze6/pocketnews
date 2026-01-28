@@ -33,11 +33,28 @@ export default function AdminUsersPage() {
     const userRef = doc(firestore, 'users', user.id);
     const newStatus = !user[role];
 
-    setDocumentNonBlocking(userRef, { [role]: newStatus }, { merge: true });
-    
-    toast({
-        title: `${role === 'isAdmin' ? 'Admin' : 'Creator'} role updated`,
-        description: `${user.displayName} is now ${newStatus ? `an ${role === 'isAdmin' ? 'admin' : 'a creator'}` : `not an ${role === 'isAdmin' ? 'admin' : 'a creator'}`}.`,
+    const batch = writeBatch(firestore);
+    batch.update(userRef, { [role]: newStatus });
+
+    // Also update the /roles_admin collection for DBAC
+    if (role === 'isAdmin') {
+        const adminRoleRef = doc(firestore, 'roles_admin', user.id);
+        if (newStatus) {
+            batch.set(adminRoleRef, { email: user.email });
+        } else {
+            batch.delete(adminRoleRef);
+        }
+    }
+
+    // Commit the batch and show toast notifications
+    batch.commit().then(() => {
+        toast({
+            title: `${role === 'isAdmin' ? 'Admin' : 'Creator'} role updated`,
+            description: `${user.displayName} is now ${newStatus ? `an ${role === 'isAdmin' ? 'admin' : 'a creator'}` : `not an ${role === 'isAdmin' ? 'admin' : 'a creator'}`}.`,
+        });
+    }).catch(error => {
+        console.error("Error updating role: ", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not update user role."});
     });
   };
 
@@ -83,7 +100,13 @@ export default function AdminUsersPage() {
       }
 
       const userRef = doc(firestore, 'users', userToPromote.id);
-      await setDoc(userRef, { isAdmin: true }, { merge: true });
+      const adminRoleRef = doc(firestore, 'roles_admin', userToPromote.id);
+      
+      const batch = writeBatch(firestore);
+      batch.update(userRef, { isAdmin: true });
+      batch.set(adminRoleRef, { email: userToPromote.email });
+      await batch.commit();
+
 
       toast({
         title: 'User Promoted!',
