@@ -45,7 +45,7 @@ service cloud.firestore {
     // --------------------------------
     match /users/{userId} {
       // A user can always get their own document (needed for role checks).
-      allow get: if isOwner(userId);
+      allow get: if isOwner(userId) || isCreatorOrAdmin();
       // A user can create, update, and delete their own document.
       allow create, update, delete: if isOwner(userId);
       
