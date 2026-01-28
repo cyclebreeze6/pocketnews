@@ -143,18 +143,97 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const breakingNewsQuery = useMemoFirebase(() => {
-    // REMOVED orderBy to prevent requiring a composite index which causes permission errors if missing.
-    // The useMemo for `videos` below will handle sorting.
-    return query(collection(firestore, 'videos'), where('contentCategory', '==', 'Breaking News'), limit(5));
-  }, [firestore]);
+    // If we don't have what we need, return null to wait.
+    if (isUserLoading || channelsLoading) return null;
+
+    let q = query(collection(firestore, 'videos'), where('contentCategory', '==', 'Breaking News'));
+    let hasChannelFilter = false;
+    
+    const prefs = userProfile?.preferences;
+    if (user && !user.isAnonymous && prefs && channels) {
+        let preferredChannelIds: string[] = [];
+        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
+        const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
+        const hasLangPref = prefs.language && prefs.language !== 'all-languages';
+
+        if (hasRegionPref || hasLangPref) {
+            let filteredChannels = [...channels];
+            if (hasRegionPref) {
+                filteredChannels = filteredChannels.filter(c => {
+                    if (!c.region) return false;
+                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+                    return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
+                });
+            }
+            if (hasLangPref) {
+                filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
+            }
+            preferredChannelIds = filteredChannels.map(c => c.id);
+            
+            if (preferredChannelIds.length === 0) {
+                 return query(q, where('id', '==', 'no-results-for-preference'));
+            }
+        }
+        
+        if (preferredChannelIds.length > 0) {
+            q = query(q, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            hasChannelFilter = true;
+        }
+    }
+    
+    if (!hasChannelFilter) {
+        q = query(q, orderBy('createdAt', 'desc'));
+    }
+
+    return query(q, limit(5));
+  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading]);
   const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    // This is now a simple query that should not cause permission errors.
-    const baseQuery = collection(firestore, 'videos');
-    // REMOVED orderBy to prevent requiring a composite index. Sorting is handled client-side.
-    return query(baseQuery, limit(20));
-  }, [firestore]);
+    // If we don't have what we need, return null to wait.
+    if (isUserLoading || channelsLoading) return null;
+
+    let q = query(collection(firestore, 'videos'));
+    let hasChannelFilter = false;
+    
+    const prefs = userProfile?.preferences;
+    if (user && !user.isAnonymous && prefs && channels) {
+        let preferredChannelIds: string[] = [];
+        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
+        const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
+        const hasLangPref = prefs.language && prefs.language !== 'all-languages';
+
+        if (hasRegionPref || hasLangPref) {
+            let filteredChannels = [...channels];
+            if (hasRegionPref) {
+                filteredChannels = filteredChannels.filter(c => {
+                    if (!c.region) return false;
+                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+                    return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
+                });
+            }
+            if (hasLangPref) {
+                filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
+            }
+            preferredChannelIds = filteredChannels.map(c => c.id);
+            
+            if (preferredChannelIds.length === 0) {
+                 return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
+            }
+        }
+        
+        if (preferredChannelIds.length > 0) {
+            q = query(q, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            hasChannelFilter = true;
+        }
+    }
+
+    if (!hasChannelFilter) {
+         q = query(q, orderBy('createdAt', 'desc'));
+    }
+
+    return query(q, limit(20));
+  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
