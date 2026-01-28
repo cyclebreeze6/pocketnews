@@ -74,8 +74,10 @@ service cloud.firestore {
     }
     
     match /roles_admin/{userId} {
-      // Only admins can modify roles. Users can read their own role doc.
-      allow read: if isOwner(userId) || isAdmin();
+      // An authenticated user can check their own admin status. Admins can list all admins.
+      allow get: if isOwner(userId);
+      allow list: if isAdmin();
+      // Only admins can modify roles.
       allow write: if isAdmin();
     }
 
