@@ -19,7 +19,7 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) || isDesignatedAdmin(request.auth.token.email);
     }
     
     function isCreator() {
