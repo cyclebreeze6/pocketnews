@@ -143,11 +143,11 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const breakingNewsQuery = useMemoFirebase(() => {
-    if (isUserLoading || channelsLoading) return null;
+    if (isUserLoading || isProfileLoading || channelsLoading) return null;
     const prefs = userProfile?.preferences;
     
     // For logged-in, non-anonymous users with preferences
-    if (user && !user.isAnonymous && prefs && channels) {
+    if (user && !user.isAnonymous && userProfile?.preferencesSet && channels) {
         let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
         const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
@@ -187,16 +187,16 @@ export default function Home() {
         where('contentCategory', '==', 'Breaking News'),
         limit(10)
     );
-  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading]);
+  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading]);
 
   const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || channelsLoading) return null;
+    if (isUserLoading || isProfileLoading || channelsLoading) return null;
     const prefs = userProfile?.preferences;
 
     // For logged-in, non-anonymous users with preferences
-    if (user && !user.isAnonymous && prefs && channels) {
+    if (user && !user.isAnonymous && userProfile?.preferencesSet && channels) {
         let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
         const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
@@ -234,7 +234,7 @@ export default function Home() {
         orderBy('createdAt', 'desc'), 
         limit(20)
     );
-  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading]);
+  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
