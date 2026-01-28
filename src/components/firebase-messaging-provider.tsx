@@ -21,7 +21,7 @@ export function FirebaseMessagingProvider() {
 
   useEffect(() => {
     // This effect runs only on the client.
-    const audioInstance = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_221a7a3e75.mp3');
+    const audioInstance = new Audio('https://cdn.pixabay.com/audio/2022/10/13/audio_a1932f8c5b.mp3');
     audioInstance.preload = 'auto';
     setAudio(audioInstance);
   }, []);

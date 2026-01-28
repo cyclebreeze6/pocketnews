@@ -143,21 +143,17 @@ export default function Home() {
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
   
   const breakingNewsQuery = useMemoFirebase(() => {
-    // If we don't have what we need, return null to wait.
     if (isUserLoading || channelsLoading) return null;
-
-    let q = query(collection(firestore, 'videos'), where('contentCategory', '==', 'Breaking News'));
-    let hasChannelFilter = false;
-    
     const prefs = userProfile?.preferences;
+    
+    // For logged-in, non-anonymous users with preferences
     if (user && !user.isAnonymous && prefs && channels) {
-        let preferredChannelIds: string[] = [];
+        let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
         const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
         const hasLangPref = prefs.language && prefs.language !== 'all-languages';
 
         if (hasRegionPref || hasLangPref) {
-            let filteredChannels = [...channels];
             if (hasRegionPref) {
                 filteredChannels = filteredChannels.filter(c => {
                     if (!c.region) return false;
@@ -168,43 +164,45 @@ export default function Home() {
             if (hasLangPref) {
                 filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
             }
-            preferredChannelIds = filteredChannels.map(c => c.id);
-            
-            if (preferredChannelIds.length === 0) {
-                 return query(q, where('id', '==', 'no-results-for-preference'));
-            }
+        }
+
+        const preferredChannelIds = filteredChannels.map(c => c.id);
+
+        if (preferredChannelIds.length === 0) {
+            return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
         }
         
-        if (preferredChannelIds.length > 0) {
-            q = query(q, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
-            hasChannelFilter = true;
-        }
+        return query(
+            collection(firestore, 'videos'), 
+            where('contentCategory', '==', 'Breaking News'), 
+            where('channelId', 'in', preferredChannelIds.slice(0, 30)),
+            limit(10)
+        );
     }
     
-    if (!hasChannelFilter) {
-        q = query(q, orderBy('createdAt', 'desc'));
-    }
-
-    return query(q, limit(5));
+    // For anonymous users or users without preferences.
+    // This query is safe as it only filters on one field. Sorting is handled client-side.
+    return query(
+        collection(firestore, 'videos'),
+        where('contentCategory', '==', 'Breaking News'),
+        limit(10)
+    );
   }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading]);
+
   const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    // If we don't have what we need, return null to wait.
     if (isUserLoading || channelsLoading) return null;
-
-    let q = query(collection(firestore, 'videos'));
-    let hasChannelFilter = false;
-    
     const prefs = userProfile?.preferences;
+
+    // For logged-in, non-anonymous users with preferences
     if (user && !user.isAnonymous && prefs && channels) {
-        let preferredChannelIds: string[] = [];
+        let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
         const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
         const hasLangPref = prefs.language && prefs.language !== 'all-languages';
 
         if (hasRegionPref || hasLangPref) {
-            let filteredChannels = [...channels];
             if (hasRegionPref) {
                 filteredChannels = filteredChannels.filter(c => {
                     if (!c.region) return false;
@@ -215,24 +213,27 @@ export default function Home() {
             if (hasLangPref) {
                 filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
             }
-            preferredChannelIds = filteredChannels.map(c => c.id);
-            
-            if (preferredChannelIds.length === 0) {
-                 return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
-            }
         }
         
-        if (preferredChannelIds.length > 0) {
-            q = query(q, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
-            hasChannelFilter = true;
+        const preferredChannelIds = filteredChannels.map(c => c.id);
+
+        if (preferredChannelIds.length === 0) {
+             return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
         }
+        
+        return query(
+            collection(firestore, 'videos'), 
+            where('channelId', 'in', preferredChannelIds.slice(0, 30)),
+            limit(20)
+        );
     }
 
-    if (!hasChannelFilter) {
-         q = query(q, orderBy('createdAt', 'desc'));
-    }
-
-    return query(q, limit(20));
+    // For anonymous users or users without preferences. This is a safe query.
+    return query(
+        collection(firestore, 'videos'), 
+        orderBy('createdAt', 'desc'), 
+        limit(20)
+    );
   }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
@@ -240,16 +241,13 @@ export default function Home() {
   const videos = useMemo(() => {
     if (!videosFromHook && !breakingNewsVideos) return null;
     
-    // Combine breaking news and the regular feed
     const combined = [
         ...(breakingNewsVideos || []),
         ...(videosFromHook || [])
     ];
 
-    // Remove duplicates, giving priority to the version from breaking news (which comes first)
     const uniqueVideos = Array.from(new Map(combined.map(v => [v.id, v])).values());
     
-    // Sort all videos by creation date, since we removed it from the query
     return uniqueVideos.sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
   }, [videosFromHook, breakingNewsVideos]);
 
@@ -275,11 +273,9 @@ export default function Home() {
 
         const playerTop = container.getBoundingClientRect().top;
         
-        // Stick when the player's top edge scrolls up to the header's height
         if (playerTop <= HEADER_HEIGHT && !isPlayerSticky) {
             setIsPlayerSticky(true);
         } else if (playerTop > HEADER_HEIGHT && isPlayerSticky) {
-            // Unstick when it's scrolled back down below the header height
              setIsPlayerSticky(false);
         }
     };
@@ -317,9 +313,7 @@ export default function Home() {
         }
       }
 
-      // Shuffle the top 5 videos for display
       const top5 = [...videos.slice(0, 5)];
-      // Fisher-Yates shuffle algorithm
       for (let i = top5.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [top5[i], top5[j]] = [top5[j], top5[i]];

@@ -11,7 +11,6 @@ import MobileNav from '../components/mobile-nav';
 export const metadata: Metadata = {
   title: 'Pocketnews TV',
   description: 'Your daily news, channelled.',
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
