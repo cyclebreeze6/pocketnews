@@ -14,6 +14,10 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
+    function isDesignatedAdmin(email) {
+      return email == 'valentinoboss18@gmail.com' || email == 'emmachukwunonye54@gmail.com';
+    }
+    
     function isAdmin() {
       return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
@@ -77,8 +81,8 @@ service cloud.firestore {
       // An authenticated user can check their own admin status. Admins can list all admins.
       allow get: if isOwner(userId);
       allow list: if isAdmin();
-      // Only admins can modify roles.
-      allow write: if isAdmin();
+      // Allow existing admins to write, or designated users to write to their OWN role doc.
+      allow write: if isAdmin() || (isOwner(userId) && isDesignatedAdmin(request.auth.token.email));
     }
 
     match /email_queue/{emailId} {
