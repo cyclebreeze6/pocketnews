@@ -125,6 +125,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
 
   const handleLogout = () => {
     auth.signOut();
+    router.push('/');
   };
   
   const regionDisplay = (() => {
