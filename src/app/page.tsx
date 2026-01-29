@@ -42,7 +42,6 @@ import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { PreferenceDialog } from '../components/preference-dialog';
-import { LocationConfirmationDialog } from '../components/location-confirmation-dialog';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -134,7 +133,6 @@ export default function Home() {
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
-  const [isLocationPromptOpen, setIsLocationPromptOpen] = useState(false);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
@@ -262,19 +260,6 @@ export default function Home() {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0; // The header is no longer sticky
-
-  useEffect(() => {
-    if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet) {
-        const FOUR_HOURS_IN_MS = 4 * 60 * 60 * 1000;
-        const lastLocationPrompt = localStorage.getItem('lastLocationPromptShown');
-        const lastShown = lastLocationPrompt ? parseInt(lastLocationPrompt, 10) : 0;
-
-        if (Date.now() - lastShown > FOUR_HOURS_IN_MS) {
-            setIsLocationPromptOpen(true);
-            localStorage.setItem('lastLocationPromptShown', Date.now().toString());
-        }
-    }
-  }, [user, userProfile]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -650,12 +635,6 @@ export default function Home() {
         Meet the #1 App to Stream News. Watch Free!
       </footer>
        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
-       {user && !user.isAnonymous && (
-         <LocationConfirmationDialog
-           open={isLocationPromptOpen}
-           onOpenChange={setIsLocationPromptOpen}
-         />
-       )}
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
           <DialogHeader>
