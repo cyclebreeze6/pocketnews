@@ -13,8 +13,8 @@ import { useState } from 'react';
 import { Loader2, MapPin } from 'lucide-react';
 import { getRegionFromLocation } from '../app/actions/get-region-from-location';
 import { useToast } from '../hooks/use-toast';
-import { useFirebase, updateDocumentNonBlocking } from '../firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 interface LocationConfirmationDialogProps {
   open: boolean;
@@ -53,7 +53,6 @@ export function LocationConfirmationDialog({ open, onOpenChange }: LocationConfi
     const userRef = doc(firestore, 'users', user.uid);
     
     try {
-        // We use updateDoc which is aliased to updateDocumentNonBlocking
         await updateDoc(userRef, {
             'preferences.region': [region],
             'preferencesSet': true
