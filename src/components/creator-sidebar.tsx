@@ -20,6 +20,7 @@ const navItems = [
   { href: '/creator/channels', label: 'Channels', icon: Tv },
   { href: '/creator/curate', label: 'Curate (Search)', icon: Search },
   { href: '/creator/bulk-import', label: 'Curate (Bulk)', icon: Archive },
+  { href: '/creator/shorts-bulk-import', label: 'Bulk Import (Shorts)', icon: Clapperboard },
   { href: '/creator/sync', label: 'Curate (Sync)', icon: RefreshCw },
 ];
 
