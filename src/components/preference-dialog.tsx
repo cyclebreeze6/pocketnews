@@ -11,26 +11,16 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from './ui/dropdown-menu';
 import { useState, useEffect } from 'react';
 import { useFirebase, updateDocumentNonBlocking } from '../firebase';
 import { doc } from 'firebase/firestore';
 import { LANGUAGES, REGIONS } from '../lib/constants';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Globe, Languages, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import type { UserProfile } from '../lib/types';
+import { cn } from '../lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+
 
 interface PreferenceDialogProps {
   open: boolean;
@@ -84,6 +74,18 @@ export function PreferenceDialog({
     }
   }, [userProfile, open]);
 
+  const handleRegionToggle = (region: string) => {
+    setSelectedRegions(prev => 
+        prev.includes(region)
+            ? prev.filter(r => r !== region)
+            : [...prev, region]
+    );
+  };
+
+  const handleLanguageSelect = (language: string) => {
+    setSelectedLanguage(language);
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     const userRef = doc(firestore, 'users', userId);
@@ -111,61 +113,81 @@ export function PreferenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Personalize Your Feed</DialogTitle>
           <DialogDescription>
             Choose the content you want to see. You can change this later.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-           <div className="grid gap-2">
-              <Label htmlFor="region-select">Filter by Region</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button id="region-select" variant="outline" className="w-full justify-start font-normal">
-                    <div className="line-clamp-1 text-left">
-                      {selectedRegions.length > 0 ? selectedRegions.join(', ') : 'Select regions...'}
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-64 max-h-60 overflow-y-auto" align="start">
-                  {REGIONS.map(region => (
-                    <DropdownMenuCheckboxItem
-                      key={region}
-                      checked={selectedRegions.includes(region)}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedRegions(prev => [...prev, region]);
-                        } else {
-                          setSelectedRegions(prev => prev.filter(r => r !== region));
-                        }
-                      }}
-                    >
-                      {region}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+        <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto pr-4">
+            <div>
+                <Label className="text-base font-semibold">Regions</Label>
+                <p className="text-sm text-muted-foreground mb-4">Select all that apply.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {REGIONS.map(region => (
+                        <div
+                            key={region}
+                            onClick={() => handleRegionToggle(region)}
+                            className={cn(
+                                "relative flex items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all aspect-square flex-col gap-2 text-center",
+                                selectedRegions.includes(region) ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                            )}
+                        >
+                            <Globe className="w-8 h-8 text-muted-foreground" />
+                            <span className="text-sm font-medium">{region}</span>
+                            {selectedRegions.includes(region) && (
+                                <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-0.5">
+                                    <Check className="w-3 h-3" />
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="language-select">Filter by Language</Label>
-              <Select onValueChange={setSelectedLanguage} value={selectedLanguage}>
-                <SelectTrigger id="language-select">
-                  <SelectValue placeholder="All Languages" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all-languages">All Languages</SelectItem>
-                  {LANGUAGES.map(lang => (
-                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+                <Label className="text-base font-semibold">Language</Label>
+                <p className="text-sm text-muted-foreground mb-4">Choose your preferred language.</p>
+                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <div
+                        key="all-languages"
+                        onClick={() => handleLanguageSelect('all-languages')}
+                        className={cn(
+                            "relative flex items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all aspect-square flex-col gap-2 text-center",
+                            selectedLanguage === 'all-languages' ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                        )}
+                    >
+                        <Languages className="w-8 h-8 text-muted-foreground" />
+                        <span className="text-sm font-medium">All Languages</span>
+                        {selectedLanguage === 'all-languages' && (
+                            <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-0.5">
+                                <Check className="w-3 h-3" />
+                            </div>
+                        )}
+                    </div>
+                    {LANGUAGES.map(lang => (
+                        <div
+                            key={lang}
+                            onClick={() => handleLanguageSelect(lang)}
+                            className={cn(
+                                "relative flex items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all aspect-square flex-col gap-2 text-center",
+                                selectedLanguage === lang ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                            )}
+                        >
+                            <Languages className="w-8 h-8 text-muted-foreground" />
+                            <span className="text-sm font-medium">{lang}</span>
+                            {selectedLanguage === lang && (
+                                <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-0.5">
+                                    <Check className="w-3 h-3" />
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
         <DialogFooter>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
+          <Button type="button" onClick={handleSave} disabled={isSaving || selectedRegions.length === 0}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save Preferences
           </Button>

@@ -262,7 +262,14 @@ export default function Home() {
 
   useEffect(() => {
     if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet) {
-      setIsPreferenceDialogOpen(true);
+        const FOUR_HOURS_IN_MS = 4 * 60 * 60 * 1000;
+        const lastShownString = localStorage.getItem('preferenceDialogLastShown');
+        const lastShown = lastShownString ? parseInt(lastShownString, 10) : 0;
+
+        if (Date.now() - lastShown > FOUR_HOURS_IN_MS) {
+            setIsPreferenceDialogOpen(true);
+            localStorage.setItem('preferenceDialogLastShown', Date.now().toString());
+        }
     }
   }, [user, userProfile]);
 
