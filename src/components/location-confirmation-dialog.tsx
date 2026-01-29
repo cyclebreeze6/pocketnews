@@ -53,9 +53,11 @@ export function LocationConfirmationDialog({ open, onOpenChange }: LocationConfi
     const userRef = doc(firestore, 'users', user.uid);
     
     try {
+        // The `preferences` object might not exist, so we set the whole object
+        // instead of using dot notation for a nested field.
         await updateDoc(userRef, {
-            'preferences.region': [region],
-            'preferencesSet': true
+            preferences: { region: [region] },
+            preferencesSet: true,
         });
         toast({
             title: 'Region preference saved!',
