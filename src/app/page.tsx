@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -41,6 +42,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { PreferenceDialog } from '../components/preference-dialog';
+import { LocationConfirmationDialog } from '../components/location-confirmation-dialog';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -132,6 +134,7 @@ export default function Home() {
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
+  const [isLocationPromptOpen, setIsLocationPromptOpen] = useState(false);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
@@ -263,12 +266,12 @@ export default function Home() {
   useEffect(() => {
     if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet) {
         const FOUR_HOURS_IN_MS = 4 * 60 * 60 * 1000;
-        const lastShownString = localStorage.getItem('preferenceDialogLastShown');
-        const lastShown = lastShownString ? parseInt(lastShownString, 10) : 0;
+        const lastLocationPrompt = localStorage.getItem('lastLocationPromptShown');
+        const lastShown = lastLocationPrompt ? parseInt(lastLocationPrompt, 10) : 0;
 
         if (Date.now() - lastShown > FOUR_HOURS_IN_MS) {
-            setIsPreferenceDialogOpen(true);
-            localStorage.setItem('preferenceDialogLastShown', Date.now().toString());
+            setIsLocationPromptOpen(true);
+            localStorage.setItem('lastLocationPromptShown', Date.now().toString());
         }
     }
   }, [user, userProfile]);
@@ -648,13 +651,11 @@ export default function Home() {
       </footer>
        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
        {user && !user.isAnonymous && (
-            <PreferenceDialog 
-                open={isPreferenceDialogOpen} 
-                onOpenChange={setIsPreferenceDialogOpen} 
-                userId={user.uid} 
-                userProfile={userProfile}
-            />
-        )}
+         <LocationConfirmationDialog
+           open={isLocationPromptOpen}
+           onOpenChange={setIsLocationPromptOpen}
+         />
+       )}
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
           <DialogHeader>
