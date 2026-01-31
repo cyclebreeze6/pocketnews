@@ -142,6 +142,12 @@ export default function Home() {
   
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
+
+  const latestVideoQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(1)),
+    [firestore]
+  );
+  const { data: latestVideoArr, isLoading: latestVideoLoading } = useCollection<Video>(latestVideoQuery);
   
   const breakingNewsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || channelsLoading) return null;
@@ -239,7 +245,7 @@ export default function Home() {
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
-  const videos = useMemo(() => {
+  const preferenceVideos = useMemo(() => {
     if (!videosFromHook && !breakingNewsVideos) return null;
     
     const combined = [
@@ -260,6 +266,8 @@ export default function Home() {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0; // The header is no longer sticky
+  
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || breakingNewsLoading || latestVideoLoading;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -280,7 +288,6 @@ export default function Home() {
 }, [isPlayerSticky, isMobile]);
 
   
-  
   useEffect(() => {
     if (!isUserLoading && !user) {
       initiateAnonymousSignIn(auth);
@@ -288,39 +295,51 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
 
   useEffect(() => {
-    if (videos && videos.length > 0) {
-      if (!currentVideo) {
-        const videoIdFromUrl = getVideoIdFromPath();
-        const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
-        if (videoToPlay) {
-          setCurrentVideo(videoToPlay);
-        } else if (videoIdFromUrl) {
-          const videoRef = doc(firestore, 'videos', videoIdFromUrl);
-          getDoc(videoRef).then(docSnap => {
-            if (docSnap.exists()) {
-              setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
-            } else {
-               setCurrentVideo(videos[0]);
-            }
-          });
-        } else {
-           setCurrentVideo(videos[0]);
-        }
-      }
+    const latestVideo = latestVideoArr?.[0];
+    let finalList: Video[] | null = null;
 
-      const top5 = [...videos.slice(0, 5)];
-      for (let i = top5.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [top5[i], top5[j]] = [top5[j], top5[i]];
-      }
-      const restOfVideos = videos.slice(5);
-      setDisplayedVideos([...top5, ...restOfVideos]);
-
-    } else if (videos && videos.length === 0) {
-      setCurrentVideo(null);
-      setDisplayedVideos([]);
+    if (latestVideo && preferenceVideos) {
+        finalList = [latestVideo, ...preferenceVideos.filter(v => v.id !== latestVideo.id)];
+    } else if (preferenceVideos) {
+        finalList = preferenceVideos;
+    } else if (latestVideo) {
+        finalList = [latestVideo];
     }
-  }, [videos, currentVideo, firestore]);
+    
+    if (finalList) {
+        setDisplayedVideos(finalList);
+        
+        if (!currentVideo) {
+            const videoIdFromUrl = getVideoIdFromPath();
+            const videoFromUrlInList = videoIdFromUrl ? finalList.find(v => v.id === videoIdFromUrl) : null;
+            
+            if (videoFromUrlInList) {
+                setCurrentVideo(videoFromUrlInList);
+            } else if (videoIdFromUrl) {
+                // Video from URL isn't in our loaded list, fetch it directly
+                const videoRef = doc(firestore, 'videos', videoIdFromUrl);
+                getDoc(videoRef).then(docSnap => {
+                    if (docSnap.exists()) {
+                        const fetchedVideo = { id: docSnap.id, ...docSnap.data() } as Video;
+                        setCurrentVideo(fetchedVideo);
+                        // Prepend it to displayed videos if not already there
+                        setDisplayedVideos(current => current?.find(v => v.id === fetchedVideo.id) ? current : [fetchedVideo, ...(current || [])]);
+                    } else {
+                        // Fallback if deep-linked video doesn't exist
+                        setCurrentVideo(finalList?.[0] || null);
+                    }
+                });
+            } else {
+                // Default case: no URL, just load the first video
+                setCurrentVideo(finalList[0] || null);
+            }
+        }
+    } else if (!isLoading) { // Ensure we don't clear state while loading
+        setDisplayedVideos([]);
+        setCurrentVideo(null);
+    }
+  }, [preferenceVideos, latestVideoArr, currentVideo, firestore, isLoading, isUserLoading]);
+
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
@@ -333,15 +352,15 @@ export default function Home() {
   
   useEffect(() => {
     const handlePopState = () => {
-       if (videos) {
+       if (displayedVideos) {
          const videoIdFromUrl = getVideoIdFromPath();
-         const videoToPlay = videoIdFromUrl ? videos.find(v => v.id === videoIdFromUrl) : videos[0];
-         setCurrentVideo(videoToPlay || videos[0]);
+         const videoToPlay = videoIdFromUrl ? displayedVideos.find(v => v.id === videoIdFromUrl) : displayedVideos[0];
+         setCurrentVideo(videoToPlay || displayedVideos[0]);
        }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [videos]);
+  }, [displayedVideos]);
 
 
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
@@ -406,13 +425,12 @@ export default function Home() {
     }
   };
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || breakingNewsLoading;
   
-  if (isLoading || !videos || !displayedVideos) {
+  if (isLoading || !displayedVideos) {
       return <HomepageSkeleton />;
   }
 
-  if (videos.length === 0) {
+  if (displayedVideos.length === 0) {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <SiteHeader />

@@ -69,10 +69,9 @@ export function FirebaseMessagingProvider() {
   }, [user, permissionStatus]);
   
   useEffect(() => {
-    // Show the preference dialog after a delay if preferences aren't set
-    // and the user hasn't opted out.
+    // Show the preference dialog after a delay if the user hasn't opted out.
     const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
-    if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet && hidePreferencePopup !== 'true') {
+    if (user && !user.isAnonymous && userProfile && hidePreferencePopup !== 'true') {
       const timer = setTimeout(() => {
         setIsPreferenceDialogOpen(true);
       }, 2000); // 2-second delay
