@@ -56,18 +56,46 @@ export function FirebaseMessagingProvider() {
   }, [user, permissionStatus]);
   
   useEffect(() => {
-    const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
-    if (hidePreferencePopup === 'true' || isUserLoading) {
+    // This effect should only run on the client after hydration
+    if (typeof window === 'undefined' || isUserLoading) {
       return;
     }
 
+    const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
+    if (hidePreferencePopup === 'true') {
+      return; // "Don't ask again" is set, so we stop here.
+    }
+
     const checkAndShowPopup = () => {
-      let shouldShow = false;
+      let prefsAreSet = false;
       if (user) {
         if (user.isAnonymous) {
-          const anonPrefs = localStorage.getItem('anonymousPreferences');
-          if (!anonPrefs) shouldShow = true;
-        } else if (!isProfileLoading && !userProfile?.preferencesSet) {
+          if (localStorage.getItem('anonymousPreferences')) {
+            prefsAreSet = true;
+          }
+        } else if (!isProfileLoading && userProfile?.preferencesSet) {
+          prefsAreSet = true;
+        }
+      }
+
+      let shouldShow = false;
+      if (!prefsAreSet) {
+        // If preferences have never been set, we should show the popup.
+        shouldShow = true;
+      } else {
+        // Preferences ARE set. Now check the 12-hour rule.
+        const lastSetTimestamp = localStorage.getItem('preferenceSetTimestamp');
+        if (lastSetTimestamp) {
+          const twelveHoursInMillis = 12 * 60 * 60 * 1000;
+          const timeSinceLastSet = new Date().getTime() - parseInt(lastSetTimestamp, 10);
+          if (timeSinceLastSet >= twelveHoursInMillis) {
+            // It's been more than 12 hours, so show it again.
+            shouldShow = true;
+          }
+        } else {
+          // Prefs are set, but there's no timestamp.
+          // This can happen for users who set prefs before this feature was added.
+          // Show it once to establish the timestamp.
           shouldShow = true;
         }
       }
@@ -80,9 +108,13 @@ export function FirebaseMessagingProvider() {
       }
     };
     
-    checkAndShowPopup();
+    // We must wait for profile loading to finish before making a decision for logged-in users.
+    if ((user && user.isAnonymous) || !isProfileLoading) {
+        checkAndShowPopup();
+    }
 
   }, [user, userProfile, isUserLoading, isProfileLoading]);
+
 
   const handleAllowNotifications = () => {
     requestPermission();

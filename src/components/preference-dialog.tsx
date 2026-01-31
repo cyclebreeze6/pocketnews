@@ -103,9 +103,13 @@ export function PreferenceDialog({
 
   const handleSave = async () => {
     setIsSaving(true);
+    
+    const now = new Date().getTime();
+    localStorage.setItem('preferenceSetTimestamp', now.toString());
     if (dontAskAgain) {
       localStorage.setItem('hidePreferencePopup', 'true');
     }
+
     const preferencesToSave = {
         region: selectedRegions,
         language: selectedLanguage === 'all-languages' ? '' : selectedLanguage,
