@@ -45,6 +45,7 @@ export function VideoPlayer({ youtubeId, videoUrl, onEnd, playing = true }: Vide
                     showinfo: 0,
                     rel: 0,
                     modestbranding: 1,
+                    origin: typeof window !== 'undefined' ? window.location.origin : '',
                 }
             },
             file: {

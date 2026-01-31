@@ -20,29 +20,15 @@ export function FirebaseMessagingProvider() {
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   const { toast } = useToast();
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-  useEffect(() => {
-    // This effect runs only on the client.
-    const audioInstance = new Audio('https://cdn.pixabay.com/audio/2022/10/13/audio_a1932f8c5b.mp3');
-    audioInstance.preload = 'auto';
-    setAudio(audioInstance);
-  }, []);
-
 
   useEffect(() => {
     if (typeof window !== 'undefined' && firebaseApp) {
       const messaging = getMessaging(firebaseApp);
       const unsubscribe = onMessage(messaging, (payload) => {
         console.log('Foreground message received.', payload);
-
-        // Play sound
-        if (audio) {
-          audio.play().catch(error => console.error("Error playing sound:", error));
-        }
 
         // Show a toast notification
         toast({
@@ -53,7 +39,7 @@ export function FirebaseMessagingProvider() {
 
       return () => unsubscribe();
     }
-  }, [firebaseApp, toast, audio]);
+  }, [firebaseApp, toast]);
 
 
   useEffect(() => {
@@ -71,11 +57,11 @@ export function FirebaseMessagingProvider() {
   useEffect(() => {
     // Show the preference dialog after a delay if the user hasn't opted out.
     const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
-    if (user && !user.isAnonymous && userProfile && hidePreferencePopup !== 'true') {
-      const timer = setTimeout(() => {
-        setIsPreferenceDialogOpen(true);
-      }, 2000); // 2-second delay
-      return () => clearTimeout(timer);
+    if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet && hidePreferencePopup !== 'true') {
+        const timer = setTimeout(() => {
+            setIsPreferenceDialogOpen(true);
+        }, 2000); // 2-second delay
+        return () => clearTimeout(timer);
     } else {
       setIsPreferenceDialogOpen(false);
     }
