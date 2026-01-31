@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,7 +8,7 @@ import { getMessaging, onMessage } from 'firebase/messaging';
 import { useToast } from '../hooks/use-toast';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '../lib/types';
-import { LocationConfirmationDialog } from './location-confirmation-dialog';
+import { PreferenceDialog } from './preference-dialog';
 
 /**
  * A client component that initializes the push notification setup
@@ -20,7 +18,7 @@ export function FirebaseMessagingProvider() {
   const { firebaseApp, user, firestore } = useFirebase();
   const { permissionStatus, requestPermission } = usePushNotifications();
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   const { toast } = useToast();
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
@@ -71,21 +69,16 @@ export function FirebaseMessagingProvider() {
   }, [user, permissionStatus]);
   
   useEffect(() => {
-    // Show the location preference dialog after a delay
-    if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet) {
-        const FOUR_HOURS_IN_MS = 4 * 60 * 60 * 1000;
-        const lastLocationPrompt = localStorage.getItem('lastLocationPromptShown');
-        const lastShown = lastLocationPrompt ? parseInt(lastLocationPrompt, 10) : 0;
-
-        if (Date.now() - lastShown > FOUR_HOURS_IN_MS) {
-            const timer = setTimeout(() => {
-                setIsLocationDialogOpen(true);
-                localStorage.setItem('lastLocationPromptShown', Date.now().toString());
-            }, 2000); // 2-second delay
-            return () => clearTimeout(timer);
-        }
+    // Show the preference dialog after a delay if preferences aren't set
+    // and the user hasn't opted out.
+    const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
+    if (user && !user.isAnonymous && userProfile && !userProfile.preferencesSet && hidePreferencePopup !== 'true') {
+      const timer = setTimeout(() => {
+        setIsPreferenceDialogOpen(true);
+      }, 2000); // 2-second delay
+      return () => clearTimeout(timer);
     } else {
-        setIsLocationDialogOpen(false);
+      setIsPreferenceDialogOpen(false);
     }
   }, [user, userProfile]);
 
@@ -102,9 +95,11 @@ export function FirebaseMessagingProvider() {
         onAllow={handleAllowNotifications}
         />
         {user && !user.isAnonymous && (
-            <LocationConfirmationDialog
-            open={isLocationDialogOpen}
-            onOpenChange={setIsLocationDialogOpen}
+            <PreferenceDialog
+            open={isPreferenceDialogOpen}
+            onOpenChange={setIsPreferenceDialogOpen}
+            userId={user.uid}
+            userProfile={userProfile}
             />
         )}
     </>

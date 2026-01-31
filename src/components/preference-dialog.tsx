@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -19,7 +18,7 @@ import { Loader2, Globe, Languages, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import type { UserProfile } from '../lib/types';
 import { cn } from '../lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
 
 
 interface PreferenceDialogProps {
@@ -41,6 +40,7 @@ export function PreferenceDialog({
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState('all-languages'); // Using a proxy value
   const [isSaving, setIsSaving] = useState(false);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -74,6 +74,15 @@ export function PreferenceDialog({
     }
   }, [userProfile, open]);
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      if (dontAskAgain) {
+        localStorage.setItem('hidePreferencePopup', 'true');
+      }
+    }
+    onOpenChange(isOpen);
+  };
+
   const handleRegionToggle = (region: string) => {
     setSelectedRegions(prev => 
         prev.includes(region)
@@ -88,6 +97,9 @@ export function PreferenceDialog({
 
   const handleSave = async () => {
     setIsSaving(true);
+    if (dontAskAgain) {
+      localStorage.setItem('hidePreferencePopup', 'true');
+    }
     const userRef = doc(firestore, 'users', userId);
     
     const preferencesToSave = {
@@ -112,7 +124,7 @@ export function PreferenceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Personalize Your Feed</DialogTitle>
@@ -186,7 +198,11 @@ export function PreferenceDialog({
                 </div>
             </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          <div className="flex items-center space-x-2 pt-2 sm:pt-0">
+            <Checkbox id="dont-ask" checked={dontAskAgain} onCheckedChange={(checked) => setDontAskAgain(Boolean(checked))} />
+            <Label htmlFor="dont-ask" className="text-xs text-muted-foreground">Don't ask me again</Label>
+          </div>
           <Button type="button" onClick={handleSave} disabled={isSaving || selectedRegions.length === 0}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save Preferences
