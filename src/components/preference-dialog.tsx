@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,7 +25,7 @@ import { Checkbox } from './ui/checkbox';
 interface PreferenceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userId: string;
+  userId: string | null;
   userProfile?: UserProfile | null;
 }
 
@@ -34,7 +35,7 @@ export function PreferenceDialog({
   userId,
   userProfile,
 }: PreferenceDialogProps) {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { toast } = useToast();
 
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
@@ -44,23 +45,28 @@ export function PreferenceDialog({
 
   useEffect(() => {
     if (open) {
-      if (userProfile?.preferencesSet && userProfile.preferences) {
-        const regionPref = userProfile.preferences.region || [];
+      const anonPrefsRaw = localStorage.getItem('anonymousPreferences');
+      let prefsToLoad: any = null;
+
+      if (user && !user.isAnonymous && userProfile?.preferences) {
+        prefsToLoad = userProfile.preferences;
+      } else if (anonPrefsRaw) {
+        prefsToLoad = JSON.parse(anonPrefsRaw);
+      }
+
+      if (prefsToLoad) {
+        const regionPref = prefsToLoad.region || [];
         setSelectedRegions(Array.isArray(regionPref) ? regionPref : [regionPref]);
-        setSelectedLanguage(userProfile.preferences.language || 'all-languages');
+        setSelectedLanguage(prefsToLoad.language || 'all-languages');
       } else {
         // Default values for new users
         setSelectedRegions(['Global']);
 
-        // Suggest language based on browser settings
         const langMap: { [key: string]: string } = {
-          en: 'English',
-          fr: 'French',
-          ar: 'Arabic',
-          es: 'Spanish',
-          pt: 'Portuguese',
-          sw: 'Swahili',
-          de: 'German',
+          en: 'English', fr: 'French', ar: 'Arabic', es: 'Spanish',
+          pt: 'Portuguese', sw: 'Swahili', de: 'German',
+          zh: 'Chinese', hi: 'Hindi', ja: 'Japanese', ko: 'Korean',
+          th: 'Thai', vi: 'Vietnamese'
         };
         const browserLangCode = navigator.language.split('-')[0];
         const suggestedLanguage = langMap[browserLangCode];
@@ -72,7 +78,7 @@ export function PreferenceDialog({
         }
       }
     }
-  }, [userProfile, open]);
+  }, [userProfile, open, user]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -100,18 +106,20 @@ export function PreferenceDialog({
     if (dontAskAgain) {
       localStorage.setItem('hidePreferencePopup', 'true');
     }
-    const userRef = doc(firestore, 'users', userId);
-    
     const preferencesToSave = {
         region: selectedRegions,
-        // Convert proxy value back to empty string for storage
         language: selectedLanguage === 'all-languages' ? '' : selectedLanguage,
     };
 
-    updateDocumentNonBlocking(userRef, {
-        preferences: preferencesToSave,
-        preferencesSet: true,
-    });
+    if (user && !user.isAnonymous && userId) {
+        const userRef = doc(firestore, 'users', userId);
+        updateDocumentNonBlocking(userRef, {
+            preferences: preferencesToSave,
+            preferencesSet: true,
+        });
+    } else {
+        localStorage.setItem('anonymousPreferences', JSON.stringify(preferencesToSave));
+    }
     
     setIsSaving(false);
     onOpenChange(false);
@@ -119,7 +127,6 @@ export function PreferenceDialog({
         title: 'Preferences Updated!',
         description: 'Your content feed will now be personalized.',
     });
-    // Reload the page to apply the new preferences
     window.location.reload();
   };
 

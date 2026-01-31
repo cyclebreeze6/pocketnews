@@ -7,6 +7,12 @@ export const LANGUAGES = [
   'Portuguese',
   'Swahili',
   'German',
+  'Chinese',
+  'Hindi',
+  'Japanese',
+  'Korean',
+  'Thai',
+  'Vietnamese',
 ];
 
 export const REGIONS = [

@@ -62,6 +62,17 @@ export default function CategoryPage() {
   
   const categoryName = decodeURIComponent(params.categoryName as string);
 
+  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (user?.isAnonymous) {
+      const storedPrefs = localStorage.getItem('anonymousPreferences');
+      if (storedPrefs) {
+        setAnonymousPreferences(JSON.parse(storedPrefs));
+      }
+    }
+  }, [user]);
+
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
@@ -69,12 +80,19 @@ export default function CategoryPage() {
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || !user || isProfileLoading || !channels) return null;
+    if (isUserLoading || isProfileLoading || !channels) return null;
 
     const baseQuery = query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName));
-    const prefs = userProfile?.preferences;
     
-    if (prefs && channels) {
+    let prefs = userProfile?.preferences;
+    let prefsAreSet = userProfile?.preferencesSet;
+
+    if (user?.isAnonymous) {
+        prefs = anonymousPreferences;
+        prefsAreSet = !!anonymousPreferences;
+    }
+    
+    if (user && prefsAreSet && channels && prefs) {
         let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
 
@@ -99,15 +117,13 @@ export default function CategoryPage() {
         }
     }
     
-    // Default query if no preference is set or type is 'all'
     return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore, categoryName, user, isUserLoading, userProfile, isProfileLoading, channels]);
+  }, [firestore, categoryName, user, isUserLoading, userProfile, isProfileLoading, channels, anonymousPreferences]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
 
   const videos = useMemo(() => {
     if (!videosFromHook) return null;
-    // Sort videos by creation date since we can't do it in the Firestore query when using an 'in' filter.
     return [...videosFromHook].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
   }, [videosFromHook]);
   
@@ -190,7 +206,6 @@ export default function CategoryPage() {
       <SiteHeader />
       <main className="flex-1 md:py-8">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
               <VideoPlayer youtubeId={currentVideo.youtubeVideoId} key={currentVideo.id} onEnd={handleVideoEnd} />
@@ -245,7 +260,6 @@ export default function CategoryPage() {
             </div>
           </div>
           
-          {/* Sidebar */}
           <div className="lg:col-span-1 px-4 md:px-0">
             <h3 className="text-lg font-semibold mb-2 text-muted-foreground mt-16">More in {categoryName}</h3>
 

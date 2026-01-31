@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { usePushNotifications } from '../firebase/messaging';
-import { useFirebase, useDoc, useMemoFirebase } from '../firebase';
+import { useFirebase, useDoc, useMemoFirebase, useUser } from '../firebase';
 import { NotificationPermissionDialog } from './notification-permission-dialog';
 import { getMessaging, onMessage } from 'firebase/messaging';
 import { useToast } from '../hooks/use-toast';
@@ -16,14 +16,14 @@ import { PreferenceDialog } from './preference-dialog';
  * and conditionally shows a permission dialog.
  */
 export function FirebaseMessagingProvider() {
-  const { firebaseApp, user, firestore } = useFirebase();
+  const { firebaseApp, user, firestore, isUserLoading } = useFirebase();
   const { permissionStatus, requestPermission } = usePushNotifications();
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const userProfileRef = useMemoFirebase(() => (user && !user.isAnonymous ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && firebaseApp) {
@@ -56,17 +56,33 @@ export function FirebaseMessagingProvider() {
   }, [user, permissionStatus]);
   
   useEffect(() => {
-    // Show the preference dialog after a delay if the user hasn't opted out.
     const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
-    if (user && !user.isAnonymous && userProfile && hidePreferencePopup !== 'true') {
-        const timer = setTimeout(() => {
-            setIsPreferenceDialogOpen(true);
-        }, 2000); // 2-second delay
-        return () => clearTimeout(timer);
-    } else {
-      setIsPreferenceDialogOpen(false);
+    if (hidePreferencePopup === 'true' || isUserLoading) {
+      return;
     }
-  }, [user, userProfile]);
+
+    const checkAndShowPopup = () => {
+      let shouldShow = false;
+      if (user) {
+        if (user.isAnonymous) {
+          const anonPrefs = localStorage.getItem('anonymousPreferences');
+          if (!anonPrefs) shouldShow = true;
+        } else if (!isProfileLoading && !userProfile?.preferencesSet) {
+          shouldShow = true;
+        }
+      }
+      
+      if (shouldShow) {
+        const timer = setTimeout(() => {
+          setIsPreferenceDialogOpen(true);
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    };
+    
+    checkAndShowPopup();
+
+  }, [user, userProfile, isUserLoading, isProfileLoading]);
 
   const handleAllowNotifications = () => {
     requestPermission();
@@ -80,14 +96,12 @@ export function FirebaseMessagingProvider() {
         onOpenChange={setIsNotificationDialogOpen}
         onAllow={handleAllowNotifications}
         />
-        {user && !user.isAnonymous && (
-            <PreferenceDialog
-            open={isPreferenceDialogOpen}
-            onOpenChange={setIsPreferenceDialogOpen}
-            userId={user.uid}
-            userProfile={userProfile}
-            />
-        )}
+        <PreferenceDialog
+        open={isPreferenceDialogOpen}
+        onOpenChange={setIsPreferenceDialogOpen}
+        userId={user?.uid || null}
+        userProfile={userProfile}
+        />
     </>
   );
 }

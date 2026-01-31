@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -133,6 +132,7 @@ export default function Home() {
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
+  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
@@ -143,6 +143,15 @@ export default function Home() {
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
+  useEffect(() => {
+    if (user?.isAnonymous) {
+      const storedPrefs = localStorage.getItem('anonymousPreferences');
+      if (storedPrefs) {
+        setAnonymousPreferences(JSON.parse(storedPrefs));
+      }
+    }
+  }, [user]);
+
   const latestVideoQuery = useMemoFirebase(() => 
     query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(1)),
     [firestore]
@@ -151,10 +160,16 @@ export default function Home() {
   
   const breakingNewsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || channelsLoading) return null;
-    const prefs = userProfile?.preferences;
     
-    // For logged-in, non-anonymous users with preferences
-    if (user && !user.isAnonymous && userProfile?.preferencesSet && channels) {
+    let prefs = userProfile?.preferences;
+    let prefsAreSet = userProfile?.preferencesSet;
+
+    if (user?.isAnonymous && anonymousPreferences) {
+        prefs = anonymousPreferences;
+        prefsAreSet = true;
+    }
+    
+    if (user && prefsAreSet && channels && prefs) {
         let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
         const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
@@ -187,23 +202,27 @@ export default function Home() {
         );
     }
     
-    // For anonymous users or users without preferences.
-    // This query is safe as it only filters on one field. Sorting is handled client-side.
     return query(
         collection(firestore, 'videos'),
         where('contentCategory', '==', 'Breaking News'),
         limit(10)
     );
-  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading]);
+  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading, anonymousPreferences]);
 
   const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
 
   const videosQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || channelsLoading) return null;
-    const prefs = userProfile?.preferences;
+    
+    let prefs = userProfile?.preferences;
+    let prefsAreSet = userProfile?.preferencesSet;
 
-    // For logged-in, non-anonymous users with preferences
-    if (user && !user.isAnonymous && userProfile?.preferencesSet && channels) {
+     if (user?.isAnonymous && anonymousPreferences) {
+        prefs = anonymousPreferences;
+        prefsAreSet = true;
+    }
+
+    if (user && prefsAreSet && channels && prefs) {
         let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
         const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
@@ -235,13 +254,12 @@ export default function Home() {
         );
     }
 
-    // For anonymous users or users without preferences. This is a safe query.
     return query(
         collection(firestore, 'videos'), 
         orderBy('createdAt', 'desc'), 
         limit(20)
     );
-  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading]);
+  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading, anonymousPreferences]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -261,11 +279,10 @@ export default function Home() {
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [displayedVideos, setDisplayedVideos] = useState<Video[] | null>(null);
   
-  // Sticky player state
   const [isPlayerSticky, setIsPlayerSticky] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
-  const HEADER_HEIGHT = 0; // The header is no longer sticky
+  const HEADER_HEIGHT = 0;
   
   const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || breakingNewsLoading || latestVideoLoading;
 
@@ -316,25 +333,21 @@ export default function Home() {
             if (videoFromUrlInList) {
                 setCurrentVideo(videoFromUrlInList);
             } else if (videoIdFromUrl) {
-                // Video from URL isn't in our loaded list, fetch it directly
                 const videoRef = doc(firestore, 'videos', videoIdFromUrl);
                 getDoc(videoRef).then(docSnap => {
                     if (docSnap.exists()) {
                         const fetchedVideo = { id: docSnap.id, ...docSnap.data() } as Video;
                         setCurrentVideo(fetchedVideo);
-                        // Prepend it to displayed videos if not already there
                         setDisplayedVideos(current => current?.find(v => v.id === fetchedVideo.id) ? current : [fetchedVideo, ...(current || [])]);
                     } else {
-                        // Fallback if deep-linked video doesn't exist
                         setCurrentVideo(finalList?.[0] || null);
                     }
                 });
             } else {
-                // Default case: no URL, just load the first video
                 setCurrentVideo(finalList[0] || null);
             }
         }
-    } else if (!isLoading) { // Ensure we don't clear state while loading
+    } else if (!isLoading) {
         setDisplayedVideos([]);
         setCurrentVideo(null);
     }
@@ -384,7 +397,7 @@ export default function Home() {
   }
   
   const handleReportSubmit = () => {
-    if (!user || !currentVideo) return;
+    if (!user || currentVideo) return;
 
     const reportRef = doc(collection(firestore, 'reports'));
     const reportData = {
@@ -445,14 +458,12 @@ export default function Home() {
             Meet the #1 App to Stream News. Watch Free!
         </footer>
         <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
-        {user && !user.isAnonymous && (
-            <PreferenceDialog 
-                open={isPreferenceDialogOpen} 
-                onOpenChange={setIsPreferenceDialogOpen} 
-                userId={user.uid} 
-                userProfile={userProfile}
-            />
-        )}
+        <PreferenceDialog 
+            open={isPreferenceDialogOpen} 
+            onOpenChange={setIsPreferenceDialogOpen} 
+            userId={user?.uid || null} 
+            userProfile={userProfile}
+        />
         <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
             <DialogContent>
             <DialogHeader>
@@ -513,7 +524,6 @@ export default function Home() {
       <SiteHeader />
       <main ref={mainRef} className="flex-1">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="relative md:rounded-lg overflow-hidden">
               <div
@@ -533,7 +543,6 @@ export default function Home() {
                   />
                 </div>
               </div>
-              {/* Placeholder to prevent content jump when player becomes sticky */}
               {isPlayerSticky && isMobile && <div className="aspect-video" />}
             </div>
 
@@ -602,7 +611,6 @@ export default function Home() {
 
           </div>
           
-          {/* Sidebar */}
           <div className="lg:col-span-1 px-4 md:px-0">
              
             <h3 className="text-lg font-semibold text-muted-foreground">My Headlines</h3>

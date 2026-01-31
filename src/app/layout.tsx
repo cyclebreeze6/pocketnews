@@ -7,6 +7,7 @@ import { NetworkStatusIndicator } from '../components/network-status-indicator';
 import Script from 'next/script';
 import { FirebaseMessagingProvider } from '../components/firebase-messaging-provider';
 import MobileNav from '../components/mobile-nav';
+import { CookieConsentBanner } from '../components/cookie-consent-banner';
 
 export const metadata: Metadata = {
   title: 'Pocketnews TV',
@@ -32,6 +33,7 @@ export default function RootLayout({
             <NetworkStatusIndicator />
             {children}
             <MobileNav />
+            <CookieConsentBanner />
           </FirebaseClientProvider>
           <Toaster />
         </div>
