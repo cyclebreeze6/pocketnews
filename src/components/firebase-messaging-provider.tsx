@@ -61,21 +61,18 @@ export function FirebaseMessagingProvider() {
       return;
     }
 
-    const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
-    if (hidePreferencePopup === 'true') {
-      return; // "Don't ask again" is set, so we stop here.
-    }
-
     const checkAndShowPopup = () => {
+      // "Don't ask again" is the highest priority.
+      const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
+      if (hidePreferencePopup === 'true') {
+        return; 
+      }
+
       let prefsAreSet = false;
-      if (user) {
-        if (user.isAnonymous) {
-          if (localStorage.getItem('anonymousPreferences')) {
-            prefsAreSet = true;
-          }
-        } else if (!isProfileLoading && userProfile?.preferencesSet) {
-          prefsAreSet = true;
-        }
+      if (user?.isAnonymous) {
+        prefsAreSet = !!localStorage.getItem('anonymousPreferences');
+      } else if (!isProfileLoading && userProfile?.preferencesSet) {
+        prefsAreSet = true;
       }
 
       let shouldShow = false;
@@ -93,9 +90,8 @@ export function FirebaseMessagingProvider() {
             shouldShow = true;
           }
         } else {
-          // Prefs are set, but there's no timestamp.
-          // This can happen for users who set prefs before this feature was added.
-          // Show it once to establish the timestamp.
+          // This is a fallback for users who may have set preferences before
+          // the timestamp logic was introduced. Show it once to record the timestamp.
           shouldShow = true;
         }
       }
