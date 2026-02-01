@@ -2,7 +2,7 @@
 
 import { ai } from '../genkit';
 import { z } from 'zod';
-import { getFirestore, writeBatch } from 'firebase-admin/firestore';
+import { getFirestore, addDoc, collection } from 'firebase-admin/firestore';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 
 // Helper to initialize the admin app idempotently
@@ -26,81 +26,49 @@ async function initializeAdminApp() {
     }
 }
 
-export const BroadcastEmailInputSchema = z.object({
+export const SingleEmailInputSchema = z.object({
+  to: z.string().email("Invalid email address.").describe("The recipient's email address."),
   subject: z.string().describe("The subject line of the email."),
   htmlBody: z.string().describe("The HTML content of the email body."),
 });
-export type BroadcastEmailInput = z.infer<typeof BroadcastEmailInputSchema>;
+export type SingleEmailInput = z.infer<typeof SingleEmailInputSchema>;
 
-export const BroadcastEmailOutputSchema = z.object({
+export const SingleEmailOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  emailsQueued: z.number().optional(),
 });
-export type BroadcastEmailOutput = z.infer<typeof BroadcastEmailOutputSchema>;
+export type SingleEmailOutput = z.infer<typeof SingleEmailOutputSchema>;
 
 
-export const sendBroadcastEmailFlow = ai.defineFlow(
+export const sendSingleEmailFlow = ai.defineFlow(
   {
-    name: 'sendBroadcastEmailFlow',
-    inputSchema: BroadcastEmailInputSchema,
-    outputSchema: BroadcastEmailOutputSchema,
+    name: 'sendSingleEmailFlow',
+    inputSchema: SingleEmailInputSchema,
+    outputSchema: SingleEmailOutputSchema,
   },
-  async ({ subject, htmlBody }) => {
+  async ({ to, subject, htmlBody }) => {
     
     await initializeAdminApp();
     const firestore = getFirestore();
 
     try {
-      // 1. Get all users
-      const usersSnapshot = await firestore.collection('users').get();
+      const emailQueueCollection = collection(firestore, 'email_queue');
       
-      if (usersSnapshot.empty) {
-        return { success: true, message: "No users found in the database to send emails to." };
-      }
-
-      // 2. Prepare batch writes to the email_queue
-      let batch = writeBatch(firestore);
-      const emailQueueRef = firestore.collection('email_queue');
-      let writesInBatch = 0;
-      let totalQueued = 0;
-
-      for (const userDoc of usersSnapshot.docs) {
-        const user = userDoc.data();
-        if (user.email) {
-          const newEmailRef = emailQueueRef.doc();
-          batch.set(newEmailRef, {
-            to: user.email,
-            message: {
-              subject: subject,
-              html: htmlBody,
-            },
-          });
-          writesInBatch++;
-          totalQueued++;
-
-          // Firestore batches have a limit of 500 operations.
-          if (writesInBatch >= 499) {
-            await batch.commit();
-            batch = writeBatch(firestore);
-            writesInBatch = 0;
-          }
-        }
-      }
-
-      // Commit any remaining writes in the last batch.
-      if (writesInBatch > 0) {
-        await batch.commit();
-      }
+      await addDoc(emailQueueCollection, {
+        to: to,
+        message: {
+          subject: subject,
+          html: htmlBody,
+        },
+      });
 
       return { 
           success: true, 
-          message: `Successfully queued ${totalQueued} emails.`,
-          emailsQueued: totalQueued,
+          message: `Successfully queued email to ${to}.`,
       };
 
     } catch (error: any) {
-      console.error('[Broadcast Email Flow] Error queuing emails:', error);
+      console.error('[Single Email Flow] Error queuing email:', error);
       const errorMessage = error.message || 'An unknown error occurred.';
       return { success: false, message: errorMessage };
     }

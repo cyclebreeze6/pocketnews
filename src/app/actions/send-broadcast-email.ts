@@ -1,7 +1,7 @@
 'use server';
-import { sendBroadcastEmailFlow } from '../../ai/flows/send-broadcast-email-flow';
-import type { BroadcastEmailInput, BroadcastEmailOutput } from '../../ai/flows/send-broadcast-email-flow';
+import { sendSingleEmailFlow } from '../../ai/flows/send-broadcast-email-flow';
+import type { SingleEmailInput, SingleEmailOutput } from '../../ai/flows/send-broadcast-email-flow';
 
-export async function sendBroadcastEmail(input: BroadcastEmailInput): Promise<BroadcastEmailOutput> {
-  return sendBroadcastEmailFlow(input);
+export async function sendSingleEmail(input: SingleEmailInput): Promise<SingleEmailOutput> {
+  return sendSingleEmailFlow(input);
 }
