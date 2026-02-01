@@ -510,7 +510,7 @@ export default function Home() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid gap-2">
+                 <div className="grid gap-2">
                     <Label htmlFor="report-details">Details (optional)</Label>
                     <Textarea id="report-details" value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder="Provide additional details..." />
                 </div>
@@ -570,12 +570,16 @@ export default function Home() {
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={currentChannel?.logoUrl || `https://picsum.photos/seed/${currentChannel?.id}/40/40`} alt={currentChannel?.name} />
-                            <AvatarFallback>{currentChannel?.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
+                        <Link href={`/channels/${currentChannel.id}`}>
+                          <Avatar>
+                              <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
+                              <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                        </Link>
                         <div>
-                            <p className="font-semibold">{currentChannel?.name}</p>
+                            <Link href={`/channels/${currentChannel.id}`}>
+                                <p className="font-semibold hover:underline">{currentChannel.name}</p>
+                            </Link>
                             <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>
                     </div>

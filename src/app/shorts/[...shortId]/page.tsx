@@ -13,6 +13,7 @@ import { MessageCircle, Share2, Clapperboard, X, ArrowUp, ArrowDown } from 'luci
 import { Skeleton } from '../../../components/ui/skeleton';
 import { useToast } from '../../../hooks/use-toast';
 import { AuthDialog } from '../../../components/auth-dialog';
+import Link from 'next/link';
 
 function ShortsPlayerSkeleton() {
     return (
@@ -191,13 +192,13 @@ function ShortsPlayerInner() {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent text-white">
-                    <div className="flex items-center gap-3">
+                    <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                             <AvatarImage src={currentChannel.logoUrl} />
                             <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <p className="font-semibold">{currentChannel.name}</p>
-                    </div>
+                    </Link>
 
                     <p className="mt-2 text-sm font-semibold [text-shadow:0_1px_2px_rgba(0,0,0,0.8)] line-clamp-2">{currentShort.title}</p>
                 </div>
