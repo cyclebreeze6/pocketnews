@@ -173,6 +173,12 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                     Shorts
                 </Button>
               </Link>
+              <Link href="/channels" className='hidden sm:inline-flex'>
+                <Button variant="ghost">
+                    <Package className="h-5 w-5 mr-2" />
+                    Channels
+                </Button>
+              </Link>
               {user && !user.isAnonymous && (
                 <Popover>
                   <PopoverTrigger asChild>
