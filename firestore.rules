@@ -86,8 +86,9 @@ service cloud.firestore {
     }
 
     match /email_queue/{emailId} {
-      // Only backend processes can access this collection.
-      allow read, write: if false;
+      // Allow admins to queue emails. Only backend processes should read.
+      allow read: if false;
+      allow write: if isAdmin();
     }
   }
 }
