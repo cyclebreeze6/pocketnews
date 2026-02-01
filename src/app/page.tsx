@@ -388,13 +388,23 @@ export default function Home() {
     }
   }, [currentVideo, user, firestore]);
 
-  const handleVideoEnd = () => {
+  const handleNextVideo = useCallback(() => {
     if (!displayedVideos || !currentVideo) return;
     const currentIndex = displayedVideos.findIndex(v => v.id === currentVideo.id);
     if (currentIndex > -1 && currentIndex < displayedVideos.length - 1) {
       handleSetCurrentVideo(displayedVideos[currentIndex + 1]);
     }
-  }
+  }, [displayedVideos, currentVideo, handleSetCurrentVideo]);
+
+  const handlePreviousVideo = useCallback(() => {
+    if (!displayedVideos || !currentVideo) return;
+    const currentIndex = displayedVideos.findIndex(v => v.id === currentVideo.id);
+    if (currentIndex > 0) {
+      handleSetCurrentVideo(displayedVideos[currentIndex - 1]);
+    }
+  }, [displayedVideos, currentVideo, handleSetCurrentVideo]);
+  
+  const handleVideoEnd = handleNextVideo;
   
   const handleReportSubmit = () => {
     if (!user || currentVideo) return;
@@ -519,6 +529,10 @@ export default function Home() {
       return <HomepageSkeleton />;
   }
 
+  const currentIndex = displayedVideos?.findIndex(v => v.id === currentVideo.id) ?? -1;
+  const hasNext = currentIndex > -1 && currentIndex < (displayedVideos?.length ?? 0) - 1;
+  const hasPrevious = currentIndex > 0;
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
@@ -538,7 +552,12 @@ export default function Home() {
                 <div className="aspect-video">
                   <VideoPlayer
                     youtubeId={currentVideo.youtubeVideoId}
+                    videoUrl={currentVideo.videoUrl}
                     onEnd={handleVideoEnd}
+                    onNext={handleNextVideo}
+                    onPrevious={handlePreviousVideo}
+                    hasNext={hasNext}
+                    hasPrevious={hasPrevious}
                     key={currentVideo.id}
                   />
                 </div>

@@ -15,7 +15,7 @@ import { Card, CardContent } from '../../../components/ui/card';
 import type { Video, Channel, UserProfile } from '../../../lib/types';
 import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -151,13 +151,23 @@ export default function CategoryPage() {
   
   const otherVideos = videos?.slice(0, 10);
   
-    const handleVideoEnd = () => {
+  const handleNextVideo = useCallback(() => {
     if (!videos || !currentVideo) return;
     const currentIndex = videos.findIndex(v => v.id === currentVideo.id);
     if (currentIndex > -1 && currentIndex < videos.length - 1) {
       setCurrentVideo(videos[currentIndex + 1]);
     }
-  }
+  }, [videos, currentVideo]);
+
+  const handlePreviousVideo = useCallback(() => {
+    if (!videos || !currentVideo) return;
+    const currentIndex = videos.findIndex(v => v.id === currentVideo.id);
+    if (currentIndex > 0) {
+      setCurrentVideo(videos[currentIndex - 1]);
+    }
+  }, [videos, currentVideo]);
+
+  const handleVideoEnd = handleNextVideo;
 
     const handleShare = (platform: 'facebook' | 'whatsapp' | 'copy') => {
         if (!currentVideo) return;
@@ -201,6 +211,10 @@ export default function CategoryPage() {
     return <div>Loading...</div>; 
   }
 
+  const currentIndex = videos?.findIndex(v => v.id === currentVideo.id) ?? -1;
+  const hasNext = currentIndex > -1 && currentIndex < (videos?.length ?? 0) - 1;
+  const hasPrevious = currentIndex > 0;
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
@@ -208,7 +222,16 @@ export default function CategoryPage() {
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           <div className="lg:col-span-2">
             <div className="aspect-video mb-4 md:rounded-lg overflow-hidden md:mx-0 -mx-4">
-              <VideoPlayer youtubeId={currentVideo.youtubeVideoId} key={currentVideo.id} onEnd={handleVideoEnd} />
+              <VideoPlayer 
+                youtubeId={currentVideo.youtubeVideoId} 
+                videoUrl={currentVideo.videoUrl}
+                key={currentVideo.id} 
+                onEnd={handleVideoEnd}
+                onNext={handleNextVideo}
+                onPrevious={handlePreviousVideo}
+                hasNext={hasNext}
+                hasPrevious={hasPrevious}
+              />
             </div>
             
             <div className="px-4 md:px-0">
