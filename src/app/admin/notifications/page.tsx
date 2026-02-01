@@ -8,6 +8,7 @@ import { Label } from '../../../components/ui/label';
 import { Textarea } from '../../../components/ui/textarea';
 import { useToast } from '../../../hooks/use-toast';
 import { sendManualNotification } from '../../actions/send-manual-notification';
+import type { ManualNotificationInput } from '../../../ai/flows/send-manual-notification-flow';
 import { Loader2, Send } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../../../components/ui/alert';
 
@@ -32,7 +33,19 @@ export default function AdminNotificationsPage() {
     setIsSending(true);
 
     try {
-      const result = await sendManualNotification({ title, body, link, imageUrl });
+      const payload: ManualNotificationInput = {
+        title,
+        body,
+      };
+
+      if (link) {
+        payload.link = link;
+      }
+      if (imageUrl) {
+        payload.imageUrl = imageUrl;
+      }
+
+      const result = await sendManualNotification(payload);
       
       if (result.success) {
         toast({
