@@ -463,6 +463,7 @@
           "schema": {
             "type": "object",
             "properties": {
+              "id": { "type": "string" },
               "to": { "type": "string" },
               "message": {
                 "type": "object",
@@ -470,8 +471,19 @@
                   "subject": { "type": "string" },
                   "html": { "type": "string" }
                 }
+              },
+              "status": {
+                "type": "string",
+                "enum": ["queued", "sent", "failed"],
+                "description": "The delivery status of the email."
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp when the email was queued."
               }
-            }
+            },
+            "required": ["id", "to", "message", "status", "createdAt"]
           },
           "description": "Stores email messages to be sent by a backend service.",
           "params": [

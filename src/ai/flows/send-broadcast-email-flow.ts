@@ -2,7 +2,7 @@
 
 import { ai } from '../genkit';
 import { z } from 'zod';
-import { getFirestore, addDoc, collection } from 'firebase-admin/firestore';
+import { getFirestore, addDoc, collection, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 
 // Helper to initialize the admin app idempotently
@@ -60,6 +60,8 @@ export const sendSingleEmailFlow = ai.defineFlow(
           subject: subject,
           html: htmlBody,
         },
+        status: 'queued',
+        createdAt: FieldValue.serverTimestamp(),
       });
 
       return { 

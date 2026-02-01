@@ -9,6 +9,20 @@ import { Textarea } from '../../../components/ui/textarea';
 import { useToast } from '../../../hooks/use-toast';
 import { sendSingleEmail } from '../../actions/send-broadcast-email';
 import { Loader2, Send } from 'lucide-react';
+import { useCollection, useFirebase, useMemoFirebase } from '../../../firebase';
+import type { EmailQueueItem } from '../../../lib/types';
+import { collection, Timestamp, query, orderBy } from 'firebase/firestore';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../../../components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
+import { format } from 'date-fns';
+import { Badge } from '../../../components/ui/badge';
+
+function toDate(timestamp: Timestamp | Date | string): Date {
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toDate();
+  }
+  return new Date(timestamp);
+}
 
 export default function AdminSendEmailPage() {
   const [to, setTo] = useState('');
@@ -16,6 +30,13 @@ export default function AdminSendEmailPage() {
   const [htmlBody, setHtmlBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
+
+  const { firestore } = useFirebase();
+  const emailQueueQuery = useMemoFirebase(() => query(collection(firestore, 'email_queue'), orderBy('createdAt', 'desc')), [firestore]);
+  const { data: emails, isLoading: emailsLoading } = useCollection<EmailQueueItem>(emailQueueQuery);
+
+  const [selectedEmail, setSelectedEmail] = useState<EmailQueueItem | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleSubmit = async () => {
     if (!to || !subject || !htmlBody) {
@@ -60,11 +81,16 @@ export default function AdminSendEmailPage() {
     }
   };
 
+  const handlePreview = (email: EmailQueueItem) => {
+    setSelectedEmail(email);
+    setIsPreviewOpen(true);
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">Send Email</h1>
 
-      <Card className="max-w-2xl">
+      <Card className="max-w-2xl mb-8">
         <CardHeader>
           <CardTitle>Compose Email</CardTitle>
           <CardDescription>Create the message you want to send. You can use HTML for formatting.</CardDescription>
@@ -94,6 +120,68 @@ export default function AdminSendEmailPage() {
           </Button>
         </div>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Email History</CardTitle>
+          <CardDescription>A log of recently queued emails.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>To</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date Queued</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {emailsLoading && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">
+                    <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" /> Loading history...
+                  </TableCell>
+                </TableRow>
+              )}
+              {emails?.map((email) => (
+                <TableRow key={email.id} onClick={() => handlePreview(email)} className="cursor-pointer">
+                  <TableCell className="font-medium">{email.to}</TableCell>
+                  <TableCell>{email.message.subject}</TableCell>
+                  <TableCell>
+                    <Badge variant={email.status === 'sent' ? 'default' : (email.status === 'failed' ? 'destructive' : 'secondary')}>
+                      {email.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{format(toDate(email.createdAt), 'PPP p')}</TableCell>
+                </TableRow>
+              ))}
+               {!emailsLoading && emails?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    No emails have been sent yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{selectedEmail?.message.subject}</DialogTitle>
+            <DialogDescription>To: {selectedEmail?.to}</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 p-4 border rounded-lg bg-secondary/20 max-h-[60vh] overflow-y-auto">
+            <div dangerouslySetInnerHTML={{ __html: selectedEmail?.message.html || '' }} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
