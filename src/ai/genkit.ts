@@ -13,7 +13,7 @@ if (!aiInstance) {
       }),
     ],
     logLevel: 'debug',
-    enableTracingAndMetrics: true,
+    enableTracingAndMetrics: false,
   });
 }
 export const ai = aiInstance;

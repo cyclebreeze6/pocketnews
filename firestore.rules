@@ -84,11 +84,5 @@ service cloud.firestore {
       // Allow existing admins to write, or designated users to write to their OWN role doc.
       allow write: if isAdmin() || (isOwner(userId) && isDesignatedAdmin(request.auth.token.email));
     }
-
-    match /email_queue/{emailId} {
-      // Admins can queue emails and read the history. Only backend processes should modify status.
-      allow get, list: if isAdmin();
-      allow write: if isAdmin();
-    }
   }
 }

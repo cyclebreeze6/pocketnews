@@ -455,44 +455,6 @@
             }
           ]
         }
-      },
-      {
-        "path": "/email_queue/{emailId}",
-        "definition": {
-          "entityName": "Email",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "to": { "type": "string" },
-              "message": {
-                "type": "object",
-                "properties": {
-                  "subject": { "type": "string" },
-                  "html": { "type": "string" }
-                }
-              },
-              "status": {
-                "type": "string",
-                "enum": ["queued", "sent", "failed"],
-                "description": "The delivery status of the email."
-              },
-              "createdAt": {
-                "type": "string",
-                "format": "date-time",
-                "description": "Timestamp when the email was queued."
-              }
-            },
-            "required": ["id", "to", "message", "status", "createdAt"]
-          },
-          "description": "Stores email messages to be sent by a backend service.",
-          "params": [
-            {
-              "name": "emailId",
-              "description": "The unique identifier of the email message."
-            }
-          ]
-        }
       }
     ],
     "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos and Shorts are top-level collections to simplify queries for feeds. The rest of the structure remains segregated for security and clarity."
