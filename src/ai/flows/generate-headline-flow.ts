@@ -61,28 +61,20 @@ const generateHeadlineFlow = ai.defineFlow(
     outputSchema: GenerateHeadlineOutputSchema,
   },
   async (input) => {
-    const { output } = await headlinePrompt(input);
-    
-    if (!output) {
-        // Fallback in case the AI fails
-        const fallbackSections = input.channels.length > 0 
-            ? input.channels.map(channel => ({
-                channel: channel,
-                categories: input.categories
-              }))
-            : input.categories.map(cat => ({ channel: cat, categories: [cat] }));
+    // AI functionality is temporarily disabled to resolve a server startup issue.
+    // This fallback provides a default layout.
+    const fallbackSections = input.channels.length > 0 
+        ? input.channels.map(channel => ({
+            channel: channel,
+            categories: input.categories
+          }))
+        : input.categories.map(cat => ({ channel: cat, categories: [cat] }));
 
-        return {
-            headlineTitle: 'My Headlines',
-            sections: fallbackSections,
-            layout: 'personalized',
-        };
-    }
-    
-    // Ensure the layout is always personalized, even if the model forgets
-    output.layout = 'personalized';
-
-    return output;
+    return {
+        headlineTitle: 'My Headlines',
+        sections: fallbackSections,
+        layout: 'personalized',
+    };
   }
 );
 
