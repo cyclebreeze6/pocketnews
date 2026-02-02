@@ -409,6 +409,22 @@
         }
       },
       {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Indicates admin role by document existence. Document content is irrelevant. (DBAC).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
         "path": "/categories/{categoryId}",
         "definition": {
           "entityName": "Category",
@@ -436,32 +452,6 @@
             {
               "name": "reportId",
               "description": "The unique identifier of the report."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/email_queue/{emailId}",
-        "definition": {
-          "entityName": "Email",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "to": { "type": "string" },
-              "message": {
-                "type": "object",
-                "properties": {
-                  "subject": { "type": "string" },
-                  "html": { "type": "string" }
-                }
-              }
-            }
-          },
-          "description": "Stores email messages to be sent by a backend service.",
-          "params": [
-            {
-              "name": "emailId",
-              "description": "The unique identifier of the email message."
             }
           ]
         }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Settings, FolderKanban, Tv, Bell, Mail } from 'lucide-react';
+import { Home, Users, Settings, FolderKanban, Tv, Bell } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
   Sidebar,
@@ -18,7 +18,6 @@ const navItems = [
   { href: '/admin/categories', label: 'Categories', icon: FolderKanban },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
-  { href: '/admin/emails', label: 'Send Email', icon: Mail },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 

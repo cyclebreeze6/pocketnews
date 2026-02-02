@@ -82,20 +82,8 @@ export interface Report {
     createdAt: Timestamp | Date | string;
     status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
 }
-
-export interface EmailQueueItem {
-  id: string;
-  to: string;
-  message: {
-    subject: string;
-    html: string;
-  };
-  status: 'queued' | 'sent' | 'failed';
-  createdAt: Timestamp;
-}
     
 
     
 
     
-
