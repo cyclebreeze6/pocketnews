@@ -3,13 +3,14 @@ import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-new
 
 export const dynamic = 'force-dynamic';
 
-// This route is temporarily disabled as its underlying features are not active.
+// This route is called by a cron job to automatically sync breaking news.
 export async function GET() {
-  console.log('Auto-sync cron job triggered, but the feature is currently disabled.');
-  return NextResponse.json({ 
-    success: true, 
-    message: "Auto-sync feature is temporarily disabled.",
-    newVideosAdded: 0,
-    syncedChannels: 0,
-  });
+  try {
+    const result = await runAutoSyncBreakingNews();
+    console.log('Auto-sync cron job completed.', result);
+    return NextResponse.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Auto-sync cron job failed:', error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
 }
