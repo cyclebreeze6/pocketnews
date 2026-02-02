@@ -1,35 +1,12 @@
-
 'use server';
 
 import { ai } from '../genkit';
 import { z } from 'zod';
 import 'dotenv/config';
 import type { Video } from '../../lib/types';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getMessaging } from 'firebase-admin/messaging';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
 
-// Helper to initialize the admin app idempotently
-async function initializeAdminApp() {
-    if (getApps().length > 0) {
-        return;
-    }
-    // Check if the service account key is available and is a valid JSON string
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY && process.env.FIREBASE_SERVICE_ACCOUNT_KEY.startsWith('{')) {
-        try {
-            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-            initializeApp({
-                credential: cert(serviceAccount),
-            });
-        } catch (e) {
-            console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is set but not valid JSON. Falling back to default credentials.", e);
-            initializeApp();
-        }
-    } else {
-        // Fallback to Application Default Credentials
-        initializeApp();
-    }
-}
+// Firebase Admin SDK has been removed to ensure server stability.
+// The notification feature is temporarily disabled.
 
 const NotificationInputSchema = z.object({
   videoId: z.string(),
@@ -48,75 +25,8 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
     outputSchema: NotificationOutputSchema,
   },
   async ({ videoId, category }) => {
-    
-    console.log(`[Notification Flow] Starting for video ${videoId} in category: ${category}`);
-
-    await initializeAdminApp();
-    const firestore = getFirestore();
-    const messaging = getMessaging();
-
-    try {
-      // 1. Get the new video's details
-      const videoRef = firestore.collection('videos').doc(videoId);
-      const videoSnap = await videoRef.get();
-      if (!videoSnap.exists) {
-        throw new Error(`Video with ID ${videoId} not found`);
-      }
-      const video = videoSnap.data() as Video;
-      const videoUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/watch/${videoId}`;
-      
-      // 2. Find users interested in this category
-      const usersSnapshot = await firestore.collection('users').where('preferredCategories', 'array-contains', category).get();
-
-      if (usersSnapshot.empty) {
-        console.log(`[Notification Flow] No users subscribed to category ${category}.`);
-        return { success: true, message: `No users subscribed to category ${category}.` };
-      }
-
-      const userIds = usersSnapshot.docs.map(doc => doc.id);
-      console.log(`[Notification Flow] Found ${userIds.length} user(s) subscribed to ${category}.`);
-      
-      // 3. Get FCM tokens for these users
-      const tokens: string[] = [];
-      for (const userId of userIds) {
-        const tokensSnapshot = await firestore.collection('users').doc(userId).collection('fcmTokens').get();
-        tokensSnapshot.forEach(doc => tokens.push(doc.id));
-      }
-      
-      // 4. Send Push Notifications if tokens are available
-      if (tokens.length > 0) {
-        console.log(`[Notification Flow] Attempting to send notifications to ${tokens.length} token(s).`);
-        const message = {
-            notification: {
-                title: `New Video in ${category}`,
-                body: video.title,
-            },
-            webpush: {
-                fcm_options: {
-                    link: videoUrl,
-                },
-                 notification: {
-                    icon: video.thumbnailUrl,
-                 }
-            },
-            tokens: tokens,
-        };
-
-        const response = await messaging.sendEachForMulticast(message);
-        console.log(`[Notification Flow] Successfully sent ${response.successCount} push notifications.`);
-        if (response.failureCount > 0) {
-            console.warn(`[Notification Flow] Failed to send ${response.failureCount} push notifications.`);
-        }
-      } else {
-        console.log(`[Notification Flow] No FCM tokens found for the subscribed users.`);
-      }
-
-      return { success: true, message: `Notifications processed for category ${category}.` };
-
-    } catch (error: any) {
-      console.error('[Notification Flow] Error sending notification:', error);
-      return { success: false, message: error.message || 'An unknown error occurred.' };
-    }
+    console.warn(`[Notification Flow] Temporarily disabled for video ${videoId}.`);
+    return { success: false, message: "Automated notifications are temporarily disabled." };
   }
 );
 
