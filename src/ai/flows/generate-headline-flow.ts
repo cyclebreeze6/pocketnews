@@ -61,8 +61,12 @@ const generateHeadlineFlow = ai.defineFlow(
     outputSchema: GenerateHeadlineOutputSchema,
   },
   async (input) => {
-    // AI functionality is temporarily disabled to resolve a server startup issue.
-    // This fallback provides a default layout.
+    const { output } = await headlinePrompt(input);
+    if (output) {
+      return output;
+    }
+
+    // Fallback in case AI fails
     const fallbackSections = input.channels.length > 0 
         ? input.channels.map(channel => ({
             channel: channel,

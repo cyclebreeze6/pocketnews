@@ -1,9 +1,18 @@
 'use server';
 
+import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { sendNewVideoNotification } from '../../ai/flows/send-notification-flow';
 import 'dotenv/config';
-// NOTE: firebase-admin and the notification flow have been removed to ensure server stability.
 
-// A leaner version of the Video type for this specific action
+let adminApp: App;
+if (!getApps().length) {
+  adminApp = initializeApp();
+} else {
+  adminApp = getApps()[0];
+}
+
+
 type NewVideoData = {
   youtubeVideoId: string;
   title: string;
@@ -17,14 +26,41 @@ type NewVideoData = {
 
 /**
  * Saves an array of new video data to Firestore using a batch write.
- * This server action is temporarily disabled.
+ * After saving, it can trigger notifications for each new video.
  * @param videos - An array of video data objects to save.
  */
 export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
-  console.warn('[saveSyncedVideos] Temporarily disabled due to server instability. Skipping video save.');
   if (!videos || videos.length === 0) {
     return;
   }
-  // Do nothing.
-  return;
+
+  const firestore = getFirestore(adminApp);
+  const batch = firestore.batch();
+
+  const savedVideoIdsAndCategories: { videoId: string; category: string }[] = [];
+
+  videos.forEach(video => {
+    const docRef = firestore.collection('videos').doc(); // Auto-generate ID
+    const videoData = {
+      ...video,
+      id: docRef.id,
+      createdAt: new Date(), // Use current server date
+      uploadDate: new Date(),
+    };
+    batch.set(docRef, videoData);
+
+    // Keep track of saved videos for notification step
+    savedVideoIdsAndCategories.push({ videoId: docRef.id, category: video.contentCategory });
+  });
+
+  // Commit the batch to save all videos
+  await batch.commit();
+
+  // After saving, trigger notifications for each new video
+  // We do this after the commit to ensure the video exists when the notification is clicked.
+  for (const { videoId, category } of savedVideoIdsAndCategories) {
+    // This is a "fire-and-forget" call. We don't need to wait for it.
+    sendNewVideoNotification({ videoId, category })
+      .catch(err => console.error(`Failed to send notification for video ${videoId}:`, err));
+  }
 }

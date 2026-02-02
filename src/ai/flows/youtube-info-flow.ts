@@ -1,3 +1,4 @@
+'use server';
 /**
  * @fileOverview A flow for fetching YouTube video information using the YouTube Data API.
  *
@@ -8,7 +9,7 @@
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
-// import { getYoutubeClient } from '../../lib/youtube-client';
+import { getYoutubeClient } from '../../lib/youtube-client';
 
 export const YouTubeVideoInfoInputSchema = z.object({
   videoUrl: z.string().url().describe('The URL of the YouTube video.'),
@@ -37,10 +38,33 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
     inputSchema: YouTubeVideoInfoInputSchema,
     outputSchema: YouTubeVideoInfoSchema,
   },
-  async (input: any) => {
-    console.warn('[fetchYouTubeVideoInfoFlow] Temporarily disabled to ensure application stability.');
-    throw new Error('Fetching YouTube video info is temporarily disabled to ensure application stability.');
+  async ({ videoUrl }) => {
+    const videoId = getYouTubeVideoId(videoUrl);
+    if (!videoId) {
+      throw new Error('Could not extract a valid YouTube video ID from the URL.');
+    }
+    
+    const youtube = await getYoutubeClient();
+
+    const response = await youtube.execute(client => 
+        client.videos.list({
+            part: ['snippet'],
+            id: [videoId],
+        })
+    );
+
+    const video = response.data.items?.[0];
+    
+    if (!video || !video.snippet) {
+      throw new Error(`No video found with ID: ${videoId}`);
+    }
+
+    return {
+      videoId: videoId,
+      title: video.snippet.title || 'Untitled',
+      description: video.snippet.description || '',
+      authorName: video.snippet.channelTitle || 'Unknown Channel',
+      thumbnailUrl: video.snippet.thumbnails?.maxres?.url || video.snippet.thumbnails?.high?.url || '',
+    };
   }
 );
-
-    

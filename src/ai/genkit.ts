@@ -1,24 +1,20 @@
-
 'use server';
 /**
- * @fileOverview Mock Genkit AI instance.
- *
- * This file provides a mock 'ai' object to prevent server startup crashes
- * related to Genkit initialization in the current hosting environment.
- * All AI-related functionality is effectively disabled, allowing the rest of
- * the application to function correctly.
+ * @fileOverview Centralized Genkit configuration and initialization.
  */
+import {genkit} from 'genkit';
+import {googleAI} from '@genkit-ai/google-genai';
+import {firebase} from '@genkit-ai/firebase'; // For flow state and trace store
+import {next} from '@genkit-ai/next';
+import 'dotenv/config';
 
-// This mock returns the flow function directly, bypassing Genkit's processing.
-// It allows the application's non-AI flows (like YouTube sync) to work as plain async functions.
-const aiMock = {
-  defineFlow: (_: any, fn: any) => fn,
-  // This mock returns a function that resolves to null, disabling AI prompts.
-  definePrompt: (_: any) => {
-    return () => Promise.resolve({ output: null });
-  },
-  defineTool: (_: any, fn: any) => fn,
-};
-
-// Export the mock object with a type assertion to satisfy TypeScript.
-export const ai = aiMock as any;
+export const ai = genkit({
+  plugins: [
+    next(),
+    firebase(), // Provides 'firebase' stores
+    googleAI(), // Provides Google AI models
+  ],
+  flowStateStore: 'firebase', // Use Firestore to store flow states
+  traceStore: 'firebase', // Use Firestore to store traces
+  enableTracingAndMetrics: false, // Keep disabled to prevent any potential permission issues on startup
+});
