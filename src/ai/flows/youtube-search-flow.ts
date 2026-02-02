@@ -1,11 +1,11 @@
 'use server';
 /**
  * @fileOverview A flow for searching for recent videos on YouTube by a query.
- * NOTE: This feature is temporarily disabled to allow application deployment.
  */
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
+import { getYoutubeClient } from '../../lib/youtube-client';
 
 const YouTubeSearchInputSchema = z.object({
   query: z.string().describe('The search term to look for on YouTube.'),
@@ -32,6 +32,28 @@ export const searchYouTubeVideosFlow = ai.defineFlow(
     outputSchema: YouTubeVideoListSchema,
   },
   async ({ query }): Promise<YouTubeVideoList> => {
-    throw new Error('YouTube integration is temporarily disabled due to server configuration issues.');
+    const youtube = await (await getYoutubeClient()).execute;
+    
+    const response = await youtube(client => client.search.list({
+        part: ['snippet'],
+        q: query,
+        maxResults: 20,
+        type: ['video'],
+        order: 'relevance',
+    }));
+
+    if (!response.data.items) {
+        return [];
+    }
+
+    const videos: YouTubeVideoDetails[] = response.data.items.map(item => ({
+        videoId: item.id?.videoId || '',
+        title: item.snippet?.title || 'Untitled Video',
+        description: item.snippet?.description || '',
+        channelTitle: item.snippet?.channelTitle || 'Unknown Channel',
+        thumbnailUrl: item.snippet?.thumbnails?.high?.url || '',
+    }));
+
+    return videos.filter(video => video.videoId);
   }
 );

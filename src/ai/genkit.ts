@@ -1,13 +1,14 @@
 'use server';
 /**
  * @fileOverview Centralized Genkit configuration and initialization.
- * NOTE: All Genkit and server-side AI functionality has been temporarily disabled to allow the application to deploy.
- * The underlying cloud environment requires additional permissions to run these services.
  */
+import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
-// A mock AI object to prevent import errors in other files.
-export const ai: any = {
-  defineFlow: (config: any, implementation: any) => implementation,
-  definePrompt: () => () => Promise.resolve({}),
-  defineTool: () => () => Promise.resolve({}),
-};
+export const ai = genkit({
+  plugins: [
+    googleAI(),
+  ],
+  logLevel: 'warn', // Use 'warn' to reduce noise in production
+  enableTracingAndMetrics: false, // Explicitly disable this to prevent startup issues
+});
