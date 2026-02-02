@@ -9,7 +9,7 @@
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
-import { getYoutubeClient } from '../../lib/youtube-client';
+// import { getYoutubeClient } from '../../lib/youtube-client';
 
 const YouTubeChannelVideosInputSchema = z.object({
   channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
@@ -36,78 +36,9 @@ export const fetchChannelVideosFlow = ai.defineFlow(
     inputSchema: YouTubeChannelVideosInputSchema,
     outputSchema: YouTubeVideoListSchema,
   },
-  async (input) => {
-    const youtube = await getYoutubeClient();
-    let channelId: string | undefined;
-
-    const trimmedUrl = input.channelUrl.trim();
-    // Regex for standard Channel ID (UC..., HC..., KC...)
-    const channelIdRegex = /(?:youtube\.com\/channel\/)([\w-]{24})/;
-    const match = trimmedUrl.match(channelIdRegex);
-
-    if (match && match[1]) {
-        // If we find a standard channel ID, use it directly.
-        channelId = match[1];
-    } else {
-        // For all other URL types (@handle, /c/name, /user/name), use the search API.
-        const searchResponse = await youtube.search.list({
-            part: ['id'],
-            q: trimmedUrl,
-            type: ['channel'],
-            maxResults: 1
-        });
-        channelId = searchResponse.data.items?.[0]?.id?.channelId;
-    }
-    
-    if (!channelId) {
-        throw new Error(`Could not determine the YouTube Channel ID from the provided URL. Please make sure the URL is correct.`);
-    }
-    
-    const channelResponse = await youtube.channels.list({
-        part: ['contentDetails', 'snippet'],
-        id: [channelId],
-    });
-
-    const channel = channelResponse.data.items?.[0];
-    if (!channel) {
-        throw new Error('Could not find channel details after finding ID.');
-    }
-
-    const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
-    if (!uploadsPlaylistId) {
-        throw new Error('Could not find the uploads playlist for this channel.');
-    }
-    
-    const authorName = channel.snippet?.title || 'Unknown Channel';
-
-    const playlistResponse = await youtube.playlistItems.list({
-        part: ['snippet'],
-        playlistId: uploadsPlaylistId,
-        maxResults: input.maxResults,
-    });
-
-    const videoItems = playlistResponse.data.items;
-    if (!videoItems || videoItems.length === 0) {
-        return [];
-    }
-    
-    const videos: YouTubeVideoList = [];
-    for (const item of videoItems) {
-        const snippet = item.snippet;
-        const videoId = snippet?.resourceId?.videoId;
-        
-        if (videoId && snippet?.title && snippet?.thumbnails?.high?.url) {
-            videos.push({
-                videoId: videoId,
-                title: snippet.title,
-                description: snippet.description || '',
-                authorName: authorName,
-                thumbnailUrl: snippet.thumbnails.high.url || snippet.thumbnails.default?.url || '',
-            });
-        }
-    }
-    
-    return videos;
+  async (input: any) => {
+    console.warn('[fetchChannelVideosFlow] Temporarily disabled to ensure application stability.');
+    return [];
   }
 );
 

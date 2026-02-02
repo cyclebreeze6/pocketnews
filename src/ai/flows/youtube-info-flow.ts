@@ -8,7 +8,7 @@
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
-import { getYoutubeClient } from '../../lib/youtube-client';
+// import { getYoutubeClient } from '../../lib/youtube-client';
 
 export const YouTubeVideoInfoInputSchema = z.object({
   videoUrl: z.string().url().describe('The URL of the YouTube video.'),
@@ -37,42 +37,9 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
     inputSchema: YouTubeVideoInfoInputSchema,
     outputSchema: YouTubeVideoInfoSchema,
   },
-  async (input) => {
-    const videoId = getYouTubeVideoId(input.videoUrl);
-    if (!videoId) {
-        throw new Error('Invalid YouTube URL provided or could not extract video ID.');
-    }
-    
-    const youtube = await getYoutubeClient();
-    
-    try {
-        const response = await youtube.videos.list({
-            part: ['snippet'],
-            id: [videoId],
-        });
-
-        const video = response.data.items?.[0];
-        if (!video || !video.snippet) {
-            throw new Error('Video not found or details are unavailable.');
-        }
-        
-        const snippet = video.snippet;
-
-        return {
-            videoId: videoId,
-            title: snippet.title || 'Untitled',
-            description: snippet.description || '',
-            authorName: snippet.channelTitle || 'Unknown Author',
-            thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
-        };
-
-    } catch (error: any) {
-        console.error('Error fetching video info from YouTube API:', error.message);
-        if (error.response?.data?.error?.message) {
-             throw new Error(`YouTube API Error: ${error.response.data.error.message}`);
-        }
-        throw new Error('Could not extract video information from YouTube Data API.');
-    }
+  async (input: any) => {
+    console.warn('[fetchYouTubeVideoInfoFlow] Temporarily disabled to ensure application stability.');
+    throw new Error('Fetching YouTube video info is temporarily disabled to ensure application stability.');
   }
 );
 
