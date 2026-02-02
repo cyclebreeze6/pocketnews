@@ -1,7 +1,8 @@
+
 'use server';
 
 import type { Channel } from '../../lib/types';
-import { getFirestore, collection, doc, getDoc, where, query, getDocs, select } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, where, query, getDocs } from 'firebase/firestore';
 import { initializeFirebase } from '../../firebase';
 
 /**
@@ -33,7 +34,7 @@ export async function getChannelsForSync(channelId?: string): Promise<{ channels
 
   // Fetch all existing YouTube video IDs from the videos collection
   const videosCollection = collection(firestore, 'videos');
-  const videosQuery = query(videosCollection, select('youtubeVideoId'));
+  const videosQuery = query(videosCollection);
   const videosSnapshot = await getDocs(videosQuery);
   const existingYoutubeIds = videosSnapshot.docs.map(doc => doc.data().youtubeVideoId);
 

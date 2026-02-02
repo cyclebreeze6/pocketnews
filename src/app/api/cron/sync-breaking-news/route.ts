@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-news';
 
-export const dynamic = 'force-dynamic';
-
 // This route is called by a cron job to automatically sync breaking news.
 export async function GET() {
   try {
