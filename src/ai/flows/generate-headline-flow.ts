@@ -29,6 +29,31 @@ const GenerateHeadlineOutputSchema = z.object({
 });
 export type GenerateHeadlineOutput = z.infer<typeof GenerateHeadlineOutputSchema>;
 
+
+const headlinePrompt = ai.definePrompt({
+    name: 'headlinePrompt',
+    input: { schema: GenerateHeadlineInputSchema },
+    output: { schema: GenerateHeadlineOutputSchema },
+    prompt: `You are a TV news curator. Given a list of channels and categories, create a personalized layout.
+    - The headline title should be short and engaging.
+    - Group the categories under the most relevant channels. A channel can have multiple categories. A category can appear in multiple channels if relevant.
+    - Ensure all given channels are used in the sections.
+    - Ensure all given categories are distributed among the sections.
+
+    Channels:
+    {{#each channels}}
+    - {{this}}
+    {{/each}}
+
+    Categories:
+    {{#each categories}}
+    - {{this}}
+    {{/each}}
+
+    Your output must be in the 'personalized' layout format.`,
+});
+
+
 const generateHeadlineFlow = ai.defineFlow(
   {
     name: 'generateHeadlineFlow',
@@ -36,28 +61,28 @@ const generateHeadlineFlow = ai.defineFlow(
     outputSchema: GenerateHeadlineOutputSchema,
   },
   async (input) => {
-    // AI functionality is disabled. Using fallback logic.
-    if (!input.channels || input.channels.length === 0) {
-      return {
-        headlineTitle: 'My Headlines',
-        sections: input.categories.map(cat => ({ channel: cat, categories: [cat] })),
-        layout: 'personalized',
-      };
-    }
+    const { output } = await headlinePrompt(input);
+    
+    if (!output) {
+        // Fallback in case the AI fails
+        const fallbackSections = input.channels.length > 0 
+            ? input.channels.map(channel => ({
+                channel: channel,
+                categories: input.categories
+              }))
+            : input.categories.map(cat => ({ channel: cat, categories: [cat] }));
 
-    // A simple fallback: just assign all categories to the first channel
-    const sections = input.channels.map(channel => {
         return {
-            channel: channel,
-            categories: input.categories
-        }
-    });
+            headlineTitle: 'My Headlines',
+            sections: fallbackSections,
+            layout: 'personalized',
+        };
+    }
+    
+    // Ensure the layout is always personalized, even if the model forgets
+    output.layout = 'personalized';
 
-    return {
-        headlineTitle: 'My Headlines',
-        sections: sections,
-        layout: 'personalized',
-    };
+    return output;
   }
 );
 
