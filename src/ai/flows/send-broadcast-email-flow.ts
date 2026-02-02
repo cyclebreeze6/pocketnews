@@ -2,7 +2,7 @@
 
 import { ai } from '../genkit';
 import { z } from 'zod';
-import { getFirestore, addDoc, collection, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 
 // Helper to initialize the admin app idempotently
@@ -52,9 +52,11 @@ export const sendSingleEmailFlow = ai.defineFlow(
     const firestore = getFirestore();
 
     try {
-      const emailQueueCollection = collection(firestore, 'email_queue');
+      const emailQueueCollection = firestore.collection('email_queue');
       
-      await addDoc(emailQueueCollection, {
+      const newEmailRef = emailQueueCollection.doc();
+      await newEmailRef.set({
+        id: newEmailRef.id,
         to: to,
         message: {
           subject: subject,
