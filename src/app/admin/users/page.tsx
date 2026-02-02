@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase';
 import type { UserProfile } from '../../../lib/types';
 import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
@@ -33,28 +33,13 @@ export default function AdminUsersPage() {
     const userRef = doc(firestore, 'users', user.id);
     const newStatus = !user[role];
 
-    const batch = writeBatch(firestore);
-    batch.update(userRef, { [role]: newStatus });
+    // The firebase-admin dependent logic for roles_admin has been removed for stability.
+    // We now only update the user document.
+    updateDocumentNonBlocking(userRef, { [role]: newStatus });
 
-    // Also update the /roles_admin collection for DBAC
-    if (role === 'isAdmin') {
-        const adminRoleRef = doc(firestore, 'roles_admin', user.id);
-        if (newStatus) {
-            batch.set(adminRoleRef, { email: user.email });
-        } else {
-            batch.delete(adminRoleRef);
-        }
-    }
-
-    // Commit the batch and show toast notifications
-    batch.commit().then(() => {
-        toast({
-            title: `${role === 'isAdmin' ? 'Admin' : 'Creator'} role updated`,
-            description: `${user.displayName} is now ${newStatus ? `an ${role === 'isAdmin' ? 'admin' : 'a creator'}` : `not an ${role === 'isAdmin' ? 'admin' : 'a creator'}`}.`,
-        });
-    }).catch(error => {
-        console.error("Error updating role: ", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not update user role."});
+    toast({
+        title: `${role === 'isAdmin' ? 'Admin' : 'Creator'} role updated`,
+        description: `${user.displayName} is now ${newStatus ? `an ${role === 'isAdmin' ? 'admin' : 'a creator'}` : `not an ${role === 'isAdmin' ? 'admin' : 'a creator'}`}.`,
     });
   };
 
@@ -100,13 +85,8 @@ export default function AdminUsersPage() {
       }
 
       const userRef = doc(firestore, 'users', userToPromote.id);
-      const adminRoleRef = doc(firestore, 'roles_admin', userToPromote.id);
-      
-      const batch = writeBatch(firestore);
-      batch.update(userRef, { isAdmin: true });
-      batch.set(adminRoleRef, { email: userToPromote.email });
-      await batch.commit();
-
+      // The firebase-admin dependent logic for roles_admin has been removed for stability.
+      await updateDoc(userRef, { isAdmin: true });
 
       toast({
         title: 'User Promoted!',

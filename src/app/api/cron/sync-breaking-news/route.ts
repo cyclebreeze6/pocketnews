@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
 import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-news';
 
-export const dynamic = 'force-dynamic'; // Prevent caching
+export const dynamic = 'force-dynamic';
 
-// This route can be called by a cron job service (like Google Cloud Scheduler)
+// This route is temporarily disabled as its underlying features are not active.
 export async function GET() {
-  try {
-    console.log('Auto-sync cron job triggered...');
-    const result = await runAutoSyncBreakingNews();
-    console.log('Auto-sync completed:', result);
-    return NextResponse.json({ success: true, ...result });
-  } catch (error: any) {
-    console.error('Error during auto-sync cron job:', error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-  }
+  console.log('Auto-sync cron job triggered, but the feature is currently disabled.');
+  return NextResponse.json({ 
+    success: true, 
+    message: "Auto-sync feature is temporarily disabled.",
+    newVideosAdded: 0,
+    syncedChannels: 0,
+  });
 }

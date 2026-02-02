@@ -1,10 +1,7 @@
 'use server';
 /**
  * @fileOverview A flow for fetching basic info from a YouTube channel using the YouTube Data API.
- *
- * - fetchYouTubeChannelInfoFlow - Fetches a channel's logo, name, and description from a given URL.
- * - YouTubeChannelInfoInput - The input type for the flow.
- * - YouTubeChannelInfo - The output type for the flow.
+ * NOTE: This feature is temporarily disabled to allow application deployment.
  */
 
 import { ai } from '../genkit';
@@ -25,50 +22,13 @@ const YouTubeChannelInfoSchema = z.object({
 });
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
-
-// Helper function to extract channel handle from various YouTube URL formats
-function getYouTubeChannelHandle(url: string): string | null {
-    const handleRegex = /@([a-zA-Z0-9_\-.]+)/;
-    const match = url.match(handleRegex);
-    return match ? match[1] : null;
-}
-
 export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
   {
     name: 'fetchYouTubeChannelInfoFlow',
     inputSchema: YouTubeChannelInfoInputSchema,
     outputSchema: YouTubeChannelInfoSchema,
   },
-  async ({ channelUrl }) => {
-    const handle = getYouTubeChannelHandle(channelUrl);
-    if (!handle) {
-      throw new Error('Could not extract a valid YouTube channel handle from the URL.');
-    }
-
-    const youtube = await getYoutubeClient();
-    const response = await youtube.execute(client => 
-        client.channels.list({
-            part: ['snippet', 'brandingSettings', 'contentDetails'],
-            forHandle: handle,
-        })
-    );
-
-    const channel = response.data.items?.[0];
-    if (!channel) {
-        throw new Error(`No YouTube channel found for handle: @${handle}`);
-    }
-
-    const snippet = channel.snippet;
-    if (!snippet || !snippet.title || !snippet.thumbnails?.high?.url) {
-        throw new Error('Incomplete channel data received from YouTube API.');
-    }
-
-    return {
-        name: snippet.title,
-        logoUrl: snippet.thumbnails.high.url,
-        description: snippet.description || '',
-        language: snippet.defaultLanguage || '',
-        region: snippet.country || '',
-    };
+  async ({ channelUrl }): Promise<YouTubeChannelInfo> => {
+    throw new Error('YouTube integration is temporarily disabled due to server configuration issues.');
   }
 );

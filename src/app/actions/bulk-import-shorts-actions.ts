@@ -2,17 +2,10 @@
 
 import { getChannelsForSync } from './get-channels-for-sync';
 import { fetchChannelShorts } from '../actions/youtube-channel-shorts-flow';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import type { YouTubeShortDetails } from '../../ai/flows/youtube-channel-shorts-flow';
-import 'dotenv/config';
+import { initializeFirebase } from '../../firebase';
+import { getFirestore, collection, getDocs, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
 
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
-}
 
 // The data structure for the UI
 export interface NewShortForImport extends YouTubeShortDetails {
@@ -36,8 +29,8 @@ export async function fetchNewShortsForBulkImport(): Promise<NewShortForImport[]
         return [];
     }
 
-    const firestore = getFirestore(adminApp);
-    const shortsCollection = await firestore.collection('shorts').get();
+    const { firestore } = initializeFirebase();
+    const shortsCollection = await getDocs(collection(firestore, 'shorts'));
     const existingYoutubeIds = new Set(shortsCollection.docs.map(doc => doc.data().youtubeVideoId));
 
     const allNewShorts: NewShortForImport[] = [];
@@ -72,15 +65,15 @@ export async function saveImportedShorts(shorts: ImportedShortSaveData[]): Promi
         return;
     }
     
-    const firestore = getFirestore(adminApp);
-    const batch = firestore.batch();
+    const { firestore } = initializeFirebase();
+    const batch = writeBatch(firestore);
 
     shorts.forEach(short => {
-        const docRef = firestore.collection('shorts').doc();
+        const docRef = doc(collection(firestore, 'shorts'));
         batch.set(docRef, {
             ...short,
             id: docRef.id,
-            createdAt: new Date(),
+            createdAt: serverTimestamp(),
         });
     });
 

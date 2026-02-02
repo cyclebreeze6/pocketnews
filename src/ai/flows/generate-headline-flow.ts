@@ -1,10 +1,7 @@
 'use server';
 /**
  * @fileOverview A flow for generating a personalized homepage configuration for a user.
- *
- * - generateHeadlineConfig - A function that creates a personalized headline and content sections.
- * - GenerateHeadlineInput - The input type for the flow.
- * - GenerateHeadlineOutput - The output type for the flow.
+ * NOTE: AI functionality is disabled; this provides a fallback.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
@@ -29,44 +26,14 @@ const GenerateHeadlineOutputSchema = z.object({
 });
 export type GenerateHeadlineOutput = z.infer<typeof GenerateHeadlineOutputSchema>;
 
-
-const headlinePrompt = ai.definePrompt({
-    name: 'headlinePrompt',
-    input: { schema: GenerateHeadlineInputSchema },
-    output: { schema: GenerateHeadlineOutputSchema },
-    prompt: `You are a TV news curator. Given a list of channels and categories, create a personalized layout.
-    - The headline title should be short and engaging.
-    - Group the categories under the most relevant channels. A channel can have multiple categories. A category can appear in multiple channels if relevant.
-    - Ensure all given channels are used in the sections.
-    - Ensure all given categories are distributed among the sections.
-
-    Channels:
-    {{#each channels}}
-    - {{this}}
-    {{/each}}
-
-    Categories:
-    {{#each categories}}
-    - {{this}}
-    {{/each}}
-
-    Your output must be in the 'personalized' layout format.`,
-});
-
-
 const generateHeadlineFlow = ai.defineFlow(
   {
     name: 'generateHeadlineFlow',
     inputSchema: GenerateHeadlineInputSchema,
     outputSchema: GenerateHeadlineOutputSchema,
   },
-  async (input) => {
-    const { output } = await headlinePrompt(input);
-    if (output) {
-      return output;
-    }
-
-    // Fallback in case AI fails
+  async (input: GenerateHeadlineInput) => {
+    // Fallback since AI is disabled
     const fallbackSections = input.channels.length > 0 
         ? input.channels.map(channel => ({
             channel: channel,

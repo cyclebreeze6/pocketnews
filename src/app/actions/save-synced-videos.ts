@@ -1,18 +1,12 @@
 'use server';
 
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { sendNewVideoNotification } from '../../ai/flows/send-notification-flow';
-import 'dotenv/config';
+import { initializeFirebase } from '../../firebase/index';
+import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
 
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
-}
-
-
+/**
+ * NOTE: The notification part of this function is disabled as it requires
+ * the `firebase-admin` package, which has been temporarily removed for stability.
+ */
 type NewVideoData = {
   youtubeVideoId: string;
   title: string;
@@ -26,7 +20,6 @@ type NewVideoData = {
 
 /**
  * Saves an array of new video data to Firestore using a batch write.
- * After saving, it can trigger notifications for each new video.
  * @param videos - An array of video data objects to save.
  */
 export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
@@ -34,33 +27,21 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
     return;
   }
 
-  const firestore = getFirestore(adminApp);
-  const batch = firestore.batch();
-
-  const savedVideoIdsAndCategories: { videoId: string; category: string }[] = [];
+  const { firestore } = initializeFirebase();
+  const batch = writeBatch(firestore);
 
   videos.forEach(video => {
-    const docRef = firestore.collection('videos').doc(); // Auto-generate ID
+    const docRef = doc(collection(firestore, 'videos')); // Auto-generate ID
     const videoData = {
       ...video,
       id: docRef.id,
-      createdAt: new Date(), // Use current server date
-      uploadDate: new Date(),
+      createdAt: serverTimestamp(),
+      uploadDate: serverTimestamp(),
     };
     batch.set(docRef, videoData);
-
-    // Keep track of saved videos for notification step
-    savedVideoIdsAndCategories.push({ videoId: docRef.id, category: video.contentCategory });
   });
 
-  // Commit the batch to save all videos
   await batch.commit();
 
-  // After saving, trigger notifications for each new video
-  // We do this after the commit to ensure the video exists when the notification is clicked.
-  for (const { videoId, category } of savedVideoIdsAndCategories) {
-    // This is a "fire-and-forget" call. We don't need to wait for it.
-    sendNewVideoNotification({ videoId, category })
-      .catch(err => console.error(`Failed to send notification for video ${videoId}:`, err));
-  }
+  // Notification logic is disabled.
 }
