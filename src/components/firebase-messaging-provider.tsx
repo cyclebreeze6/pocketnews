@@ -65,7 +65,7 @@ export function FirebaseMessagingProvider() {
       // "Don't ask again" is the highest priority.
       const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
       if (hidePreferencePopup === 'true') {
-        return; 
+        return;
       }
 
       let prefsAreSet = false;
@@ -75,31 +75,26 @@ export function FirebaseMessagingProvider() {
         prefsAreSet = true;
       }
 
-      let shouldShow = false;
-      if (!prefsAreSet) {
-        // If preferences have never been set, we should show the popup.
-        shouldShow = true;
-      } else {
-        // Preferences ARE set. Now check the 12-hour rule.
+      if (prefsAreSet) {
         const lastSetTimestamp = localStorage.getItem('preferenceSetTimestamp');
         if (lastSetTimestamp) {
           const twelveHoursInMillis = 12 * 60 * 60 * 1000;
           const timeSinceLastSet = new Date().getTime() - parseInt(lastSetTimestamp, 10);
           if (timeSinceLastSet >= twelveHoursInMillis) {
-            // It's been more than 12 hours, so show it again.
-            shouldShow = true;
+            // It's been more than 12 hours, so show the popup.
+            const timer = setTimeout(() => setIsPreferenceDialogOpen(true), 2000);
+            return () => clearTimeout(timer);
           }
+          // If less than 12 hours, do nothing.
         } else {
-          // This is a fallback for users who may have set preferences before
-          // the timestamp logic was introduced. Show it once to record the timestamp.
-          shouldShow = true;
+          // If prefs are set but there's no timestamp (e.g., first time after update, or cleared cache),
+          // just set the timestamp for now and don't show the popup.
+          // This will start the 12-hour timer for the next check.
+          localStorage.setItem('preferenceSetTimestamp', new Date().getTime().toString());
         }
-      }
-      
-      if (shouldShow) {
-        const timer = setTimeout(() => {
-          setIsPreferenceDialogOpen(true);
-        }, 2000);
+      } else {
+        // If preferences have never been set, show the popup.
+        const timer = setTimeout(() => setIsPreferenceDialogOpen(true), 2000);
         return () => clearTimeout(timer);
       }
     };
