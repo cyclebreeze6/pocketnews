@@ -7,8 +7,6 @@ if (!aiInstance) {
     plugins: [
       googleAI(),
     ],
-    logLevel: 'debug',
-    enableTracingAndMetrics: false,
   });
 }
 export const ai = aiInstance;
