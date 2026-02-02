@@ -21,30 +21,13 @@ const GenerateHeadlineOutputSchema = z.object({
     .array(
       z.object({
         channel: z.string().describe('The name of the channel for this section.'),
-        categories: z.array(z.string()).describe('A list of related categories for this channel section.'),
+        categories: z.array(z.string()).describe('A list of related categories for this channel.'),
       })
     )
     .describe('An array of content sections built from the selected channels.'),
   layout: z.literal('personalized').describe("The layout type, which must be 'personalized'."),
 });
 export type GenerateHeadlineOutput = z.infer<typeof GenerateHeadlineOutputSchema>;
-
-const prompt = ai.definePrompt({
-    name: 'generateHeadlinePrompt',
-    input: { schema: GenerateHeadlineInputSchema },
-    output: { schema: GenerateHeadlineOutputSchema },
-    prompt: `Generate a personalized homepage configuration for a logged-in user.
-
-User-selected channels: {{channels}}
-User-selected categories: {{categories}}
-
-Requirements:
-- Create a short personal headline title (max 7 words).
-- Build homepage sections using only selected channels.
-- Group related categories under each channel.
-- Keep output simple and balanced.
-- Return ONLY valid JSON.`,
-});
 
 const generateHeadlineFlow = ai.defineFlow(
   {
@@ -53,7 +36,7 @@ const generateHeadlineFlow = ai.defineFlow(
     outputSchema: GenerateHeadlineOutputSchema,
   },
   async (input) => {
-    // If no channels are provided, create a fallback configuration
+    // AI functionality is disabled. Using fallback logic.
     if (!input.channels || input.channels.length === 0) {
       return {
         headlineTitle: 'My Headlines',
@@ -61,17 +44,9 @@ const generateHeadlineFlow = ai.defineFlow(
         layout: 'personalized',
       };
     }
-    
-    // If AI generation is needed
-    const { output } = await prompt(input);
-    if (output) {
-      return output;
-    }
 
-    // Fallback if AI fails
+    // A simple fallback: just assign all categories to the first channel
     const sections = input.channels.map(channel => {
-        // A simple fallback: just assign all categories to the first channel
-        // A more complex grouping could be done here if needed.
         return {
             channel: channel,
             categories: input.categories
