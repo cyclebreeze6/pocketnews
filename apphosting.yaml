@@ -8,8 +8,3 @@ runConfig:
 env:
   - variable: NODE_ENV
     value: production
-scheduledJobs:
-  - schedule: "every 30 minutes"
-    httpTarget:
-      uri: "/api/cron/sync-breaking-news"
-    timeZone: "UTC"
