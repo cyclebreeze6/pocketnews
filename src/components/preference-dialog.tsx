@@ -12,8 +12,8 @@ import {
 import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { useState, useEffect } from 'react';
-import { useFirebase, updateDocumentNonBlocking } from '../firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { LANGUAGES, REGIONS } from '../lib/constants';
 import { Loader2, Globe, Languages, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
@@ -103,35 +103,49 @@ export function PreferenceDialog({
 
   const handleSave = async () => {
     setIsSaving(true);
-    
     const now = new Date().getTime();
-    localStorage.setItem('preferenceSetTimestamp', now.toString());
-    if (dontAskAgain) {
-      localStorage.setItem('hidePreferencePopup', 'true');
-    }
 
     const preferencesToSave = {
         region: selectedRegions,
         language: selectedLanguage === 'all-languages' ? '' : selectedLanguage,
     };
 
-    if (user && !user.isAnonymous && userId) {
-        const userRef = doc(firestore, 'users', userId);
-        updateDocumentNonBlocking(userRef, {
-            preferences: preferencesToSave,
-            preferencesSet: true,
+    try {
+        if (user && !user.isAnonymous && userId) {
+            const userRef = doc(firestore, 'users', userId);
+            await updateDoc(userRef, {
+                preferences: preferencesToSave,
+                preferencesSet: true,
+            });
+        } else {
+            localStorage.setItem('anonymousPreferences', JSON.stringify(preferencesToSave));
+        }
+
+        // Only set timestamp and reload on success
+        localStorage.setItem('preferenceSetTimestamp', now.toString());
+        if (dontAskAgain) {
+            localStorage.setItem('hidePreferencePopup', 'true');
+        }
+
+        toast({
+            title: 'Preferences Updated!',
+            description: 'Your content feed will now be personalized.',
         });
-    } else {
-        localStorage.setItem('anonymousPreferences', JSON.stringify(preferencesToSave));
+
+        onOpenChange(false);
+        // Using a short timeout to allow the toast to be seen before reload
+        setTimeout(() => window.location.reload(), 500);
+
+    } catch (error) {
+        console.error("Failed to save preferences:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Save Failed',
+            description: 'Could not save your preferences. Please try again.'
+        });
+    } finally {
+        setIsSaving(false);
     }
-    
-    setIsSaving(false);
-    onOpenChange(false);
-    toast({
-        title: 'Preferences Updated!',
-        description: 'Your content feed will now be personalized.',
-    });
-    window.location.reload();
   };
 
   return (
