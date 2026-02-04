@@ -1,12 +1,5 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
-export default function AdminEmailsRedirectPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace('/admin');
-  }, [router]);
-
+export default function AdminEmailsPage() {
+  // This page is intentionally left blank.
   return null;
 }

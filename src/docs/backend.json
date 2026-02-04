@@ -409,22 +409,6 @@
         }
       },
       {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Indicates admin role by document existence. Document content is irrelevant. (DBAC).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
         "path": "/categories/{categoryId}",
         "definition": {
           "entityName": "Category",

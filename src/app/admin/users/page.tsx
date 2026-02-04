@@ -3,20 +3,36 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase';
 import type { UserProfile } from '../../../lib/types';
-import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
 import { Switch } from '../../../components/ui/switch';
 import { useToast } from '../../../hooks/use-toast';
 import { Badge } from '../../../components/ui/badge';
-import { MoreHorizontal, Trash2, Loader2, UserCheck } from 'lucide-react';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
 import { Button } from '../../../components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../../components/ui/alert-dialog';
 import { useState } from 'react';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
+
+export default![CDATA[
+'use client';
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase';
+import type { UserProfile } from '../../../lib/types';
+import { collection, doc } from 'firebase/firestore';
+import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
+import { Switch } from '../../../components/ui/switch';
+import { useToast } from '../../../hooks/use-toast';
+import { Badge } from '../../../components/ui/badge';
+import { MoreHorizontal, Trash2, Loader2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
+import { Button } from '../../../components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../../components/ui/alert-dialog';
+import { useState } from 'react';
 
 export default function AdminUsersPage() {
   const { firestore } = useFirebase();
@@ -26,15 +42,11 @@ export default function AdminUsersPage() {
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
-  const [promoteEmail, setPromoteEmail] = useState('');
-  const [isPromoting, setIsPromoting] = useState(false);
 
   const handleRoleToggle = (user: UserProfile, role: 'isAdmin' | 'isCreator') => {
     const userRef = doc(firestore, 'users', user.id);
     const newStatus = !user[role];
 
-    // The firebase-admin dependent logic for roles_admin has been removed for stability.
-    // We now only update the user document.
     updateDocumentNonBlocking(userRef, { [role]: newStatus });
 
     toast({
@@ -42,7 +54,6 @@ export default function AdminUsersPage() {
         description: `${user.displayName} is now ${newStatus ? `an ${role === 'isAdmin' ? 'admin' : 'a creator'}` : `not an ${role === 'isAdmin' ? 'admin' : 'a creator'}`}.`,
     });
   };
-
 
   const handleDeleteUser = () => {
     if (userToDelete) {
@@ -56,84 +67,15 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handlePromoteByEmail = async () => {
-    if (!promoteEmail) {
-      toast({ variant: 'destructive', title: 'Please enter an email address.' });
-      return;
-    }
-    setIsPromoting(true);
-
-    try {
-      const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('email', '==', promoteEmail));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        toast({ variant: 'destructive', title: 'User not found', description: `No user with the email ${promoteEmail} exists.` });
-        setIsPromoting(false);
-        return;
-      }
-
-      const userDoc = querySnapshot.docs[0];
-      const userToPromote = { id: userDoc.id, ...userDoc.data() } as UserProfile;
-
-      if (userToPromote.isAdmin) {
-        toast({ title: 'Already an Admin', description: `${userToPromote.displayName} is already an administrator.` });
-        setPromoteEmail('');
-        setIsPromoting(false);
-        return;
-      }
-
-      const userRef = doc(firestore, 'users', userToPromote.id);
-      // The firebase-admin dependent logic for roles_admin has been removed for stability.
-      await updateDoc(userRef, { isAdmin: true });
-
-      toast({
-        title: 'User Promoted!',
-        description: `${userToPromote.displayName} (${userToPromote.email}) is now an administrator.`,
-      });
-      setPromoteEmail('');
-
-    } catch (error) {
-      console.error('Error promoting user:', error);
-      toast({ variant: 'destructive', title: 'Error promoting user' });
-    } finally {
-      setIsPromoting(false);
-    }
-  };
-
-
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">Manage Users</h1>
-      
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Promote New Admin</CardTitle>
-          <CardDescription>Grant administrator privileges to an existing user by entering their email address.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-2 max-w-lg">
-            <div className="grid flex-1 gap-2">
-              <Label htmlFor="promote-email" className="sr-only">Email</Label>
-              <Input
-                id="promote-email"
-                type="email"
-                placeholder="Enter user's email"
-                value={promoteEmail}
-                onChange={(e) => setPromoteEmail(e.target.value)}
-                disabled={isPromoting}
-              />
-            </div>
-            <Button onClick={handlePromoteByEmail} disabled={isPromoting || !promoteEmail}>
-              {isPromoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Promote to Admin
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle>All Users</CardTitle>
+          <CardDescription>Manage roles and permissions for all users in the system.</CardDescription>
+        </CardHeader>
         <CardContent className="mt-6">
           <Table>
             <TableHeader>
@@ -149,7 +91,12 @@ export default function AdminUsersPage() {
             <TableBody>
               {usersLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">Loading users...</TableCell>
+                  <TableCell colSpan={6} className="text-center">
+                    <div className="flex justify-center items-center p-4">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Loading users...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
               )}
               {users?.map((user) => (
@@ -229,5 +176,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
-    
