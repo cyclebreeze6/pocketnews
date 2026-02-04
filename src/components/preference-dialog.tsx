@@ -118,6 +118,7 @@ export function PreferenceDialog({
             });
         } else {
             localStorage.setItem('anonymousPreferences', JSON.stringify(preferencesToSave));
+            localStorage.setItem('preferencesSet', 'true');
         }
 
         if (dontAskAgain) {

@@ -60,33 +60,34 @@ export function FirebaseMessagingProvider() {
     if (typeof window === 'undefined') {
       return;
     }
-
+  
     const checkAndShowPopup = () => {
       // "Don't ask again" is the highest priority.
       const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
       if (hidePreferencePopup === 'true') {
         return;
       }
-
+  
       let prefsAreSet = false;
       if (user?.isAnonymous) {
-        prefsAreSet = !!localStorage.getItem('anonymousPreferences');
-      } else if (userProfile?.preferencesSet) {
-        prefsAreSet = true;
+        // For anonymous users, check the dedicated flag in localStorage.
+        prefsAreSet = localStorage.getItem('preferencesSet') === 'true';
+      } else if (userProfile) {
+        // For logged-in users, check the profile from Firestore.
+        prefsAreSet = !!userProfile.preferencesSet;
       }
-
+  
       // Only show the popup if preferences have never been set.
       if (!prefsAreSet) {
         const timer = setTimeout(() => setIsPreferenceDialogOpen(true), 2000);
         return () => clearTimeout(timer);
       }
     };
-    
+  
     // We must wait for auth and profile loading to finish before making a decision.
     if (!isUserLoading && !isProfileLoading) {
-        checkAndShowPopup();
+      checkAndShowPopup();
     }
-
   }, [user, userProfile, isUserLoading, isProfileLoading]);
 
 
