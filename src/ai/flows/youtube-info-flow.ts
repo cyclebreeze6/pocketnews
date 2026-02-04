@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A flow for fetching YouTube video information using the YouTube Data API.
  */
