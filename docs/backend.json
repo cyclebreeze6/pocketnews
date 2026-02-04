@@ -29,6 +29,10 @@
           "description": "URL for the channel's logo.",
           "format": "uri"
         },
+        "youtubeChannelId": {
+          "type": "string",
+          "description": "The unique ID of the YouTube channel for matching."
+        },
         "language": {
             "type": "string",
             "description": "The default language of the channel."
@@ -409,22 +413,6 @@
         }
       },
       {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Indicates admin role by document existence. Document content is irrelevant. (DBAC).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
         "path": "/categories/{categoryId}",
         "definition": {
           "entityName": "Category",
@@ -464,3 +452,4 @@
     
 
     
+

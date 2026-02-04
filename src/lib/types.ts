@@ -18,6 +18,7 @@ export interface Channel {
   createdAt?: Timestamp | Date | string;
   logoUrl?: string;
   youtubeChannelUrl?: string; // For auto-syncing
+  youtubeChannelId?: string; // For matching imported videos
   language?: string;
   region?: string[];
 }
@@ -87,3 +88,4 @@ export interface Report {
     
 
     
+

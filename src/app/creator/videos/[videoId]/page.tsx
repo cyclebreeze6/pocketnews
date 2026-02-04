@@ -15,6 +15,7 @@ import { useToast } from '../../../../hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { fetchYouTubeVideoInfo } from '../../../actions/youtube-info-flow';
 import type { YouTubeVideoInfo } from '../../../../ai/flows/youtube-info-flow';
+import { fetchYouTubeChannelInfo } from '../../../actions/youtube-channel-info-flow';
 import { Textarea } from '../../../../components/ui/textarea';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -69,7 +70,7 @@ export default function VideoEditPage() {
       setVideoInputUrl(urlFromQuery);
       handleFetchDetails(urlFromQuery);
     }
-  }, [searchParams, isNewVideo]);
+  }, [searchParams, isNewVideo, channels]); // Add channels dependency
 
   useEffect(() => {
     if (existingVideo) {
@@ -89,35 +90,70 @@ export default function VideoEditPage() {
       return;
     }
 
-    // Only fetch from YouTube if it's a YouTube URL
     if (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be')) {
       setIsFetching(true);
       try {
-        const videoInfo: YouTubeVideoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
+        const videoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
         if (videoInfo && videoInfo.title) {
           setVideoDetails(prev => ({
               ...prev,
               youtubeVideoId: videoInfo.videoId,
-              videoUrl: '', // Clear other url
+              videoUrl: '', 
               title: videoInfo.title,
               description: videoInfo.description,
               thumbnailUrl: videoInfo.thumbnailUrl,
           }));
+
+          if (videoInfo.youtubeChannelId && channels) {
+            const existingChannel = channels.find(c => c.youtubeChannelId === videoInfo.youtubeChannelId);
+
+            if (existingChannel) {
+              setVideoDetails(prev => ({...prev, channelId: existingChannel.id}));
+              toast({ title: 'Channel matched!', description: `"${existingChannel.name}" was automatically selected.`});
+            } else {
+              toast({ title: 'New channel detected', description: 'Creating and selecting it for you...'});
+              try {
+                const newChannelInfo = await fetchYouTubeChannelInfo({ channelUrl: `https://www.youtube.com/channel/${videoInfo.youtubeChannelId}` });
+                
+                const newChannelRef = doc(collection(firestore, 'channels'));
+                const newChannelData = {
+                    id: newChannelRef.id,
+                    name: newChannelInfo.name,
+                    description: newChannelInfo.description || 'Auto-created channel.',
+                    createdAt: serverTimestamp(),
+                    logoUrl: newChannelInfo.logoUrl,
+                    youtubeChannelUrl: `https://www.youtube.com/channel/${videoInfo.youtubeChannelId}`,
+                    language: newChannelInfo.language || 'English',
+                    region: newChannelInfo.region ? [newChannelInfo.region] : ['Global'],
+                    youtubeChannelId: videoInfo.youtubeChannelId,
+                };
+                
+                await setDoc(newChannelRef, newChannelData);
+
+                setVideoDetails(prev => ({ ...prev, channelId: newChannelRef.id }));
+                toast({ title: 'Channel Created!', description: `"${newChannelInfo.name}" has been created and selected.` });
+
+              } catch (channelError: any) {
+                  console.error("Error auto-creating channel:", channelError);
+                  toast({ variant: 'destructive', title: 'Failed to create channel', description: channelError.message || 'Please select a channel manually.' });
+              }
+            }
+          }
+
         } else {
           toast({ variant: 'destructive', title: 'Could not fetch YouTube video details.' });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'An error occurred while fetching YouTube details.' });
+        toast({ variant: 'destructive', title: 'An error occurred while fetching YouTube details.', description: error.message });
       } finally {
         setIsFetching(false);
       }
     } else {
-        // For non-YouTube URLs, just set the videoUrl
         setVideoDetails(prev => ({
             ...prev,
             videoUrl: finalUrl,
-            youtubeVideoId: '', // Clear youtube id
+            youtubeVideoId: '', 
             title: prev?.title || 'New Video',
             description: prev?.description || '',
             thumbnailUrl: prev?.thumbnailUrl || 'https://picsum.photos/seed/placeholder/1280/720',

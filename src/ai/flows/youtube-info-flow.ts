@@ -13,6 +13,7 @@ export type YouTubeVideoInfoInput = z.infer<typeof YouTubeVideoInfoInputSchema>;
 
 export const YouTubeVideoInfoSchema = z.object({
   videoId: z.string().describe('The unique ID of the YouTube video.'),
+  youtubeChannelId: z.string().describe('The ID of the YouTube channel.'),
   title: z.string().describe('The title of the video.'),
   description: z.string().describe('The description of the video.'),
   authorName: z.string().describe("The name of the video's author or channel."),
@@ -63,6 +64,7 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
 
     return {
         videoId: video.id || videoId,
+        youtubeChannelId: video.snippet?.channelId || '',
         title: video.snippet?.title || 'Untitled Video',
         description: video.snippet?.description || '',
         authorName: video.snippet?.channelTitle || 'Unknown Channel',
