@@ -57,7 +57,7 @@ export function FirebaseMessagingProvider() {
   
   useEffect(() => {
     // This effect should only run on the client after hydration
-    if (typeof window === 'undefined' || isUserLoading) {
+    if (typeof window === 'undefined') {
       return;
     }
 
@@ -71,36 +71,19 @@ export function FirebaseMessagingProvider() {
       let prefsAreSet = false;
       if (user?.isAnonymous) {
         prefsAreSet = !!localStorage.getItem('anonymousPreferences');
-      } else if (!isProfileLoading && userProfile?.preferencesSet) {
+      } else if (userProfile?.preferencesSet) {
         prefsAreSet = true;
       }
 
-      if (prefsAreSet) {
-        const lastSetTimestamp = localStorage.getItem('preferenceSetTimestamp');
-        if (lastSetTimestamp) {
-          const twelveHoursInMillis = 12 * 60 * 60 * 1000;
-          const timeSinceLastSet = new Date().getTime() - parseInt(lastSetTimestamp, 10);
-          if (timeSinceLastSet >= twelveHoursInMillis) {
-            // It's been more than 12 hours, so show the popup.
-            const timer = setTimeout(() => setIsPreferenceDialogOpen(true), 2000);
-            return () => clearTimeout(timer);
-          }
-          // If less than 12 hours, do nothing.
-        } else {
-          // If prefs are set but there's no timestamp (e.g., first time after update, or cleared cache),
-          // just set the timestamp for now and don't show the popup.
-          // This will start the 12-hour timer for the next check.
-          localStorage.setItem('preferenceSetTimestamp', new Date().getTime().toString());
-        }
-      } else {
-        // If preferences have never been set, show the popup.
+      // Only show the popup if preferences have never been set.
+      if (!prefsAreSet) {
         const timer = setTimeout(() => setIsPreferenceDialogOpen(true), 2000);
         return () => clearTimeout(timer);
       }
     };
     
-    // We must wait for profile loading to finish before making a decision for logged-in users.
-    if ((user && user.isAnonymous) || !isProfileLoading) {
+    // We must wait for auth and profile loading to finish before making a decision.
+    if (!isUserLoading && !isProfileLoading) {
         checkAndShowPopup();
     }
 
