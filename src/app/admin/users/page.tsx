@@ -1,22 +1,3 @@
-
-'use client';
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase';
-import type { UserProfile } from '../../../lib/types';
-import { collection, doc } from 'firebase/firestore';
-import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
-import { Switch } from '../../../components/ui/switch';
-import { useToast } from '../../../hooks/use-toast';
-import { Badge } from '../../../components/ui/badge';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
-import { Button } from '../../../components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../../components/ui/alert-dialog';
-import { useState } from 'react';
-
-export default![CDATA[
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
