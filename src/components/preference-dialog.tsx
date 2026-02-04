@@ -111,28 +111,33 @@ export function PreferenceDialog({
 
     try {
         if (user && !user.isAnonymous && userId) {
+            // For logged-in users, update Firestore. The page will update reactively.
             const userRef = doc(firestore, 'users', userId);
             await updateDoc(userRef, {
                 preferences: preferencesToSave,
                 preferencesSet: true,
             });
+            toast({
+                title: 'Preferences Saved!',
+                description: 'Your personalized feed is being updated.',
+            });
         } else {
+            // For anonymous users, save to localStorage and reload the page.
             localStorage.setItem('anonymousPreferences', JSON.stringify(preferencesToSave));
             localStorage.setItem('preferencesSet', 'true');
+            toast({
+                title: 'Preferences Saved!',
+                description: 'Your feed will be updated.',
+            });
+            // Reload to apply localStorage changes across the app
+            window.location.reload();
         }
 
         if (dontAskAgain) {
             localStorage.setItem('hidePreferencePopup', 'true');
         }
 
-        toast({
-            title: 'Preferences Updated!',
-            description: 'Your content feed will now be personalized.',
-        });
-
         onOpenChange(false);
-        // Using a short timeout to allow the toast to be seen before reload
-        setTimeout(() => window.location.reload(), 500);
 
     } catch (error) {
         console.error("Failed to save preferences:", error);
