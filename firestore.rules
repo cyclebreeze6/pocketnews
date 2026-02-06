@@ -100,13 +100,5 @@ service cloud.firestore {
       // Designated super-admins can also grant themselves the role.
       allow write: if isAdmin() || (isOwner(userId) && isDesignatedAdmin(request.auth.token.email));
     }
-    
-    /* =================================
-       🔥 GLOBAL FALLBACK RULE
-       Deny all other reads/writes by default for security.
-    ================================= */
-    match /{path=**} {
-      allow read, write: if false;
-    }
   }
 }

@@ -54,6 +54,7 @@ import {
 } from './ui/dialog';
 import { SidebarTrigger } from './ui/sidebar';
 import { usePathname } from 'next/navigation';
+import { PreferenceDialog } from './preference-dialog';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -69,6 +70,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   const router = useRouter(); 
   const pathname = usePathname();
 
@@ -167,6 +169,10 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                     Channels
                 </Button>
               </Link>
+              <Button variant="ghost" onClick={() => setIsPreferenceDialogOpen(true)} className="hidden sm:inline-flex">
+                <ListFilter className="h-5 w-5 mr-2" />
+                Edit Preferences
+              </Button>
               {hasMounted && (
               <Popover onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>
@@ -308,6 +314,7 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         </DialogFooter>
         </DialogContent>
       </Dialog>
+      <PreferenceDialog open={isPreferenceDialogOpen} onOpenChange={setIsPreferenceDialogOpen} userId={user?.uid || null} userProfile={userProfile} />
     </>
   );
 }

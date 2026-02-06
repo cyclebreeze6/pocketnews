@@ -41,7 +41,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { PreferenceFAB } from '../components/preference-fab';
-import { generateHeadline } from '@/app/actions/generate-headline-flow';
+import { generateHeadline } from './actions/generate-headline-flow';
 import type { GenerateHeadlineOutput } from '../ai/flows/generate-headline-flow';
 
 
@@ -657,5 +657,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
