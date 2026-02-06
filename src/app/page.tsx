@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -40,6 +41,8 @@ import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { PreferenceFAB } from '../components/preference-fab';
+import { generateHeadline } from '@/app/actions/generate-headline-flow';
+import type { GenerateHeadlineOutput } from '../ai/flows/generate-headline-flow';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -130,6 +133,7 @@ export default function Home() {
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
+  const [headlineConfig, setHeadlineConfig] = useState<GenerateHeadlineOutput | null>(null);
 
   const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
 
@@ -147,6 +151,29 @@ export default function Home() {
 
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+  
+  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
+  const { data: categories } = useCollection<Category>(categoriesQuery);
+
+  useEffect(() => {
+    if ((userProfile?.preferences || anonymousPreferences) && channels && categories) {
+        const prefs = userProfile?.preferences || anonymousPreferences;
+        const inputChannels = channels
+            .filter(c => prefs?.region?.some((pr: string) => c.region?.includes(pr)))
+            .map(c => c.name).slice(0, 5);
+
+        const inputCategories = categories.map(c => c.name).slice(0, 5);
+
+        if (inputChannels.length > 0 || inputCategories.length > 0) {
+            generateHeadline({ channels: inputChannels, categories: inputCategories })
+                .then(setHeadlineConfig)
+                .catch(console.error);
+        }
+    } else {
+        setHeadlineConfig({ headlineTitle: 'My Headlines', sections: [], layout: 'personalized' });
+    }
+  }, [userProfile, anonymousPreferences, channels, categories]);
+
 
   const videosQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || !channels) return null;
@@ -157,11 +184,8 @@ export default function Home() {
     let prefsAreSet = userProfile?.preferencesSet;
 
     if (user?.isAnonymous) {
-        const storedPrefs = localStorage.getItem('anonymousPreferences');
-        if (storedPrefs) {
-            prefs = JSON.parse(storedPrefs);
-            prefsAreSet = localStorage.getItem('preferencesSet') === 'true';
-        }
+      prefs = anonymousPreferences;
+      prefsAreSet = !!anonymousPreferences;
     }
     
     if (user && prefsAreSet && channels && prefs) {
@@ -190,7 +214,7 @@ export default function Home() {
     }
     
     return query(baseQuery, limit(30));
-  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, channels]);
+  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, channels, anonymousPreferences]);
   
   const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -229,31 +253,32 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
 
   useEffect(() => {
-    if (displayedVideos) {
-        if (!currentVideo) {
-            const videoIdFromUrl = getVideoIdFromPath();
-            const videoFromUrlInList = videoIdFromUrl ? displayedVideos.find(v => v.id === videoIdFromUrl) : null;
-            
-            if (videoFromUrlInList) {
-                setCurrentVideo(videoFromUrlInList);
-            } else if (videoIdFromUrl) {
-                const videoRef = doc(firestore, 'videos', videoIdFromUrl);
-                getDoc(videoRef).then(docSnap => {
-                    if (docSnap.exists()) {
-                        const fetchedVideo = { id: docSnap.id, ...docSnap.data() } as Video;
-                        setCurrentVideo(fetchedVideo);
-                    } else {
-                        setCurrentVideo(displayedVideos?.[0] || null);
-                    }
-                });
+    if (displayedVideos && displayedVideos.length > 0 && !currentVideo) {
+      const videoIdFromUrl = getVideoIdFromPath();
+      if (videoIdFromUrl) {
+        const videoFromList = displayedVideos.find(v => v.id === videoIdFromUrl);
+        if (videoFromList) {
+          setCurrentVideo(videoFromList);
+        } else {
+          // If the video from URL is not in the current list, fetch it directly
+          const videoRef = doc(firestore, 'videos', videoIdFromUrl);
+          getDoc(videoRef).then(docSnap => {
+            if (docSnap.exists()) {
+              setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
             } else {
-                setCurrentVideo(displayedVideos[0] || null);
+              // Fallback to the first video in the list if the URL one doesn't exist
+              setCurrentVideo(displayedVideos[0]);
             }
+          });
         }
-    } else if (!isLoading) {
-        setCurrentVideo(null);
+      } else {
+        // No video in URL, just play the first one
+        setCurrentVideo(displayedVideos[0]);
+      }
+    } else if (displayedVideos && displayedVideos.length === 0) {
+      setCurrentVideo(null); // No videos to display
     }
-  }, [displayedVideos, currentVideo, firestore, isLoading]);
+  }, [displayedVideos, firestore, currentVideo]);
 
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
@@ -532,7 +557,7 @@ export default function Home() {
           
           <div className="lg:col-span-1 px-4 md:px-0">
              
-            <h3 className="text-lg font-semibold text-muted-foreground">My Headlines</h3>
+            <h3 className="text-lg font-semibold text-muted-foreground">{headlineConfig?.headlineTitle || 'My Headlines'}</h3>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
                     {displayedVideos.map((video) => {
@@ -632,3 +657,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
