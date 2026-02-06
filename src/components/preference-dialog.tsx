@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -41,17 +40,18 @@ export function PreferenceDialog({
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState('all-languages'); // Using a proxy value
   const [isSaving, setIsSaving] = useState(false);
-  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   useEffect(() => {
     if (open) {
-      const anonPrefsRaw = localStorage.getItem('anonymousPreferences');
       let prefsToLoad: any = null;
 
       if (user && !user.isAnonymous && userProfile?.preferences) {
         prefsToLoad = userProfile.preferences;
-      } else if (anonPrefsRaw) {
-        prefsToLoad = JSON.parse(anonPrefsRaw);
+      } else if (user?.isAnonymous) {
+        const anonPrefsRaw = localStorage.getItem('anonymousPreferences');
+        if (anonPrefsRaw) {
+          prefsToLoad = JSON.parse(anonPrefsRaw);
+        }
       }
 
       if (prefsToLoad) {
@@ -61,33 +61,10 @@ export function PreferenceDialog({
       } else {
         // Default values for new users
         setSelectedRegions(['Global']);
-
-        const langMap: { [key: string]: string } = {
-          en: 'English', fr: 'French', ar: 'Arabic', es: 'Spanish',
-          pt: 'Portuguese', sw: 'Swahili', de: 'German',
-          zh: 'Chinese', hi: 'Hindi', ja: 'Japanese', ko: 'Korean',
-          th: 'Thai', vi: 'Vietnamese'
-        };
-        const browserLangCode = navigator.language.split('-')[0];
-        const suggestedLanguage = langMap[browserLangCode];
-
-        if (suggestedLanguage && LANGUAGES.includes(suggestedLanguage)) {
-          setSelectedLanguage(suggestedLanguage);
-        } else {
-          setSelectedLanguage('all-languages');
-        }
+        setSelectedLanguage('all-languages');
       }
     }
   }, [userProfile, open, user]);
-
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      if (dontAskAgain) {
-        localStorage.setItem('hidePreferencePopup', 'true');
-      }
-    }
-    onOpenChange(isOpen);
-  };
 
   const handleRegionToggle = (region: string) => {
     setSelectedRegions(prev => 
@@ -122,19 +99,13 @@ export function PreferenceDialog({
                 description: 'Your personalized feed is being updated.',
             });
         } else {
-            // For anonymous users, save to localStorage and reload the page.
+            // For anonymous users, save to localStorage. The page will react to this state change.
             localStorage.setItem('anonymousPreferences', JSON.stringify(preferencesToSave));
             localStorage.setItem('preferencesSet', 'true');
-            toast({
+             toast({
                 title: 'Preferences Saved!',
-                description: 'Your feed will be updated.',
+                description: 'Your feed will be updated on the next page load.',
             });
-            // Reload to apply localStorage changes across the app
-            window.location.reload();
-        }
-
-        if (dontAskAgain) {
-            localStorage.setItem('hidePreferencePopup', 'true');
         }
 
         onOpenChange(false);
@@ -152,7 +123,7 @@ export function PreferenceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Personalize Your Feed</DialogTitle>
@@ -226,11 +197,7 @@ export function PreferenceDialog({
                 </div>
             </div>
         </div>
-        <DialogFooter className="sm:justify-between">
-          <div className="flex items-center space-x-2 pt-2 sm:pt-0">
-            <Checkbox id="dont-ask" checked={dontAskAgain} onCheckedChange={(checked) => setDontAskAgain(Boolean(checked))} />
-            <Label htmlFor="dont-ask" className="text-xs text-muted-foreground">Don't ask me again</Label>
-          </div>
+        <DialogFooter>
           <Button type="button" onClick={handleSave} disabled={isSaving || selectedRegions.length === 0}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Save Preferences

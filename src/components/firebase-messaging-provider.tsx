@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -19,7 +18,6 @@ export function FirebaseMessagingProvider() {
   const { firebaseApp, user, firestore, isUserLoading } = useFirebase();
   const { permissionStatus, requestPermission } = usePushNotifications();
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
-  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const userProfileRef = useMemoFirebase(() => (user && !user.isAnonymous ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
@@ -54,42 +52,6 @@ export function FirebaseMessagingProvider() {
       setIsNotificationDialogOpen(false);
     }
   }, [user, permissionStatus]);
-  
-  useEffect(() => {
-    // This effect should only run on the client after hydration
-    if (typeof window === 'undefined') {
-      return;
-    }
-  
-    const checkAndShowPopup = () => {
-      // "Don't ask again" is the highest priority.
-      const hidePreferencePopup = localStorage.getItem('hidePreferencePopup');
-      if (hidePreferencePopup === 'true') {
-        return;
-      }
-  
-      let prefsAreSet = false;
-      if (user?.isAnonymous) {
-        // For anonymous users, check the dedicated flag in localStorage.
-        prefsAreSet = localStorage.getItem('preferencesSet') === 'true';
-      } else if (userProfile) {
-        // For logged-in users, check the profile from Firestore.
-        prefsAreSet = !!userProfile.preferencesSet;
-      }
-  
-      // Only show the popup if preferences have never been set.
-      if (!prefsAreSet) {
-        const timer = setTimeout(() => setIsPreferenceDialogOpen(true), 2000);
-        return () => clearTimeout(timer);
-      }
-    };
-  
-    // We must wait for auth and profile loading to finish before making a decision.
-    if (!isUserLoading && !isProfileLoading) {
-      checkAndShowPopup();
-    }
-  }, [user, userProfile, isUserLoading, isProfileLoading]);
-
 
   const handleAllowNotifications = () => {
     requestPermission();
@@ -97,18 +59,10 @@ export function FirebaseMessagingProvider() {
   };
 
   return (
-    <>
-        <NotificationPermissionDialog
-        open={isNotificationDialogOpen}
-        onOpenChange={setIsNotificationDialogOpen}
-        onAllow={handleAllowNotifications}
-        />
-        <PreferenceDialog
-        open={isPreferenceDialogOpen}
-        onOpenChange={setIsPreferenceDialogOpen}
-        userId={user?.uid || null}
-        userProfile={userProfile}
-        />
-    </>
+    <NotificationPermissionDialog
+      open={isNotificationDialogOpen}
+      onOpenChange={setIsNotificationDialogOpen}
+      onAllow={handleAllowNotifications}
+    />
   );
 }

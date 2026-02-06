@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -40,6 +39,7 @@ import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
+import { PreferenceFAB } from '../components/preference-fab';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -130,17 +130,67 @@ export default function Home() {
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
-  
+
+  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (user?.isAnonymous) {
+      const storedPrefs = localStorage.getItem('anonymousPreferences');
+      if (storedPrefs) {
+        setAnonymousPreferences(JSON.parse(storedPrefs));
+      }
+    }
+  }, [user]);
+
+  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    return query(
-        collection(firestore, 'videos'), 
-        orderBy('createdAt', 'desc'), 
-        limit(30)
-    );
-  }, [firestore]);
+    if (isUserLoading || isProfileLoading || !channels) return null;
+
+    let baseQuery = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'));
+    
+    let prefs = userProfile?.preferences;
+    let prefsAreSet = userProfile?.preferencesSet;
+
+    if (user?.isAnonymous) {
+        const storedPrefs = localStorage.getItem('anonymousPreferences');
+        if (storedPrefs) {
+            prefs = JSON.parse(storedPrefs);
+            prefsAreSet = localStorage.getItem('preferencesSet') === 'true';
+        }
+    }
+    
+    if (user && prefsAreSet && channels && prefs) {
+        let filteredChannels = [...channels];
+        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
+
+        if (preferredRegions.length > 0 && !preferredRegions.includes('Global')) {
+          filteredChannels = filteredChannels.filter(c => {
+              if (!c.region) return false;
+              const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+              return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
+          });
+        }
+
+        if (prefs.language && prefs.language !== 'all-languages') {
+            filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
+        }
+
+        const preferredChannelIds = filteredChannels.map(c => c.id);
+
+        if (preferredChannelIds.length > 0) {
+            baseQuery = query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+        } else {
+            return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
+        }
+    }
+    
+    return query(baseQuery, limit(30));
+  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, channels]);
   
   const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -151,7 +201,7 @@ export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0;
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading;
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -259,7 +309,7 @@ export default function Home() {
   const handleVideoEnd = handleNextVideo;
   
   const handleReportSubmit = () => {
-    if (!user || currentVideo) return;
+    if (!user || !currentVideo) return;
 
     const reportRef = doc(collection(firestore, 'reports'));
     const reportData = {
@@ -312,8 +362,9 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
             <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
-              There are currently no videos available. Check back later!
+              Your preferences might be too specific. Try broadening your region or language settings.
             </p>
+            <PreferenceFAB />
         </main>
          <footer className="py-4 text-center text-sm text-muted-foreground">
             Meet the #1 App to Stream News. Watch Free!
@@ -481,7 +532,7 @@ export default function Home() {
           
           <div className="lg:col-span-1 px-4 md:px-0">
              
-            <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
+            <h3 className="text-lg font-semibold text-muted-foreground">My Headlines</h3>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
                     {displayedVideos.map((video) => {
@@ -577,7 +628,7 @@ export default function Home() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+      <PreferenceFAB />
     </div>
   );
 }
