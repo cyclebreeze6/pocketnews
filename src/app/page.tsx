@@ -152,12 +152,6 @@ export default function Home() {
     }
   }, [user]);
 
-  const latestVideoQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(1)),
-    [firestore]
-  );
-  const { data: latestVideoArr, isLoading: latestVideoLoading } = useCollection<Video>(latestVideoQuery);
-  
   const breakingNewsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || channelsLoading) return null;
     
@@ -198,6 +192,7 @@ export default function Home() {
             collection(firestore, 'videos'), 
             where('contentCategory', '==', 'Breaking News'), 
             where('channelId', 'in', preferredChannelIds.slice(0, 30)),
+            orderBy('createdAt', 'desc'),
             limit(10)
         );
     }
@@ -205,6 +200,7 @@ export default function Home() {
     return query(
         collection(firestore, 'videos'),
         where('contentCategory', '==', 'Breaking News'),
+        orderBy('createdAt', 'desc'),
         limit(10)
     );
   }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading, anonymousPreferences]);
@@ -250,6 +246,7 @@ export default function Home() {
         return query(
             collection(firestore, 'videos'), 
             where('channelId', 'in', preferredChannelIds.slice(0, 30)),
+            orderBy('createdAt', 'desc'),
             limit(20)
         );
     }
@@ -284,7 +281,7 @@ export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0;
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || breakingNewsLoading || latestVideoLoading;
+  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || breakingNewsLoading;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -312,16 +309,7 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
 
   useEffect(() => {
-    const latestVideo = latestVideoArr?.[0];
-    let finalList: Video[] | null = null;
-
-    if (latestVideo && preferenceVideos) {
-        finalList = [latestVideo, ...preferenceVideos.filter(v => v.id !== latestVideo.id)];
-    } else if (preferenceVideos) {
-        finalList = preferenceVideos;
-    } else if (latestVideo) {
-        finalList = [latestVideo];
-    }
+    const finalList = preferenceVideos;
     
     if (finalList) {
         setDisplayedVideos(finalList);
@@ -351,7 +339,7 @@ export default function Home() {
         setDisplayedVideos([]);
         setCurrentVideo(null);
     }
-  }, [preferenceVideos, latestVideoArr, currentVideo, firestore, isLoading, isUserLoading]);
+  }, [preferenceVideos, currentVideo, firestore, isLoading, isUserLoading]);
 
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
