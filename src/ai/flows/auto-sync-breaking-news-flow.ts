@@ -15,11 +15,30 @@ const AutoSyncResultSchema = z.object({
 });
 export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
 
+// A list of major news outlets to be considered for "Breaking News"
+const BREAKING_NEWS_CHANNEL_NAMES = [
+  'cnn', 
+  'aljazeera', // Note: 'Aljazeera' instead of 'Al Jazeera English' for broader matching
+  'fox news', 
+  'abc news', 
+  'africa news', 
+  'channels news', // Assuming this matches 'Channels Television'
+  'channels television',
+  'cbs news', 
+  'sky news', 
+  'reuters'
+];
+
 async function runAutoSync(): Promise<AutoSyncResult> {
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
     
-    if (channelsToSync.length === 0) {
-      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are configured for syncing."] };
+    // Filter the channels to only include the designated breaking news sources
+    const breakingNewsChannels = channelsToSync.filter(c => 
+      BREAKING_NEWS_CHANNEL_NAMES.includes(c.name.toLowerCase())
+    );
+
+    if (breakingNewsChannels.length === 0) {
+      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No breaking news channels are configured for syncing."] };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -27,30 +46,25 @@ async function runAutoSync(): Promise<AutoSyncResult> {
     let successfulSyncs = 0;
     const errorMessages: string[] = [];
 
-    // Filter for specific keywords in title for "Breaking News"
-    const breakingNewsKeywords = ['breaking', 'live', 'developing story'];
-
-    for (const channel of channelsToSync) {
+    for (const channel of breakingNewsChannels) {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Fetch more recent videos for breaking news check
+            // Fetch more recent videos to ensure we catch breaking stories
             const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 15 });
 
+            // All new videos from these channels are considered "Breaking News"
             const newBreakingVideos = fetchedVideos
-                .filter(video => 
-                    !existingIdsSet.has(video.videoId) && 
-                    breakingNewsKeywords.some(keyword => video.title.toLowerCase().includes(keyword))
-                )
+                .filter(video => !existingIdsSet.has(video.videoId))
                 .map(video => ({
                     youtubeVideoId: video.videoId,
                     title: video.title,
                     description: video.description,
                     thumbnailUrl: video.thumbnailUrl,
                     channelId: channel.id,
-                    contentCategory: 'Breaking News', // Assign to Breaking News
-                    views: Math.floor(Math.random() * 1000),
-                    watchTime: Math.floor(Math.random() * 100),
+                    contentCategory: 'Breaking News', // Assign all to Breaking News category
+                    views: Math.floor(Math.random() * 1000), // Placeholder views
+                    watchTime: Math.floor(Math.random() * 100), // Placeholder watch time
                 }));
             
             if (newBreakingVideos.length > 0) {
@@ -60,7 +74,7 @@ async function runAutoSync(): Promise<AutoSyncResult> {
             successfulSyncs++;
 
         } catch (error: any) {
-            console.error(`Failed to sync channel "${channel.name}" for breaking news:`, error.message);
+            console.error(`Failed to sync breaking news for channel "${channel.name}":`, error.message);
             errorMessages.push(`Channel "${channel.name}": ${error.message}`);
         }
     }

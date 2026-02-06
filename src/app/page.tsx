@@ -170,7 +170,7 @@ export default function Home() {
                 .catch(console.error);
         }
     } else {
-        setHeadlineConfig({ headlineTitle: 'My Headlines', sections: [], layout: 'personalized' });
+        setHeadlineConfig({ headlineTitle: 'Up Next', sections: [], layout: 'personalized' });
     }
   }, [userProfile, anonymousPreferences, channels, categories]);
 
@@ -188,6 +188,7 @@ export default function Home() {
       prefsAreSet = !!anonymousPreferences;
     }
     
+    // For logged-in users with preferences, filter the content
     if (user && prefsAreSet && channels && prefs) {
         let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
@@ -207,13 +208,16 @@ export default function Home() {
         const preferredChannelIds = filteredChannels.map(c => c.id);
 
         if (preferredChannelIds.length > 0) {
-            baseQuery = query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            // Firestore 'in' queries are limited to 30 items.
+            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
         } else {
+            // If no channels match preferences, return a query that yields no results.
             return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
         }
     }
     
-    return query(baseQuery, limit(30));
+    // For all other users (guests, new users), show the top 20 latest videos.
+    return query(baseQuery, limit(20));
   }, [firestore, isUserLoading, isProfileLoading, user, userProfile, channels, anonymousPreferences]);
   
   const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
@@ -557,7 +561,7 @@ export default function Home() {
           
           <div className="lg:col-span-1 px-4 md:px-0">
              
-            <h3 className="text-lg font-semibold text-muted-foreground">{headlineConfig?.headlineTitle || 'My Headlines'}</h3>
+            <h3 className="text-lg font-semibold text-muted-foreground">{headlineConfig?.headlineTitle || 'Up Next'}</h3>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
                     {displayedVideos.map((video) => {
