@@ -40,7 +40,6 @@ import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
-import { PreferenceDialog } from '../components/preference-dialog';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -125,163 +124,34 @@ export default function Home() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
-  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
   
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
-  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
-  
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
-  const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
-
-  useEffect(() => {
-    if (user?.isAnonymous) {
-      const storedPrefs = localStorage.getItem('anonymousPreferences');
-      if (storedPrefs) {
-        setAnonymousPreferences(JSON.parse(storedPrefs));
-      }
-    }
-  }, [user]);
-
-  const breakingNewsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || channelsLoading) return null;
-    
-    let prefs = userProfile?.preferences;
-    let prefsAreSet = userProfile?.preferencesSet;
-
-    if (user?.isAnonymous && anonymousPreferences) {
-        prefs = anonymousPreferences;
-        prefsAreSet = true;
-    }
-    
-    if (user && prefsAreSet && channels && prefs) {
-        let filteredChannels = [...channels];
-        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
-        const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
-        const hasLangPref = prefs.language && prefs.language !== 'all-languages';
-
-        if (hasRegionPref || hasLangPref) {
-            if (hasRegionPref) {
-                filteredChannels = filteredChannels.filter(c => {
-                    if (!c.region) return false;
-                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                    return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
-                });
-            }
-            if (hasLangPref) {
-                filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
-            }
-        }
-
-        const preferredChannelIds = filteredChannels.map(c => c.id);
-
-        if (preferredChannelIds.length === 0) {
-            return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
-        }
-        
-        return query(
-            collection(firestore, 'videos'), 
-            where('contentCategory', '==', 'Breaking News'), 
-            where('channelId', 'in', preferredChannelIds.slice(0, 30)),
-            orderBy('createdAt', 'desc'),
-            limit(10)
-        );
-    }
-    
-    return query(
-        collection(firestore, 'videos'),
-        where('contentCategory', '==', 'Breaking News'),
-        orderBy('createdAt', 'desc'),
-        limit(10)
-    );
-  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading, anonymousPreferences]);
-
-  const { data: breakingNewsVideos, isLoading: breakingNewsLoading } = useCollection<Video>(breakingNewsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || channelsLoading) return null;
-    
-    let prefs = userProfile?.preferences;
-    let prefsAreSet = userProfile?.preferencesSet;
-
-     if (user?.isAnonymous && anonymousPreferences) {
-        prefs = anonymousPreferences;
-        prefsAreSet = true;
-    }
-
-    if (user && prefsAreSet && channels && prefs) {
-        let filteredChannels = [...channels];
-        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
-        const hasRegionPref = preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global');
-        const hasLangPref = prefs.language && prefs.language !== 'all-languages';
-
-        if (hasRegionPref || hasLangPref) {
-            if (hasRegionPref) {
-                filteredChannels = filteredChannels.filter(c => {
-                    if (!c.region) return false;
-                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                    return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
-                });
-            }
-            if (hasLangPref) {
-                filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
-            }
-        }
-        
-        const preferredChannelIds = filteredChannels.map(c => c.id);
-
-        if (preferredChannelIds.length === 0) {
-             return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
-        }
-        
-        return query(
-            collection(firestore, 'videos'), 
-            where('channelId', 'in', preferredChannelIds.slice(0, 30)),
-            orderBy('createdAt', 'desc'),
-            limit(20)
-        );
-    }
-
     return query(
         collection(firestore, 'videos'), 
         orderBy('createdAt', 'desc'), 
-        limit(20)
+        limit(30)
     );
-  }, [firestore, user, isUserLoading, userProfile, channels, channelsLoading, isProfileLoading, anonymousPreferences]);
+  }, [firestore]);
   
-  const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+  const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
-  const preferenceVideos = useMemo(() => {
-    if (!videosFromHook && !breakingNewsVideos) return null;
-    
-    const combined = [
-        ...(breakingNewsVideos || []),
-        ...(videosFromHook || [])
-    ];
-
-    const uniqueVideos = Array.from(new Map(combined.map(v => [v.id, v])).values());
-    
-    return uniqueVideos.sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
-  }, [videosFromHook, breakingNewsVideos]);
-
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-  const [displayedVideos, setDisplayedVideos] = useState<Video[] | null>(null);
   
   const [isPlayerSticky, setIsPlayerSticky] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0;
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading || categoriesLoading || breakingNewsLoading;
+  const isLoading = videosLoading || channelsLoading || isUserLoading;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -309,14 +179,10 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
 
   useEffect(() => {
-    const finalList = preferenceVideos;
-    
-    if (finalList) {
-        setDisplayedVideos(finalList);
-        
+    if (displayedVideos) {
         if (!currentVideo) {
             const videoIdFromUrl = getVideoIdFromPath();
-            const videoFromUrlInList = videoIdFromUrl ? finalList.find(v => v.id === videoIdFromUrl) : null;
+            const videoFromUrlInList = videoIdFromUrl ? displayedVideos.find(v => v.id === videoIdFromUrl) : null;
             
             if (videoFromUrlInList) {
                 setCurrentVideo(videoFromUrlInList);
@@ -326,20 +192,18 @@ export default function Home() {
                     if (docSnap.exists()) {
                         const fetchedVideo = { id: docSnap.id, ...docSnap.data() } as Video;
                         setCurrentVideo(fetchedVideo);
-                        setDisplayedVideos(current => current?.find(v => v.id === fetchedVideo.id) ? current : [fetchedVideo, ...(current || [])]);
                     } else {
-                        setCurrentVideo(finalList?.[0] || null);
+                        setCurrentVideo(displayedVideos?.[0] || null);
                     }
                 });
             } else {
-                setCurrentVideo(finalList[0] || null);
+                setCurrentVideo(displayedVideos[0] || null);
             }
         }
     } else if (!isLoading) {
-        setDisplayedVideos([]);
         setCurrentVideo(null);
     }
-  }, [preferenceVideos, currentVideo, firestore, isLoading, isUserLoading]);
+  }, [displayedVideos, currentVideo, firestore, isLoading]);
 
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
@@ -448,20 +312,13 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
             <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
-              There are currently no videos for this region or language.
+              There are currently no videos available. Check back later!
             </p>
-            <Button onClick={() => setIsPreferenceDialogOpen(true)}>Change Preferences</Button>
         </main>
          <footer className="py-4 text-center text-sm text-muted-foreground">
             Meet the #1 App to Stream News. Watch Free!
         </footer>
         <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
-        <PreferenceDialog 
-            open={isPreferenceDialogOpen} 
-            onOpenChange={setIsPreferenceDialogOpen} 
-            userId={user?.uid || null} 
-            userProfile={userProfile}
-        />
         <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
             <DialogContent>
             <DialogHeader>
@@ -624,7 +481,7 @@ export default function Home() {
           
           <div className="lg:col-span-1 px-4 md:px-0">
              
-            <h3 className="text-lg font-semibold text-muted-foreground">My Headlines</h3>
+            <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
                     {displayedVideos.map((video) => {

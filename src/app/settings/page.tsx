@@ -24,21 +24,6 @@ export default function SettingsPage() {
                 Settings
             </h1>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Push Notifications</CardTitle>
-                    <CardDescription>Manage which video categories you want to receive push notifications for.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Link href="/settings/headlines">
-                        <Button variant="outline">
-                            <ListFilter className="mr-2 h-4 w-4" />
-                            Customize Your Topics
-                        </Button>
-                    </Link>
-                </CardContent>
-            </Card>
-
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>Privacy</CardTitle>

@@ -54,7 +54,6 @@ import {
 } from './ui/dialog';
 import { SidebarTrigger } from './ui/sidebar';
 import { usePathname } from 'next/navigation';
-import { PreferenceDialog } from './preference-dialog';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -70,7 +69,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
   const { firestore } = useFirebase();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
-  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
   const router = useRouter(); 
   const pathname = usePathname();
 
@@ -128,16 +126,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
     router.push('/');
   };
   
-  const regionDisplay = (() => {
-    const regionPref = userProfile?.preferences?.region;
-    if (!regionPref || (Array.isArray(regionPref) && regionPref.length === 0)) {
-      return 'Global';
-    }
-    if (Array.isArray(regionPref)) {
-      return regionPref.join(', ');
-    }
-    return regionPref;
-  })();
 
   return (
     <>
@@ -179,33 +167,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                     Channels
                 </Button>
               </Link>
-              {user && !user.isAnonymous && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
-                        <Globe className="h-5 w-5" />
-                        <span className="absolute top-1 right-1 flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                        </span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                      <div className="grid gap-4">
-                          <div className="space-y-2">
-                              <h4 className="font-medium leading-none">Current Preferences</h4>
-                               <div className="grid gap-1 text-sm">
-                                  <p className="text-muted-foreground">Region: <span className="font-semibold text-foreground">{regionDisplay}</span></p>
-                                  <p className="text-muted-foreground">Language: <span className="font-semibold text-foreground">{userProfile?.preferences?.language || 'All Languages'}</span></p>
-                              </div>
-                          </div>
-                          <Button onClick={() => setIsPreferenceDialogOpen(true)} className="relative">
-                            Edit Preferences
-                          </Button>
-                      </div>
-                  </PopoverContent>
-                </Popover>
-              )}
               {hasMounted && (
               <Popover onOpenChange={handlePopoverOpen}>
                   <PopoverTrigger asChild>
@@ -316,9 +277,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
                           <DropdownMenuItem asChild>
                             <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
                           </DropdownMenuItem>
-                           <DropdownMenuItem asChild>
-                            <Link href="/settings/headlines"><ListFilter className="mr-2 h-4 w-4" /><span>Customize Headlines</span></Link>
-                          </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href="/settings"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
                           </DropdownMenuItem>
@@ -350,14 +308,6 @@ export default function SiteHeader({ hideCategoryNav = false }: { hideCategoryNa
         </DialogFooter>
         </DialogContent>
       </Dialog>
-      {user && !user.isAnonymous && (
-        <PreferenceDialog
-            open={isPreferenceDialogOpen}
-            onOpenChange={setIsPreferenceDialogOpen}
-            userId={user.uid}
-            userProfile={userProfile}
-        />
-      )}
     </>
   );
 }
