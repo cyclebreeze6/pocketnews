@@ -41,7 +41,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { PreferenceFAB } from '../components/preference-fab';
-import { generateHeadline } from './actions/generate-headline-flow';
+import { generateHeadline } from '../actions/generate-headline-flow';
 import type { GenerateHeadlineOutput } from '../ai/flows/generate-headline-flow';
 
 
@@ -135,90 +135,15 @@ export default function Home() {
   const [reportDetails, setReportDetails] = useState('');
   const [headlineConfig, setHeadlineConfig] = useState<GenerateHeadlineOutput | null>(null);
 
-  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (user?.isAnonymous) {
-      const storedPrefs = localStorage.getItem('anonymousPreferences');
-      if (storedPrefs) {
-        setAnonymousPreferences(JSON.parse(storedPrefs));
-      }
-    }
-  }, [user]);
-
-  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories } = useCollection<Category>(categoriesQuery);
 
-  useEffect(() => {
-    if ((userProfile?.preferences || anonymousPreferences) && channels && categories) {
-        const prefs = userProfile?.preferences || anonymousPreferences;
-        const inputChannels = channels
-            .filter(c => prefs?.region?.some((pr: string) => c.region?.includes(pr)))
-            .map(c => c.name).slice(0, 5);
-
-        const inputCategories = categories.map(c => c.name).slice(0, 5);
-
-        if (inputChannels.length > 0 || inputCategories.length > 0) {
-            generateHeadline({ channels: inputChannels, categories: inputCategories })
-                .then(setHeadlineConfig)
-                .catch(console.error);
-        }
-    } else {
-        setHeadlineConfig({ headlineTitle: 'Up Next', sections: [], layout: 'personalized' });
-    }
-  }, [userProfile, anonymousPreferences, channels, categories]);
-
-
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !channels) return null;
-
-    let baseQuery = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'));
-    
-    let prefs = userProfile?.preferences;
-    let prefsAreSet = userProfile?.preferencesSet;
-
-    if (user?.isAnonymous) {
-      prefs = anonymousPreferences;
-      prefsAreSet = !!anonymousPreferences;
-    }
-    
-    // For logged-in users with preferences, filter the content
-    if (user && prefsAreSet && channels && prefs) {
-        let filteredChannels = [...channels];
-        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
-
-        if (preferredRegions.length > 0 && !preferredRegions.includes('Global')) {
-          filteredChannels = filteredChannels.filter(c => {
-              if (!c.region) return false;
-              const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-              return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
-          });
-        }
-
-        if (prefs.language && prefs.language !== 'all-languages') {
-            filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
-        }
-
-        const preferredChannelIds = filteredChannels.map(c => c.id);
-
-        if (preferredChannelIds.length > 0) {
-            // Firestore 'in' queries are limited to 30 items.
-            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
-        } else {
-            // If no channels match preferences, return a query that yields no results.
-            return query(collection(firestore, 'videos'), where('id', '==', 'no-results-for-preference'));
-        }
-    }
-    
-    // For all other users (guests, new users), show the top 20 latest videos.
-    return query(baseQuery, limit(20));
-  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, channels, anonymousPreferences]);
+    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(20));
+  }, [firestore]);
   
   const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -229,7 +154,7 @@ export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0;
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading;
+  const isLoading = videosLoading || channelsLoading || isUserLoading;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -561,7 +486,7 @@ export default function Home() {
           
           <div className="lg:col-span-1 px-4 md:px-0">
              
-            <h3 className="text-lg font-semibold text-muted-foreground">{headlineConfig?.headlineTitle || 'Up Next'}</h3>
+            <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
                     {displayedVideos.map((video) => {
@@ -661,3 +586,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

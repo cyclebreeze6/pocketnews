@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -41,22 +42,22 @@ service cloud.firestore {
        Readable by all, writable by Creators/Admins.
     ================================= */
     match /channels/{channelId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
     match /videos/{videoId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
     match /shorts/{shortId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
     match /categories/{categoryId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
@@ -102,3 +103,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
