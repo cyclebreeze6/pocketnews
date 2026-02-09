@@ -4,7 +4,9 @@ import { getChannelsForSync } from './get-channels-for-sync';
 import { fetchChannelShorts } from '../actions/youtube-channel-shorts-flow';
 import type { YouTubeShortDetails } from '../../ai/flows/youtube-channel-shorts-flow';
 import { initializeFirebase } from '../../firebase';
-import { getFirestore, collection, getDocs, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 
 // The data structure for the UI
@@ -65,15 +67,20 @@ export async function saveImportedShorts(shorts: ImportedShortSaveData[]): Promi
         return;
     }
     
-    const { firestore } = initializeFirebase();
-    const batch = writeBatch(firestore);
+    if (!isFirebaseAdminInitialized) {
+        throw new Error("Cannot save shorts: Admin SDK not configured.");
+    }
+    
+    const firestore = adminSDK.firestore();
+    const batch = firestore.batch();
+    const shortsCollection = firestore.collection('shorts');
 
     shorts.forEach(short => {
-        const docRef = doc(collection(firestore, 'shorts'));
+        const docRef = shortsCollection.doc();
         batch.set(docRef, {
             ...short,
             id: docRef.id,
-            createdAt: serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
     });
 
