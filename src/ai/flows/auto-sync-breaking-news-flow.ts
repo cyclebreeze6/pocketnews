@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
+import { initializeFirebase } from '../../firebase';
+import { collection, query, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore';
 
 const AutoSyncResultSchema = z.object({
   newVideosAdded: z.number().describe("The total number of new videos added as Breaking News."),
@@ -18,23 +20,46 @@ export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
 // A list of major news outlets to be considered for "Breaking News"
 const BREAKING_NEWS_CHANNEL_NAMES = [
   'cnn', 
-  'aljazeera', // Note: 'Aljazeera' instead of 'Al Jazeera English' for broader matching
+  'aljazeera',
+  'al jazeera english',
   'fox news', 
   'abc news', 
   'africa news', 
-  'channels news', // Assuming this matches 'Channels Television'
+  'channels news',
   'channels television',
   'cbs news', 
   'sky news', 
   'reuters'
 ];
 
+const BREAKING_NEWS_CATEGORY = 'Breaking News';
+
+async function ensureBreakingNewsCategory() {
+    const { firestore } = initializeFirebase();
+    const categoriesRef = collection(firestore, 'categories');
+    const q = query(categoriesRef, where('name', '==', BREAKING_NEWS_CATEGORY));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        console.log(`'${BREAKING_NEWS_CATEGORY}' category not found. Creating it...`);
+        const newCategoryRef = doc(collection(firestore, 'categories'));
+        await setDoc(newCategoryRef, {
+            id: newCategoryRef.id,
+            name: BREAKING_NEWS_CATEGORY,
+            createdAt: serverTimestamp(),
+        });
+        console.log(`'${BREAKING_NEWS_CATEGORY}' category created.`);
+    }
+}
+
+
 async function runAutoSync(): Promise<AutoSyncResult> {
+    await ensureBreakingNewsCategory();
+
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
     
-    // Filter the channels to only include the designated breaking news sources
     const breakingNewsChannels = channelsToSync.filter(c => 
-      BREAKING_NEWS_CHANNEL_NAMES.includes(c.name.toLowerCase())
+      BREAKING_NEWS_CHANNEL_NAMES.some(name => c.name.toLowerCase().includes(name))
     );
 
     if (breakingNewsChannels.length === 0) {
@@ -50,10 +75,8 @@ async function runAutoSync(): Promise<AutoSyncResult> {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Fetch more recent videos to ensure we catch breaking stories
             const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 15 });
 
-            // All new videos from these channels are considered "Breaking News"
             const newBreakingVideos = fetchedVideos
                 .filter(video => !existingIdsSet.has(video.videoId))
                 .map(video => ({
@@ -62,9 +85,9 @@ async function runAutoSync(): Promise<AutoSyncResult> {
                     description: video.description,
                     thumbnailUrl: video.thumbnailUrl,
                     channelId: channel.id,
-                    contentCategory: 'Breaking News', // Assign all to Breaking News category
-                    views: Math.floor(Math.random() * 1000), // Placeholder views
-                    watchTime: Math.floor(Math.random() * 100), // Placeholder watch time
+                    contentCategory: BREAKING_NEWS_CATEGORY,
+                    views: Math.floor(Math.random() * 1000),
+                    watchTime: Math.floor(Math.random() * 100),
                 }));
             
             if (newBreakingVideos.length > 0) {

@@ -8,3 +8,8 @@ runConfig:
 env:
   - variable: NODE_ENV
     value: production
+
+cron:
+  - schedule: "every 20 minutes"
+    uri: "/api/cron/sync-breaking-news"
+    timeoutSeconds: 540
