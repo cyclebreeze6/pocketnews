@@ -31,22 +31,22 @@ service cloud.firestore {
 
     // Public content collections: anyone can read.
     match /videos/{videoId} {
-      allow read: if true;
+      allow get, list: if true;
       allow write: if isCreatorOrAdmin();
     }
 
     match /channels/{channelId} {
-      allow read: if true;
+      allow get, list: if true;
       allow write: if isCreatorOrAdmin();
     }
     
     match /shorts/{shortId} {
-      allow read: if true;
+      allow get, list: if true;
       allow write: if isCreatorOrAdmin();
     }
     
     match /categories/{categoryId} {
-      allow read: if true;
+      allow get, list: if true;
       allow write: if isCreatorOrAdmin();
     }
 
