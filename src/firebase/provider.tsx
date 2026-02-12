@@ -10,6 +10,7 @@ import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '../components/FirebaseErrorListener'
 import { setDocumentNonBlocking } from './non-blocking-updates';
 import type { UserProfile } from '../lib/types';
+import { initiateAnonymousSignIn } from './non-blocking-login';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -67,7 +68,7 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
  * @param user - The Firebase Auth user object.
  */
 const ensureUserDocument = async (firestore: Firestore, user: User) => {
-  if (!user) return;
+  if (!user || user.isAnonymous) return; // Do not create documents for anonymous users
   const userRef = doc(firestore, 'users', user.uid);
   const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
   
@@ -83,7 +84,7 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
       const newUserProfile: UserProfile = {
         id: user.uid,
         email: user.email || '',
-        displayName: user.displayName || 'Anonymous User',
+        displayName: user.displayName || 'New User',
         isAdmin: isDesignatedAdmin,
         isCreator: isDesignatedAdmin,
         avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
@@ -147,8 +148,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       async (firebaseUser) => { // Auth state determined
          if (firebaseUser) {
-          // When a user logs in, ensure their document exists in Firestore.
+          // When a real user logs in, ensure their document exists in Firestore.
           await ensureUserDocument(firestore, firebaseUser);
+        } else {
+          // If no user is logged in, sign in anonymously.
+          initiateAnonymousSignIn(auth);
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
