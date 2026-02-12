@@ -7,8 +7,8 @@ import { z } from 'zod';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
-import { initializeFirebase } from '../../firebase';
-import { collection, query, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const AutoSyncResultSchema = z.object({
   newVideosAdded: z.number().describe("The total number of new videos added as Breaking News."),
@@ -35,18 +35,22 @@ const BREAKING_NEWS_CHANNEL_NAMES = [
 const BREAKING_NEWS_CATEGORY = 'Breaking News';
 
 async function ensureBreakingNewsCategory() {
-    const { firestore } = initializeFirebase();
-    const categoriesRef = collection(firestore, 'categories');
-    const q = query(categoriesRef, where('name', '==', BREAKING_NEWS_CATEGORY));
-    const querySnapshot = await getDocs(q);
+    if (!isFirebaseAdminInitialized) {
+        console.warn("Firebase Admin SDK is not initialized. Cannot ensure 'Breaking News' category exists.");
+        return;
+    }
+    const firestore = adminSDK.firestore();
+    const categoriesRef = firestore.collection('categories');
+    const q = categoriesRef.where('name', '==', BREAKING_NEWS_CATEGORY);
+    const querySnapshot = await q.get();
 
     if (querySnapshot.empty) {
         console.log(`'${BREAKING_NEWS_CATEGORY}' category not found. Creating it...`);
-        const newCategoryRef = doc(collection(firestore, 'categories'));
-        await setDoc(newCategoryRef, {
+        const newCategoryRef = categoriesRef.doc();
+        await newCategoryRef.set({
             id: newCategoryRef.id,
             name: BREAKING_NEWS_CATEGORY,
-            createdAt: serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
         console.log(`'${BREAKING_NEWS_CATEGORY}' category created.`);
     }
@@ -54,12 +58,18 @@ async function ensureBreakingNewsCategory() {
 
 
 async function runAutoSync(): Promise<AutoSyncResult> {
+    if (!isFirebaseAdminInitialized) {
+        const errorMsg = "Auto-sync failed: Firebase Admin SDK is not configured on the server. Please provide service account credentials.";
+        console.error(errorMsg);
+        return { newVideosAdded: 0, syncedChannels: 0, errors: [errorMsg] };
+    }
+    
     await ensureBreakingNewsCategory();
 
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
     
     const breakingNewsChannels = channelsToSync.filter(c => 
-      BREAKING_NEWS_CHANNEL_NAMES.some(name => c.name.toLowerCase().includes(name))
+      c.name && BREAKING_NEWS_CHANNEL_NAMES.some(name => c.name.toLowerCase().includes(name))
     );
 
     if (breakingNewsChannels.length === 0) {
