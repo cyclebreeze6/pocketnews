@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -40,7 +39,6 @@ import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
-import { PreferenceFAB } from '../components/preference-fab';
 import { generateHeadline } from '../actions/generate-headline-flow';
 import type { GenerateHeadlineOutput } from '../ai/flows/generate-headline-flow';
 import { REGION_HIERARCHY } from '../lib/constants';
@@ -128,80 +126,45 @@ export default function Home() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  const [regionFilter, setRegionFilter] = useState('Global');
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
-  const [headlineConfig, setHeadlineConfig] = useState<GenerateHeadlineOutput | null>(null);
   
-  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   
-  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
-  const { data: categories } = useCollection<Category>(categoriesQuery);
-
-  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (user?.isAnonymous) {
-      const storedPrefs = localStorage.getItem('anonymousPreferences');
-      if (storedPrefs) {
-        setAnonymousPreferences(JSON.parse(storedPrefs));
-      }
-    }
-  }, [user]);
-
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !channels) return null;
+    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(50));
+  }, [firestore]);
+  
+  const { data: allVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
 
-    const baseQuery = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'));
-    
-    let prefs = userProfile?.preferences;
-    let prefsAreSet = userProfile?.preferencesSet;
+  const displayedVideos = useMemo(() => {
+    if (!allVideos || !channels) return null;
+    if (regionFilter === 'Global') return allVideos.slice(0, 20);
 
-    if (user?.isAnonymous) {
-        prefs = anonymousPreferences;
-        prefsAreSet = !!anonymousPreferences;
+    const expandedRegions = new Set<string>([regionFilter]);
+    const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
+    if (hierarchy) {
+        hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
     }
     
-    if (user && prefsAreSet && channels && prefs) {
-        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
-
-        if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
-            const expandedRegions = new Set<string>();
-            preferredRegions.forEach(region => {
-                expandedRegions.add(region);
-                if (REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY]) {
-                    REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY].forEach(subRegion => expandedRegions.add(subRegion));
-                }
-            });
-
-            let filteredChannels = [...channels];
-            filteredChannels = filteredChannels.filter(c => {
+    const preferredChannelIds = new Set(
+        channels
+            .filter(c => {
                 if (!c.region) return false;
                 const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                return channelRegions.some(channelRegion => expandedRegions.has(channelRegion));
-            });
+                return channelRegions.some(cr => expandedRegions.has(cr));
+            })
+            .map(c => c.id)
+    );
 
-            const preferredChannelIds = filteredChannels.map(c => c.id);
-
-            if (preferredChannelIds.length > 0) {
-                return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)), limit(20));
-            } else {
-                return query(baseQuery, where('id', '==', 'no-results-for-preference'));
-            }
-        }
-    }
-    
-    return query(baseQuery, limit(20));
-  }, [firestore, user, isUserLoading, userProfile, isProfileLoading, channels, anonymousPreferences]);
-  
-  const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+    return allVideos.filter(video => preferredChannelIds.has(video.channelId)).slice(0, 20);
+  }, [allVideos, channels, regionFilter]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   
@@ -368,64 +331,16 @@ export default function Home() {
   if (displayedVideos.length === 0) {
     return (
       <div className="flex min-h-screen w-full flex-col">
-        <SiteHeader />
+        <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
             <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
-              There are no videos available for your selected preferences. Try changing your region settings.
+              There are no videos available for your selected region.
             </p>
         </main>
          <footer className="py-4 text-center text-sm text-muted-foreground">
             Meet the #1 App to Stream News. Watch Free!
         </footer>
-        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
-        <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
-            <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
-                <DialogDescription>
-                Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
-                </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-                <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
-            </DialogFooter>
-            </DialogContent>
-        </Dialog>
-        <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
-            <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Report Video</DialogTitle>
-                <DialogDescription>
-                Why are you reporting this video? Your report is anonymous.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="report-reason">Reason</Label>
-                    <Select onValueChange={setReportReason} value={reportReason}>
-                        <SelectTrigger id="report-reason">
-                            <SelectValue placeholder="Select a reason..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Copyright">Copyright</SelectItem>
-                            <SelectItem value="Wrong Information">Wrong Information</SelectItem>
-                            <SelectItem value="False News">False News</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="grid gap-2">
-                    <Label htmlFor="report-details">Details (optional)</Label>
-                    <Textarea id="report-details" value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder="Provide additional details..." />
-                </div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleReportSubmit}>Report Video</Button>
-            </DialogFooter>
-            </DialogContent>
-        </Dialog>
       </div>
     );
   }
@@ -440,7 +355,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
+      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
       <main ref={mainRef} className="flex-1">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
           <div className="lg:col-span-2">
@@ -642,7 +557,6 @@ export default function Home() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <PreferenceFAB />
     </div>
   );
 }

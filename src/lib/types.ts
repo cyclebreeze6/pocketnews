@@ -58,12 +58,6 @@ export interface Category {
 }
 
 export interface UserProfile extends User {
-    preferredCategories?: string[];
-    preferencesSet?: boolean;
-    preferences?: {
-        region?: string[];
-        language?: string;
-    }
 }
 
 export interface WatchHistory {
@@ -88,4 +82,6 @@ export interface Report {
     
 
     
+
+
 

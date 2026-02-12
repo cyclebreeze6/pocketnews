@@ -88,7 +88,6 @@ const ensureUserDocument = async (firestore: Firestore, user: User) => {
         isAdmin: isDesignatedAdmin,
         isCreator: isDesignatedAdmin,
         avatar: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
-        preferencesSet: false,
       };
       batch.set(userRef, newUserProfile);
       if (isDesignatedAdmin) {

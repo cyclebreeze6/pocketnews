@@ -10,13 +10,10 @@ import { Switch } from '../../components/ui/switch';
 import { useUser } from '../../firebase';
 import Link from 'next/link';
 import { ListFilter, Settings2 } from 'lucide-react';
-import { PreferenceDialog } from '../../components/preference-dialog';
 import { useState } from 'react';
 
 export default function SettingsPage() {
   const { user } = useUser();
-  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false);
-
 
   return (
     <>
@@ -29,26 +26,6 @@ export default function SettingsPage() {
             </h1>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Content</CardTitle>
-                    <CardDescription>Customize the content you see in your feed.</CardDescription>
-                </CardHeader>
-                 <CardContent>
-                    <div className="flex items-center gap-4 p-4 border rounded-lg">
-                        <ListFilter className="h-8 w-8 text-muted-foreground" />
-                        <div className="flex-grow">
-                            <h3 className="font-semibold">Feed Preferences</h3>
-                            <p className="text-sm text-muted-foreground">Choose your preferred regions and languages.</p>
-                        </div>
-                        <Button variant="secondary" onClick={() => setIsPreferenceDialogOpen(true)}>
-                            <Settings2 className="mr-2 h-4 w-4" />
-                            Edit
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="mt-8">
                 <CardHeader>
                     <CardTitle>Privacy</CardTitle>
                     <CardDescription>Control your privacy settings.</CardDescription>
@@ -76,7 +53,6 @@ export default function SettingsPage() {
         </div>
       </main>
     </div>
-    <PreferenceDialog open={isPreferenceDialogOpen} onOpenChange={setIsPreferenceDialogOpen} userId={user?.uid || null} userProfile={null} />
     </>
   );
 }

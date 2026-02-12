@@ -172,21 +172,6 @@
         "isCreator": {
           "type": "boolean",
           "description": "Indicates if the user is a content creator."
-        },
-        "preferencesSet": {
-          "type": "boolean",
-          "description": "Indicates if the user has set their content preferences."
-        },
-        "preferences": {
-          "type": "object",
-          "description": "User's content filtering preferences.",
-          "properties": {
-            "region": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "The specific regions to filter by."
-            }
-          }
         }
       },
       "required": [

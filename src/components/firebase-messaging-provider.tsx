@@ -1,27 +1,21 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { usePushNotifications } from '../firebase/messaging';
-import { useFirebase, useDoc, useMemoFirebase, useUser } from '../firebase';
+import { useFirebase } from '../firebase';
 import { NotificationPermissionDialog } from './notification-permission-dialog';
 import { getMessaging, onMessage } from 'firebase/messaging';
 import { useToast } from '../hooks/use-toast';
-import { doc } from 'firebase/firestore';
-import type { UserProfile } from '../lib/types';
-import { PreferenceDialog } from './preference-dialog';
 
 /**
  * A client component that initializes the push notification setup
  * and conditionally shows a permission dialog.
  */
 export function FirebaseMessagingProvider() {
-  const { firebaseApp, user, firestore, isUserLoading } = useFirebase();
+  const { firebaseApp, user } = useFirebase();
   const { permissionStatus, requestPermission } = usePushNotifications();
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const { toast } = useToast();
-
-  const userProfileRef = useMemoFirebase(() => (user && !user.isAnonymous ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && firebaseApp) {

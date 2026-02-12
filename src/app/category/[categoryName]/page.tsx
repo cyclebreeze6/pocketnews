@@ -62,75 +62,39 @@ export default function CategoryPage() {
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   
   const categoryName = decodeURIComponent(params.categoryName as string);
-
-  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (user?.isAnonymous) {
-      const storedPrefs = localStorage.getItem('anonymousPreferences');
-      if (storedPrefs) {
-        setAnonymousPreferences(JSON.parse(storedPrefs));
-      }
-    }
-  }, [user]);
-
-  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [firestore, user]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const [regionFilter, setRegionFilter] = useState('Global');
 
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
   const videosQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !channels) return null;
-
-    const baseQuery = query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName));
-    
-    let prefs = userProfile?.preferences;
-    let prefsAreSet = userProfile?.preferencesSet;
-
-    if (user?.isAnonymous) {
-        prefs = anonymousPreferences;
-        prefsAreSet = !!anonymousPreferences;
-    }
-    
-    if (user && prefsAreSet && channels && prefs) {
-        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
-
-        if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
-            const expandedRegions = new Set<string>();
-            preferredRegions.forEach(region => {
-                expandedRegions.add(region);
-                if (REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY]) {
-                    REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY].forEach(subRegion => expandedRegions.add(subRegion));
-                }
-            });
-
-            let filteredChannels = [...channels];
-            filteredChannels = filteredChannels.filter(c => {
-                if (!c.region) return false;
-                const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                return channelRegions.some(channelRegion => expandedRegions.has(channelRegion));
-            });
-
-            const preferredChannelIds = filteredChannels.map(c => c.id);
-
-            if (preferredChannelIds.length > 0) {
-                return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)), orderBy('createdAt', 'desc'), limit(20));
-            } else {
-                return query(baseQuery, where('id', '==', 'no-results-for-preference'));
-            }
-        }
-    }
-    
-    return query(baseQuery, orderBy('createdAt', 'desc'), limit(20));
-  }, [firestore, categoryName, user, isUserLoading, userProfile, isProfileLoading, channels, anonymousPreferences]);
+    return query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName), orderBy('createdAt', 'desc'), limit(50));
+  }, [firestore, categoryName]);
   
   const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
 
   const videos = useMemo(() => {
-    if (!videosFromHook) return null;
-    return [...videosFromHook].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
-  }, [videosFromHook]);
+    if (!videosFromHook || !channels) return null;
+    if (regionFilter === 'Global') return videosFromHook.slice(0, 20);
+
+    const expandedRegions = new Set<string>([regionFilter]);
+    const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
+    if (hierarchy) {
+        hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
+    }
+    
+    const preferredChannelIds = new Set(
+        channels
+            .filter(c => {
+                if (!c.region) return false;
+                const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+                return channelRegions.some(cr => expandedRegions.has(cr));
+            })
+            .map(c => c.id)
+    );
+
+    return videosFromHook.filter(video => preferredChannelIds.has(video.channelId)).slice(0, 20);
+  }, [videosFromHook, channels, regionFilter]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
@@ -192,7 +156,7 @@ export default function CategoryPage() {
         }
     };
 
-  const isLoading = videosLoading || channelsLoading || isUserLoading || isProfileLoading;
+  const isLoading = videosLoading || channelsLoading || isUserLoading;
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -201,12 +165,12 @@ export default function CategoryPage() {
   if (!videos || videos.length === 0) {
      return (
         <div className="flex min-h-screen w-full flex-col">
-            <SiteHeader />
+            <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
             <main className="flex-1 py-12 md:py-16 text-center">
                 <h2 className="text-2xl font-bold tracking-tight mb-4">
                     No videos in {categoryName}
                 </h2>
-                <p>No videos found in this category for your preferences. Check back later!</p>
+                <p>No videos found in this category for your selected region. Check back later!</p>
             </main>
         </div>
      )
@@ -222,7 +186,7 @@ export default function CategoryPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
+      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
       <main className="flex-1 md:py-8">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           <div className="lg:col-span-2">
