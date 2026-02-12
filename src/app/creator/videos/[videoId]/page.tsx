@@ -123,7 +123,6 @@ export default function VideoEditPage() {
                     createdAt: serverTimestamp(),
                     logoUrl: newChannelInfo.logoUrl,
                     youtubeChannelUrl: `https://www.youtube.com/channel/${videoInfo.youtubeChannelId}`,
-                    language: newChannelInfo.language || 'English',
                     region: newChannelInfo.region ? [newChannelInfo.region] : ['Global'],
                     youtubeChannelId: videoInfo.youtubeChannelId,
                 };
@@ -464,5 +463,3 @@ export default function VideoEditPage() {
     </div>
   );
 }
-
-    

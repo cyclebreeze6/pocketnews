@@ -33,9 +33,10 @@
           "type": "string",
           "description": "The unique ID of the YouTube channel for matching."
         },
-        "language": {
-            "type": "string",
-            "description": "The default language of the channel."
+        "youtubeChannelUrl": {
+          "type": "string",
+          "description": "The public URL of the YouTube channel.",
+          "format": "uri"
         },
         "region": {
             "type": "array",
@@ -184,10 +185,6 @@
               "type": "array",
               "items": { "type": "string" },
               "description": "The specific regions to filter by."
-            },
-            "language": {
-              "type": "string",
-              "description": "The specific language to filter by."
             }
           }
         }
@@ -448,8 +445,3 @@
     "reasoning": "The Firestore structure is designed to support Pocketnews TV's core features. Videos and Shorts are top-level collections to simplify queries for feeds. The rest of the structure remains segregated for security and clarity."
   }
 }
-    
-    
-
-    
-

@@ -43,7 +43,7 @@ export function PreferenceFAB() {
 
     const startInterval = () => {
         promptInterval = setInterval(() => {
-        setPromptText(Math.random() > 0.5 ? 'Change region' : 'Change language');
+        setPromptText('Change region');
         setPromptOpen(true);
         const autoClose = setTimeout(() => setPromptOpen(false), 10000); // show for 10s
          return () => clearTimeout(autoClose);

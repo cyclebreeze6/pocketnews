@@ -31,6 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '../../../components/ui/popover';
+import { REGION_HIERARCHY } from '../../../lib/constants';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -93,27 +94,31 @@ export default function CategoryPage() {
     }
     
     if (user && prefsAreSet && channels && prefs) {
-        let filteredChannels = [...channels];
         const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
 
         if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
-          filteredChannels = filteredChannels.filter(c => {
-              if (!c.region) return false;
-              const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-              return channelRegions.some(channelRegion => preferredRegions.includes(channelRegion));
-          });
-        }
+            const expandedRegions = new Set<string>();
+            preferredRegions.forEach(region => {
+                expandedRegions.add(region);
+                if (REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY]) {
+                    REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY].forEach(subRegion => expandedRegions.add(subRegion));
+                }
+            });
 
-        if (prefs.language && prefs.language !== 'all-languages') {
-            filteredChannels = filteredChannels.filter(c => c.language === prefs.language);
-        }
+            let filteredChannels = [...channels];
+            filteredChannels = filteredChannels.filter(c => {
+                if (!c.region) return false;
+                const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+                return channelRegions.some(channelRegion => expandedRegions.has(channelRegion));
+            });
 
-        const preferredChannelIds = filteredChannels.map(c => c.id);
+            const preferredChannelIds = filteredChannels.map(c => c.id);
 
-        if (preferredChannelIds.length > 0) {
-            return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
-        } else {
-            return query(baseQuery, where('id', '==', 'no-results-for-preference'));
+            if (preferredChannelIds.length > 0) {
+                return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            } else {
+                return query(baseQuery, where('id', '==', 'no-results-for-preference'));
+            }
         }
     }
     

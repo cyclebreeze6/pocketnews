@@ -27,8 +27,7 @@ import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow
 import type { YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { useRouter } from 'next/navigation';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { LANGUAGES, REGIONS } from '../../../lib/constants';
+import { REGIONS } from '../../../lib/constants';
 import { Badge } from '../../../components/ui/badge';
 
 
@@ -44,7 +43,6 @@ export default function CreatorChannelsPage() {
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
-  const [channelLanguage, setChannelLanguage] = useState('');
   const [channelRegions, setChannelRegions] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -67,11 +65,10 @@ export default function CreatorChannelsPage() {
       const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
       setChannelName(info.name);
       setChannelDescription(info.description || '');
-      setChannelLanguage('');
       setChannelRegions([]);
       setLogoPreview(info.logoUrl);
       setLogoFile(null); // Clear file if we fetched a new logo URL
-      toast({ title: "Channel info populated! Please select Language and Region." });
+      toast({ title: "Channel info populated! Please select a Region." });
     } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Failed to fetch info', description: error.message });
@@ -96,7 +93,6 @@ export default function CreatorChannelsPage() {
     setChannelName('');
     setChannelDescription('');
     setYoutubeChannelUrl('');
-    setChannelLanguage('');
     setChannelRegions([]);
     setLogoFile(null);
     setLogoPreview(null);
@@ -109,7 +105,6 @@ export default function CreatorChannelsPage() {
       setChannelName(channel.name);
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
-      setChannelLanguage(channel.language || '');
       setChannelRegions(Array.isArray(channel.region) ? channel.region : (channel.region ? [channel.region] : []));
       setLogoPreview(channel.logoUrl || null);
       setLogoFile(null);
@@ -143,7 +138,6 @@ export default function CreatorChannelsPage() {
           description: channelDescription,
           youtubeChannelUrl: youtubeChannelUrl.trim(),
           logoUrl: finalLogoUrl,
-          language: channelLanguage || 'English',
           region: channelRegions.length > 0 ? channelRegions : ['Global'],
         };
 
@@ -253,48 +247,35 @@ export default function CreatorChannelsPage() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" value={channelDescription} onChange={(e) => setChannelDescription(e.target.value)} />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="language-select">Language</Label>
-                    <Select onValueChange={setChannelLanguage} value={channelLanguage}>
-                        <SelectTrigger id="language-select">
-                            <SelectValue placeholder="Select language..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {LANGUAGES.map(lang => <SelectItem key={lang} value={lang}>{lang}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="region-select">Region(s)</Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button id="region-select" variant="outline" className="w-full justify-start font-normal">
-                          <div className="line-clamp-1 text-left">
-                            {channelRegions.length > 0 ? channelRegions.join(', ') : 'Select regions...'}
-                          </div>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-60 max-h-60 overflow-y-auto" align="start">
-                        {REGIONS.map(region => (
-                          <DropdownMenuCheckboxItem
-                            key={region}
-                            checked={channelRegions.includes(region)}
-                            onSelect={(e) => e.preventDefault()}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setChannelRegions(prev => [...prev, region]);
-                              } else {
-                                setChannelRegions(prev => prev.filter(r => r !== region));
-                              }
-                            }}
-                          >
-                            {region}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="region-select">Region(s)</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button id="region-select" variant="outline" className="w-full justify-start font-normal">
+                        <div className="line-clamp-1 text-left">
+                          {channelRegions.length > 0 ? channelRegions.join(', ') : 'Select regions...'}
+                        </div>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-60 max-h-60 overflow-y-auto" align="start">
+                      {REGIONS.map(region => (
+                        <DropdownMenuCheckboxItem
+                          key={region}
+                          checked={channelRegions.includes(region)}
+                          onSelect={(e) => e.preventDefault()}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setChannelRegions(prev => [...prev, region]);
+                            } else {
+                              setChannelRegions(prev => prev.filter(r => r !== region));
+                            }
+                          }}
+                        >
+                          {region}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
             </div>
             <div className="grid gap-2 content-start">
@@ -335,7 +316,6 @@ export default function CreatorChannelsPage() {
                 <TableHead>Logo</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Language</TableHead>
                 <TableHead>Region</TableHead>
                 <TableHead>YouTube URL</TableHead>
                 <TableHead>
@@ -354,7 +334,6 @@ export default function CreatorChannelsPage() {
                   </TableCell>
                   <TableCell className="font-medium">{channel.name}</TableCell>
                   <TableCell className="line-clamp-2">{channel.description}</TableCell>
-                  <TableCell>{channel.language}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1 max-w-xs">
                         {channel.region && (Array.isArray(channel.region) ? channel.region : [channel.region]).map(r => <Badge key={r} variant="outline">{r}</Badge>)}

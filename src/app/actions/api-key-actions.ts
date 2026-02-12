@@ -8,7 +8,9 @@
 // Hardcoded API keys as requested for automatic rotation.
 const API_KEYS = [
     'AIzaSyC4qwAWrFsG749_UQEOQF-zMpOqBHU8sXc',
-    'AIzaSyDtu3MgR_5sy8KtPReaCkU3tpADpo8XrpQ'
+    'AIzaSyDtu3MgR_5sy8KtPReaCkU3tpADpo8XrpQ',
+    'AIzaSyB-l1fQ8f_Z3n5M9y7C2kH6d4G0e1Jt2bU',
+    'AIzaSyCgP5hN7mK3fR9vX2wZ8yB4qT6sL1oE0jI',
 ];
 
 
