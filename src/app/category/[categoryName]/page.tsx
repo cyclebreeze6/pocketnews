@@ -251,8 +251,13 @@ export default function CategoryPage() {
                             </Avatar>
                         </Link>
                         <div>
-                            <Link href={`/channels/${currentChannel.id}`}>
+                            <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
                                 <p className="font-semibold hover:underline">{currentChannel.name}</p>
+                                {currentChannel.region && currentChannel.region.length > 0 && (
+                                    <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
+                                        {currentChannel.region[0]}
+                                    </span>
+                                )}
                             </Link>
                             <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>

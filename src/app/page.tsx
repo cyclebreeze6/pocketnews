@@ -145,9 +145,61 @@ export default function Home() {
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories } = useCollection<Category>(categoriesQuery);
 
+  const [anonymousPreferences, setAnonymousPreferences] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (user?.isAnonymous) {
+      const storedPrefs = localStorage.getItem('anonymousPreferences');
+      if (storedPrefs) {
+        setAnonymousPreferences(JSON.parse(storedPrefs));
+      }
+    }
+  }, [user]);
+
   const videosQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(15));
-  }, [firestore]);
+    if (isUserLoading || isProfileLoading || !channels) return null;
+
+    const baseQuery = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'));
+    
+    let prefs = userProfile?.preferences;
+    let prefsAreSet = userProfile?.preferencesSet;
+
+    if (user?.isAnonymous) {
+        prefs = anonymousPreferences;
+        prefsAreSet = !!anonymousPreferences;
+    }
+    
+    if (user && prefsAreSet && channels && prefs) {
+        const preferredRegions = Array.isArray(prefs.region) ? prefs.region : (prefs.region ? [prefs.region] : []);
+
+        if (preferredRegions.length > 0 && !(preferredRegions.length === 1 && preferredRegions[0] === 'Global')) {
+            const expandedRegions = new Set<string>();
+            preferredRegions.forEach(region => {
+                expandedRegions.add(region);
+                if (REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY]) {
+                    REGION_HIERARCHY[region as keyof typeof REGION_HIERARCHY].forEach(subRegion => expandedRegions.add(subRegion));
+                }
+            });
+
+            let filteredChannels = [...channels];
+            filteredChannels = filteredChannels.filter(c => {
+                if (!c.region) return false;
+                const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+                return channelRegions.some(channelRegion => expandedRegions.has(channelRegion));
+            });
+
+            const preferredChannelIds = filteredChannels.map(c => c.id);
+
+            if (preferredChannelIds.length > 0) {
+                return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)), limit(20));
+            } else {
+                return query(baseQuery, where('id', '==', 'no-results-for-preference'));
+            }
+        }
+    }
+    
+    return query(baseQuery, limit(15));
+  }, [firestore, user, isUserLoading, userProfile, isProfileLoading, channels, anonymousPreferences]);
   
   const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
   
@@ -320,7 +372,7 @@ export default function Home() {
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
             <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
-              There are no videos available right now. Please check back later.
+              There are no videos available for your selected preferences. Try changing your region settings.
             </p>
         </main>
          <footer className="py-4 text-center text-sm text-muted-foreground">
@@ -430,8 +482,13 @@ export default function Home() {
                           </Avatar>
                         </Link>
                         <div>
-                            <Link href={`/channels/${currentChannel.id}`}>
+                            <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
                                 <p className="font-semibold hover:underline">{currentChannel.name}</p>
+                                {currentChannel.region && currentChannel.region.length > 0 && (
+                                    <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
+                                        {currentChannel.region[0]}
+                                    </span>
+                                )}
                             </Link>
                             <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>
