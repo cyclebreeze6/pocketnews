@@ -198,7 +198,7 @@ export default function Home() {
         }
     }
     
-    return query(baseQuery, limit(15));
+    return query(baseQuery, limit(20));
   }, [firestore, user, isUserLoading, userProfile, isProfileLoading, channels, anonymousPreferences]);
   
   const { data: displayedVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
@@ -483,12 +483,12 @@ export default function Home() {
                         </Link>
                         <div>
                             <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
-                                <p className="font-semibold hover:underline">{currentChannel.name}</p>
                                 {currentChannel.region && currentChannel.region.length > 0 && (
                                     <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
                                         {currentChannel.region[0]}
                                     </span>
                                 )}
+                                <p className="font-semibold hover:underline">{currentChannel.name}</p>
                             </Link>
                             <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>

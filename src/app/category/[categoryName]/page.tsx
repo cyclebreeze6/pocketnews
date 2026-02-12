@@ -115,7 +115,7 @@ export default function CategoryPage() {
             const preferredChannelIds = filteredChannels.map(c => c.id);
 
             if (preferredChannelIds.length > 0) {
-                return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+                return query(baseQuery, where('channelId', 'in', preferredChannelIds.slice(0, 30)), orderBy('createdAt', 'desc'), limit(20));
             } else {
                 return query(baseQuery, where('id', '==', 'no-results-for-preference'));
             }
@@ -252,12 +252,12 @@ export default function CategoryPage() {
                         </Link>
                         <div>
                             <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
-                                <p className="font-semibold hover:underline">{currentChannel.name}</p>
                                 {currentChannel.region && currentChannel.region.length > 0 && (
                                     <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
                                         {currentChannel.region[0]}
                                     </span>
                                 )}
+                                <p className="font-semibold hover:underline">{currentChannel.name}</p>
                             </Link>
                             <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
                         </div>
