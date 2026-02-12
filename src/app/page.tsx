@@ -144,6 +144,18 @@ export default function Home() {
   
   const { data: allVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
 
+  useEffect(() => {
+    const savedRegion = localStorage.getItem('pocketnews-region-filter');
+    if (savedRegion) {
+      setRegionFilter(savedRegion);
+    }
+  }, []);
+
+  const handleRegionChange = (newRegion: string) => {
+    setRegionFilter(newRegion);
+    localStorage.setItem('pocketnews-region-filter', newRegion);
+  };
+
   const displayedVideos = useMemo(() => {
     if (!allVideos || !channels) return null;
     if (regionFilter === 'Global') return allVideos;
@@ -332,7 +344,7 @@ export default function Home() {
   if (displayedVideos.length === 0) {
     return (
       <div className="flex min-h-screen w-full flex-col">
-        <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
+        <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
         <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
             <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
             <p className="text-muted-foreground mb-6">
@@ -356,7 +368,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
+      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
       <main ref={mainRef} className="flex-1">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
           <div className="lg:col-span-2">

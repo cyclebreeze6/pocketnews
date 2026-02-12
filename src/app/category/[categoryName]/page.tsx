@@ -64,6 +64,18 @@ export default function CategoryPage() {
   const categoryName = decodeURIComponent(params.categoryName as string);
   const [regionFilter, setRegionFilter] = useState('Global');
 
+  useEffect(() => {
+    const savedRegion = localStorage.getItem('pocketnews-region-filter');
+    if (savedRegion) {
+      setRegionFilter(savedRegion);
+    }
+  }, []);
+
+  const handleRegionChange = (newRegion: string) => {
+    setRegionFilter(newRegion);
+    localStorage.setItem('pocketnews-region-filter', newRegion);
+  };
+
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
@@ -165,7 +177,7 @@ export default function CategoryPage() {
   if (!videos || videos.length === 0) {
      return (
         <div className="flex min-h-screen w-full flex-col">
-            <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
+            <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
             <main className="flex-1 py-12 md:py-16 text-center">
                 <h2 className="text-2xl font-bold tracking-tight mb-4">
                     No videos in {categoryName}
@@ -186,7 +198,7 @@ export default function CategoryPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
+      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
       <main className="flex-1 md:py-8">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           <div className="lg:col-span-2">
