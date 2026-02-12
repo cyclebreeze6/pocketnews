@@ -7,6 +7,7 @@ service cloud.firestore {
     /* =================================
        HELPER FUNCTIONS
     ================================= */
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -15,13 +16,20 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    function isAdmin() {
-      // User is an admin if the isAdmin flag is true on their user profile.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
+    // This function checks against hardcoded admin emails.
+    function isDesignatedAdmin(email) {
+      return email == 'valentinoboss18@gmail.com' || email == 'emmachukwunonye54@gmail.com';
     }
     
+    // An admin is someone whose UID is in the roles_admin collection OR is a designated super-admin.
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) 
+             || isDesignatedAdmin(request.auth.token.email);
+    }
+    
+    // A creator is someone with the isCreator flag on their user profile.
     function isCreator() {
-      // User is a creator if the isCreator flag is true on their user profile.
+      // This get is allowed because users can read their own document.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isCreator', false) == true;
     }
 
@@ -31,25 +39,26 @@ service cloud.firestore {
 
     /* =================================
        PUBLIC CONTENT COLLECTIONS
-       Readable by all, writable by Creators/Admins.
+       - Readable by ALL users (signed in or not).
+       - Writable only by Creators or Admins.
     ================================= */
     match /channels/{channelId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
     match /videos/{videoId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
     match /shorts/{shortId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
     match /categories/{categoryId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
 
@@ -57,17 +66,18 @@ service cloud.firestore {
        USER-SPECIFIC COLLECTIONS
     ================================= */
     match /users/{userId} {
-      // Admins can get any user's profile. Others can only get their own.
+      // A user can get their own profile. An admin can get anyone's profile.
       allow get: if isOwner(userId) || isAdmin();
-      // Admins can list all users.
-      allow list: if isAdmin();
       
+      // Only admins can list all users.
+      allow list: if isAdmin();
+
       // A user can create and delete their own document.
+      // An admin can update any user document, and a user can update their own.
       allow create, delete: if isOwner(userId);
-      // A user can update their own document. Admins can update any user document.
       allow update: if isOwner(userId) || isAdmin();
 
-      // Subcollections are private to the owner.
+      // User subcollections are private to the owner.
       match /history/{docId}        { allow read, write, delete: if isOwner(userId); }
       match /fcmTokens/{tokenId}    { allow read, write, delete: if isOwner(userId); }
       match /collections/{collectionId} { allow read, write, delete: if isOwner(userId); }
@@ -77,11 +87,22 @@ service cloud.firestore {
        ADMIN & SYSTEM COLLECTIONS
     ================================= */
 
-    // Any signed-in user can submit a report.
-    // Only Creators/Admins can read or manage reports.
+    // Any signed-in user can create a report.
+    // Only creators or admins can manage reports.
     match /reports/{reportId} {
       allow create: if isSignedIn();
       allow read, update, delete: if isCreatorOrAdmin();
+    }
+    
+    // Rules for the admin roles collection.
+    match /roles_admin/{userId} {
+      // An admin can check any role. A user can only check their own role status.
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      // Only existing admins can grant/revoke roles.
+      // Designated super-admins can also grant themselves the role initially.
+      allow write: if isAdmin() || (isOwner(userId) && isDesignatedAdmin(request.auth.token.email));
     }
   }
 }
