@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -138,14 +139,14 @@ export default function Home() {
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   
   const videosQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(50));
+    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(40));
   }, [firestore]);
   
   const { data: allVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
 
   const displayedVideos = useMemo(() => {
     if (!allVideos || !channels) return null;
-    if (regionFilter === 'Global') return allVideos.slice(0, 20);
+    if (regionFilter === 'Global') return allVideos;
 
     const expandedRegions = new Set<string>([regionFilter]);
     const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
@@ -163,7 +164,7 @@ export default function Home() {
             .map(c => c.id)
     );
 
-    return allVideos.filter(video => preferredChannelIds.has(video.channelId)).slice(0, 20);
+    return allVideos.filter(video => preferredChannelIds.has(video.channelId));
   }, [allVideos, channels, regionFilter]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
