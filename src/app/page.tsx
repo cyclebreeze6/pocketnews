@@ -14,7 +14,7 @@ import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHori
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, collectionGroup, getDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -138,11 +138,12 @@ export default function Home() {
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   
-  const videosQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(40));
-  }, [firestore]);
-  
-  const { data: allVideos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+  const [allVideos, setAllVideos] = useState<Video[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const observerRef = useRef(null);
 
   useEffect(() => {
     const savedRegion = localStorage.getItem('pocketnews-region-filter');
@@ -155,6 +156,66 @@ export default function Home() {
     setRegionFilter(newRegion);
     localStorage.setItem('pocketnews-region-filter', newRegion);
   };
+  
+  useEffect(() => {
+    setIsLoading(true);
+    const fetchInitialVideos = async () => {
+        const first = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(12));
+        const documentSnapshots = await getDocs(first);
+
+        const videosData = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
+        setAllVideos(videosData);
+        
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        setLastVisible(lastDoc);
+        
+        setHasMore(documentSnapshots.docs.length === 12);
+        setIsLoading(false);
+    };
+    fetchInitialVideos();
+  }, [firestore]);
+
+  const fetchMoreVideos = useCallback(async () => {
+    if (isFetchingMore || !hasMore || !lastVisible) return;
+
+    setIsFetchingMore(true);
+    const next = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(8));
+    const documentSnapshots = await getDocs(next);
+
+    const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
+    setAllVideos(prev => [...prev, ...newVideos]);
+    
+    const last = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+    setLastVisible(last);
+
+    if (documentSnapshots.docs.length < 8) {
+        setHasMore(false);
+    }
+    setIsFetchingMore(false);
+  }, [firestore, isFetchingMore, hasMore, lastVisible]);
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+        (entries) => {
+            if (entries[0].isIntersecting && hasMore && !isLoading && !isFetchingMore) {
+                fetchMoreVideos();
+            }
+        },
+        { threshold: 1.0 }
+    );
+
+    const currentObserverRef = observerRef.current;
+    if (currentObserverRef) {
+        observer.observe(currentObserverRef);
+    }
+
+    return () => {
+        if (currentObserverRef) {
+            observer.unobserve(currentObserverRef);
+        }
+    };
+  }, [hasMore, isLoading, isFetchingMore, fetchMoreVideos]);
+
 
   const displayedVideos = useMemo(() => {
     if (!allVideos || !channels) return null;
@@ -186,7 +247,8 @@ export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0;
   
-  const isLoading = videosLoading || channelsLoading || isUserLoading;
+  // This combines all initial loading states.
+  const isInitiallyLoading = (isLoading && allVideos.length === 0) || channelsLoading || isUserLoading;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -236,10 +298,10 @@ export default function Home() {
         // No video in URL, just play the first one
         setCurrentVideo(displayedVideos[0]);
       }
-    } else if (displayedVideos && displayedVideos.length === 0) {
+    } else if (displayedVideos && displayedVideos.length === 0 && !isLoading) {
       setCurrentVideo(null); // No videos to display
     }
-  }, [displayedVideos, firestore, currentVideo]);
+  }, [displayedVideos, firestore, currentVideo, isLoading]);
 
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
@@ -337,11 +399,11 @@ export default function Home() {
   };
   
   
-  if (isLoading || !displayedVideos) {
+  if (isInitiallyLoading) {
       return <HomepageSkeleton />;
   }
 
-  if (displayedVideos.length === 0) {
+  if (!displayedVideos || displayedVideos.length === 0) {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
@@ -506,8 +568,15 @@ export default function Home() {
                         </div>
                         )
                     })}
+                    <div ref={observerRef} />
                 </div>
             </ScrollArea>
+
+            {isFetchingMore && (
+                <div className="flex justify-center items-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+            )}
 
              <Card className="mt-8 bg-card/50">
                 <CardContent className="p-4 flex items-center justify-between">
