@@ -5,92 +5,79 @@ import { useState } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Checkbox } from '../../../components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { useToast } from '../../../hooks/use-toast';
-import { Loader2, DownloadCloud, UploadCloud } from 'lucide-react';
-import Image from 'next/image';
-import { fetchNewVideosForBulkImport, saveImportedVideos } from '../../actions/bulk-import-actions';
-import type { NewVideoForImport, ImportedVideoSaveData } from '../../actions/bulk-import-actions';
+import { Loader2, UploadCloud } from 'lucide-react';
 import { useCollection, useFirebase, useMemoFirebase } from '../../../firebase';
-import type { Category } from '../../../lib/types';
+import type { Channel } from '../../../lib/types';
 import { collection } from 'firebase/firestore';
-
-interface VideoToImport extends NewVideoForImport {
-  category?: string;
-  isSelected?: boolean;
-}
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from '../../../components/ui/dialog';
+import { importLatestVideoFromChannels } from '../../actions/bulk-import-actions';
+import { ScrollArea } from '../../../components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 
 export default function CreatorBulkImportPage() {
   const { firestore } = useFirebase();
-  const [isFetching, setIsFetching] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [fetchedVideos, setFetchedVideos] = useState<VideoToImport[]>([]);
   const { toast } = useToast();
+  
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
+  const [importResult, setImportResult] = useState<{ importedCount: number; errors: string[] } | null>(null);
 
-  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
-  const { data: categories } = useCollection<Category>(categoriesQuery);
+  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
+  const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  const handleFetchVideos = async () => {
-    setIsFetching(true);
-    setFetchedVideos([]);
-
-    try {
-      const results = await fetchNewVideosForBulkImport();
-      setFetchedVideos(results.map(v => ({ ...v, isSelected: false })));
-      if (results.length === 0) {
-        toast({ title: 'No new videos found', description: 'All linked channels are up-to-date.' });
-      }
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to fetch videos',
-        description: error.message,
-      });
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
-  const handleVideoSelection = (videoId: string, isSelected: boolean) => {
-    setFetchedVideos(prev =>
-      prev.map(v => (v.youtubeVideoId === videoId ? { ...v, isSelected } : v))
+  const handleChannelSelection = (channelId: string, isSelected: boolean) => {
+    setSelectedChannelIds(prev =>
+      isSelected ? [...prev, channelId] : prev.filter(id => id !== channelId)
     );
   };
   
-  const handleCategoryChange = (videoId: string, value: string) => {
-     setFetchedVideos(prev =>
-      prev.map(v => (v.youtubeVideoId === videoId ? { ...v, category: value } : v))
-    );
+  const handleSelectAll = (isSelected: boolean) => {
+      if (isSelected && channels) {
+          setSelectedChannelIds(channels.map(c => c.id));
+      } else {
+          setSelectedChannelIds([]);
+      }
   }
 
-  const videosReadyForImport = fetchedVideos.filter(v => v.isSelected && v.category);
-
   const handleImport = async () => {
-    if (videosReadyForImport.length === 0) {
-      toast({ variant: 'destructive', title: 'No videos ready for import', description: "Please select videos and assign a category to each." });
-      return;
-    }
-     if (videosReadyForImport.length > 10) {
-      toast({ variant: 'destructive', title: 'Too many videos selected', description: "You can import a maximum of 10 videos at a time." });
+    if (selectedChannelIds.length === 0) {
+      toast({ variant: 'destructive', title: 'No channels selected', description: "Please select at least one channel to import from." });
       return;
     }
     
     setIsSaving(true);
-    const videosToSave: ImportedVideoSaveData[] = videosReadyForImport.map(v => ({
-      ...v,
-      contentCategory: v.category!,
-      views: Math.floor(Math.random() * 100), // Placeholder
-      watchTime: Math.floor(Math.random() * 100), // Placeholder
-    }));
+    setImportResult(null);
 
     try {
-      await saveImportedVideos(videosToSave);
+      const result = await importLatestVideoFromChannels(selectedChannelIds);
+      setImportResult(result);
+      
       toast({
-        title: 'Import Successful!',
-        description: `${videosReadyForImport.length} videos have been added to your library.`,
+        title: 'Import Complete!',
+        description: `Successfully imported ${result.importedCount} new video(s).`,
       });
-      // Remove imported videos from the fetched list
-      setFetchedVideos(prev => prev.filter(v => !videosReadyForImport.some(sv => sv.youtubeVideoId === v.youtubeVideoId)));
+
+      if (result.errors.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Some imports failed',
+          description: "Check the results section for more details.",
+        })
+      }
+
+      setIsDialogOpen(false); // Close dialog on success
+      setSelectedChannelIds([]); // Reset selection
+
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Import Failed', description: error.message });
     } finally {
@@ -98,78 +85,109 @@ export default function CreatorBulkImportPage() {
     }
   };
 
+  const allSelected = channels ? selectedChannelIds.length === channels.length : false;
+
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight mb-8 font-headline">Bulk Import</h1>
       
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Step 1: Fetch New Videos</CardTitle>
-          <CardDescription>Sync with all your linked YouTube channels to find videos that haven't been imported yet.</CardDescription>
+          <CardTitle>Import Latest Videos</CardTitle>
+          <CardDescription>Import the single most recent video from a selection of your channels.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleFetchVideos} disabled={isFetching}>
-            {isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-            {isFetching ? 'Fetching...' : 'Fetch New Videos'}
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+               <Button>
+                  <UploadCloud className="mr-2 h-4 w-4" />
+                  Start Import
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Select Channels</DialogTitle>
+                <DialogDescription>
+                  Choose the channels you want to import the latest video from.
+                </DialogDescription>
+              </DialogHeader>
+              
+              {channelsLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+              ) : (
+                <>
+                <div className="flex items-center space-x-2 border-b pb-2">
+                    <Checkbox
+                        id="select-all"
+                        checked={allSelected}
+                        onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                    />
+                    <label
+                        htmlFor="select-all"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                       Select All
+                    </label>
+                </div>
+                <ScrollArea className="h-64">
+                    <div className="space-y-2 p-1">
+                        {channels?.map(channel => (
+                            <div key={channel.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={channel.id}
+                                    checked={selectedChannelIds.includes(channel.id)}
+                                    onCheckedChange={(checked) => handleChannelSelection(channel.id, !!checked)}
+                                />
+                                <label
+                                    htmlFor={channel.id}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    {channel.name}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+                </>
+              )}
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleImport} disabled={isSaving || selectedChannelIds.length === 0}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Import ({selectedChannelIds.length})
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
-
-      {fetchedVideos.length > 0 && (
+      
+      {importResult && (
         <Card>
-          <CardHeader>
-            <CardTitle>Step 2: Select and Import</CardTitle>
-            <CardDescription>Choose up to 10 videos, assign a category to each, then import them all at once.</CardDescription>
+           <CardHeader>
+            <CardTitle>Last Import Results</CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="flex justify-end mb-6">
-                <Button onClick={handleImport} disabled={isSaving || videosReadyForImport.length === 0}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                    Import {videosReadyForImport.length > 0 ? `(${videosReadyForImport.length})` : ''} Selected
-                </Button>
-            </div>
-
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              {fetchedVideos.map((video) => (
-                <div key={video.youtubeVideoId} className="flex items-center gap-4 p-2 border rounded-lg flex-wrap">
-                  <Checkbox
-                    id={`video-${video.youtubeVideoId}`}
-                    checked={video.isSelected}
-                    onCheckedChange={(checked) => handleVideoSelection(video.youtubeVideoId, !!checked)}
-                  />
-                  <label htmlFor={`video-${video.youtubeVideoId}`} className="flex-grow flex items-center gap-4 cursor-pointer min-w-[200px]">
-                    <Image
-                      src={video.thumbnailUrl}
-                      alt={video.title}
-                      width={120}
-                      height={68}
-                      className="rounded-md aspect-video object-cover"
-                    />
-                    <div className="flex-grow">
-                      <p className="font-semibold line-clamp-2">{video.title}</p>
-                      <p className="text-xs text-muted-foreground">{video.channelName}</p>
-                    </div>
-                  </label>
-                  <div className="flex gap-2 flex-wrap">
-                    <div className="w-40">
-                        <Select onValueChange={(value) => handleCategoryChange(video.youtubeVideoId, value)} value={video.category}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Category..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {categories?.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p>Successfully imported <strong>{importResult.importedCount}</strong> new video(s).</p>
+            {importResult.errors.length > 0 && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTitle>Errors Encountered</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc pl-5 mt-2 text-xs">
+                      {importResult.errors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+            )}
           </CardContent>
         </Card>
       )}
+
     </div>
   );
 }
-
-    
