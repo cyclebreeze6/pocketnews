@@ -13,7 +13,7 @@ import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucid
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardContent } from '../../../components/ui/card';
 import type { Video, Channel, UserProfile } from '../../../lib/types';
-import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit, getDocs } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
@@ -64,6 +64,9 @@ export default function CategoryPage() {
   const categoryName = decodeURIComponent(params.categoryName as string);
   const [regionFilter, setRegionFilter] = useState('Global');
 
+  const [videos, setVideos] = useState<Video[] | null>(null);
+  const [videosLoading, setVideosLoading] = useState(true);
+
   useEffect(() => {
     const savedRegion = localStorage.getItem('pocketnews-region-filter');
     if (savedRegion) {
@@ -79,34 +82,62 @@ export default function CategoryPage() {
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  const videosQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'videos'), where('contentCategory', '==', categoryName), orderBy('createdAt', 'desc'), limit(50));
-  }, [firestore, categoryName]);
-  
-  const { data: videosFromHook, isLoading: videosLoading } = useCollection<Video>(videosQuery);
+  useEffect(() => {
+    if (!channels) return; // Don't fetch until channels are loaded
 
-  const videos = useMemo(() => {
-    if (!videosFromHook || !channels) return null;
-    if (regionFilter === 'Global') return videosFromHook.slice(0, 20);
+    const fetchCategoryVideos = async () => {
+        setVideosLoading(true);
 
-    const expandedRegions = new Set<string>([regionFilter]);
-    const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
-    if (hierarchy) {
-        hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
-    }
-    
-    const preferredChannelIds = new Set(
-        channels
-            .filter(c => {
-                if (!c.region) return false;
-                const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                return channelRegions.some(cr => expandedRegions.has(cr));
-            })
-            .map(c => c.id)
-    );
+        const queryConstraints: any[] = [
+            where('contentCategory', '==', categoryName),
+            orderBy('createdAt', 'desc')
+        ];
 
-    return videosFromHook.filter(video => preferredChannelIds.has(video.channelId)).slice(0, 20);
-  }, [videosFromHook, channels, regionFilter]);
+        if (regionFilter !== 'Global') {
+            const expandedRegions = new Set<string>([regionFilter]);
+            const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
+            if (hierarchy) {
+                hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
+            }
+            
+            const preferredChannelIds = channels
+                .filter(c => {
+                    if (!c.region) return false;
+                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+                    return channelRegions.some(cr => expandedRegions.has(cr));
+                })
+                .map(c => c.id);
+
+            if (preferredChannelIds.length === 0) {
+                setVideos([]);
+                setVideosLoading(false);
+                return; // Stop if no channels match the filter
+            }
+
+            if (preferredChannelIds.length > 30) {
+              console.warn(`Region filter matches more than 30 channels. Query will be limited.`);
+            }
+
+            queryConstraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+        }
+
+        queryConstraints.push(limit(20)); // Limit to 20 results
+
+        try {
+          const q = query(collection(firestore, 'videos'), ...queryConstraints);
+          const snapshot = await getDocs(q);
+          const videosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
+          setVideos(videosData);
+        } catch (e) {
+          console.error("Error fetching category videos:", e);
+          setVideos([]); // Set to empty on error
+        } finally {
+          setVideosLoading(false);
+        }
+    };
+
+    fetchCategoryVideos();
+  }, [firestore, categoryName, regionFilter, channels]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 

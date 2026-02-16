@@ -144,6 +144,7 @@ export default function Home() {
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef(null);
+  const PAGE_SIZE = 12;
 
   useEffect(() => {
     const savedRegion = localStorage.getItem('pocketnews-region-filter');
@@ -157,48 +158,110 @@ export default function Home() {
     localStorage.setItem('pocketnews-region-filter', newRegion);
   };
   
-  useEffect(() => {
-    setIsLoading(true);
-    const fetchInitialVideos = async () => {
-        const first = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), limit(12));
-        const documentSnapshots = await getDocs(first);
+  const fetchVideos = useCallback(async (loadMore = false) => {
+    if (!channels) return; // Wait for channels to load
 
-        const videosData = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
-        setAllVideos(videosData);
+    const getQueryConstraints = () => {
+        const constraints: any[] = [orderBy('createdAt', 'desc')];
         
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-        setLastVisible(lastDoc);
+        if (regionFilter !== 'Global') {
+            const expandedRegions = new Set<string>([regionFilter]);
+            const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
+            if (hierarchy) {
+                hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
+            }
+            
+            const preferredChannelIds = channels
+                .filter(c => {
+                    if (!c.region) return false;
+                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
+                    return channelRegions.some(cr => expandedRegions.has(cr));
+                })
+                .map(c => c.id);
+
+            if (preferredChannelIds.length === 0) {
+                // Short-circuit if no channels match the region
+                return [where('channelId', '==', 'no-channels-found-for-this-region')];
+            }
+            
+            if (preferredChannelIds.length > 30) {
+                console.warn(`Region filter matches ${preferredChannelIds.length} channels. Firestore 'in' query is limited to 30.`);
+            }
+
+            constraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+        }
+
+        if (loadMore && lastVisible) {
+            constraints.push(startAfter(lastVisible));
+        }
         
-        setHasMore(documentSnapshots.docs.length === 12);
-        setIsLoading(false);
-    };
-    fetchInitialVideos();
-  }, [firestore]);
+        constraints.push(limit(PAGE_SIZE));
 
-  const fetchMoreVideos = useCallback(async () => {
-    if (isFetchingMore || !hasMore || !lastVisible) return;
-
-    setIsFetchingMore(true);
-    const next = query(collection(firestore, 'videos'), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(8));
-    const documentSnapshots = await getDocs(next);
-
-    const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
-    setAllVideos(prev => [...prev, ...newVideos]);
-    
-    const last = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-    setLastVisible(last);
-
-    if (documentSnapshots.docs.length < 8) {
-        setHasMore(false);
+        return constraints;
     }
-    setIsFetchingMore(false);
-  }, [firestore, isFetchingMore, hasMore, lastVisible]);
+
+    if (loadMore) {
+        if (isFetchingMore || !hasMore) return;
+        setIsFetchingMore(true);
+    } else {
+        setIsLoading(true);
+        setAllVideos([]); // Clear old videos on new filter/initial load
+        setLastVisible(null);
+        setHasMore(true);
+    }
+    
+    const queryConstraints = getQueryConstraints();
+    
+    // Check for the short-circuit case
+    const noChannelsFound = queryConstraints.some(
+        c => (c as any)._op === '==' && (c as any)._value === 'no-channels-found-for-this-region'
+    );
+
+    if (noChannelsFound) {
+        setAllVideos([]);
+        setHasMore(false);
+        setIsLoading(false);
+        setIsFetchingMore(false);
+        return;
+    }
+
+    try {
+        const q = query(collection(firestore, 'videos'), ...queryConstraints);
+        const documentSnapshots = await getDocs(q);
+        
+        const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+        setLastVisible(lastDoc);
+        setHasMore(newVideos.length === PAGE_SIZE);
+        
+        if (loadMore) {
+            setAllVideos(prev => [...prev, ...newVideos]);
+        } else {
+            setAllVideos(newVideos);
+        }
+
+    } catch (e) {
+        console.error("Error fetching videos: ", e);
+    } finally {
+        setIsLoading(false);
+        setIsFetchingMore(false);
+    }
+  }, [firestore, channels, regionFilter, isFetchingMore, hasMore, lastVisible]);
   
+  // Initial fetch and refetch on filter change
+  useEffect(() => {
+    if (channels) { // only fetch when channels are loaded
+        fetchVideos(false);
+    }
+  }, [regionFilter, channels]); // Note: fetchVideos is not in deps array to avoid re-running on its own state changes
+  
+  // Infinite scroll trigger
   useEffect(() => {
     const observer = new IntersectionObserver(
         (entries) => {
             if (entries[0].isIntersecting && hasMore && !isLoading && !isFetchingMore) {
-                fetchMoreVideos();
+                fetchVideos(true);
             }
         },
         { threshold: 1.0 }
@@ -214,31 +277,7 @@ export default function Home() {
             observer.unobserve(currentObserverRef);
         }
     };
-  }, [hasMore, isLoading, isFetchingMore, fetchMoreVideos]);
-
-
-  const displayedVideos = useMemo(() => {
-    if (!allVideos || !channels) return null;
-    if (regionFilter === 'Global') return allVideos;
-
-    const expandedRegions = new Set<string>([regionFilter]);
-    const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
-    if (hierarchy) {
-        hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
-    }
-    
-    const preferredChannelIds = new Set(
-        channels
-            .filter(c => {
-                if (!c.region) return false;
-                const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                return channelRegions.some(cr => expandedRegions.has(cr));
-            })
-            .map(c => c.id)
-    );
-
-    return allVideos.filter(video => preferredChannelIds.has(video.channelId));
-  }, [allVideos, channels, regionFilter]);
+  }, [hasMore, isLoading, isFetchingMore, fetchVideos]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   
@@ -276,10 +315,10 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
 
   useEffect(() => {
-    if (displayedVideos && displayedVideos.length > 0 && !currentVideo) {
+    if (allVideos && allVideos.length > 0 && !currentVideo) {
       const videoIdFromUrl = getVideoIdFromPath();
       if (videoIdFromUrl) {
-        const videoFromList = displayedVideos.find(v => v.id === videoIdFromUrl);
+        const videoFromList = allVideos.find(v => v.id === videoIdFromUrl);
         if (videoFromList) {
           setCurrentVideo(videoFromList);
         } else {
@@ -290,18 +329,18 @@ export default function Home() {
               setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
             } else {
               // Fallback to the first video in the list if the URL one doesn't exist
-              setCurrentVideo(displayedVideos[0]);
+              setCurrentVideo(allVideos[0]);
             }
           });
         }
       } else {
         // No video in URL, just play the first one
-        setCurrentVideo(displayedVideos[0]);
+        setCurrentVideo(allVideos[0]);
       }
-    } else if (displayedVideos && displayedVideos.length === 0 && !isLoading) {
+    } else if (allVideos && allVideos.length === 0 && !isLoading) {
       setCurrentVideo(null); // No videos to display
     }
-  }, [displayedVideos, firestore, currentVideo, isLoading]);
+  }, [allVideos, firestore, currentVideo, isLoading]);
 
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
@@ -315,15 +354,15 @@ export default function Home() {
   
   useEffect(() => {
     const handlePopState = () => {
-       if (displayedVideos) {
+       if (allVideos) {
          const videoIdFromUrl = getVideoIdFromPath();
-         const videoToPlay = videoIdFromUrl ? displayedVideos.find(v => v.id === videoIdFromUrl) : displayedVideos[0];
-         setCurrentVideo(videoToPlay || displayedVideos[0]);
+         const videoToPlay = videoIdFromUrl ? allVideos.find(v => v.id === videoIdFromUrl) : allVideos[0];
+         setCurrentVideo(videoToPlay || allVideos[0]);
        }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [displayedVideos]);
+  }, [allVideos]);
 
 
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
@@ -339,20 +378,20 @@ export default function Home() {
   }, [currentVideo, user, firestore]);
 
   const handleNextVideo = useCallback(() => {
-    if (!displayedVideos || !currentVideo) return;
-    const currentIndex = displayedVideos.findIndex(v => v.id === currentVideo.id);
-    if (currentIndex > -1 && currentIndex < displayedVideos.length - 1) {
-      handleSetCurrentVideo(displayedVideos[currentIndex + 1]);
+    if (!allVideos || !currentVideo) return;
+    const currentIndex = allVideos.findIndex(v => v.id === currentVideo.id);
+    if (currentIndex > -1 && currentIndex < allVideos.length - 1) {
+      handleSetCurrentVideo(allVideos[currentIndex + 1]);
     }
-  }, [displayedVideos, currentVideo, handleSetCurrentVideo]);
+  }, [allVideos, currentVideo, handleSetCurrentVideo]);
 
   const handlePreviousVideo = useCallback(() => {
-    if (!displayedVideos || !currentVideo) return;
-    const currentIndex = displayedVideos.findIndex(v => v.id === currentVideo.id);
+    if (!allVideos || !currentVideo) return;
+    const currentIndex = allVideos.findIndex(v => v.id === currentVideo.id);
     if (currentIndex > 0) {
-      handleSetCurrentVideo(displayedVideos[currentIndex - 1]);
+      handleSetCurrentVideo(allVideos[currentIndex - 1]);
     }
-  }, [displayedVideos, currentVideo, handleSetCurrentVideo]);
+  }, [allVideos, currentVideo, handleSetCurrentVideo]);
   
   const handleVideoEnd = handleNextVideo;
   
@@ -403,7 +442,7 @@ export default function Home() {
       return <HomepageSkeleton />;
   }
 
-  if (!displayedVideos || displayedVideos.length === 0) {
+  if ((!allVideos || allVideos.length === 0) && !isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
@@ -424,8 +463,8 @@ export default function Home() {
       return <HomepageSkeleton />;
   }
 
-  const currentIndex = displayedVideos?.findIndex(v => v.id === currentVideo.id) ?? -1;
-  const hasNext = currentIndex > -1 && currentIndex < (displayedVideos?.length ?? 0) - 1;
+  const currentIndex = allVideos?.findIndex(v => v.id === currentVideo.id) ?? -1;
+  const hasNext = currentIndex > -1 && currentIndex < (allVideos?.length ?? 0) - 1;
   const hasPrevious = currentIndex > 0;
 
   return (
@@ -539,7 +578,7 @@ export default function Home() {
             <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
-                    {displayedVideos.map((video) => {
+                    {allVideos.map((video) => {
                         const videoChannel = channels.find(c => c.id === video.channelId);
                         const isPlaying = video.id === currentVideo.id;
                         return (
