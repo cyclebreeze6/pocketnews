@@ -118,6 +118,7 @@ export default function CategoryPage() {
             }
 
             queryConstraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            queryConstraints.push(orderBy('channelId'));
         }
 
         queryConstraints.push(orderBy('createdAt', 'desc'));

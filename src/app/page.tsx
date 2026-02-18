@@ -188,6 +188,7 @@ export default function Home() {
             }
 
             constraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            constraints.push(orderBy('channelId'));
         }
         
         constraints.push(orderBy('createdAt', 'desc'));
