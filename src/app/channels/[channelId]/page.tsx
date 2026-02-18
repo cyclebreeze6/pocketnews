@@ -5,7 +5,7 @@ import { notFound, useParams } from 'next/navigation';
 import SiteHeader from '../../../components/site-header';
 import { VideoCard } from '../../../components/video-card';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 import type { Channel, Video, Short } from '../../../lib/types';
 import { Tv, PlayCircle } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/skeleton';
@@ -65,7 +65,7 @@ export default function ChannelPage() {
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
 
   const channelRef = useMemoFirebase(() => doc(firestore, 'channels', channelId), [firestore, channelId]);
-  const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), where('channelId', '==', channelId)), [firestore, channelId]);
+  const videosQuery = useMemoFirebase(() => query(collection(firestore, 'videos'), where('channelId', '==', channelId), orderBy('createdAt', 'desc')), [firestore, channelId]);
   const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), where('channelId', '==', channelId)), [firestore, channelId]);
 
   const { data: channel, isLoading: channelLoading } = useDoc<Channel>(channelRef);

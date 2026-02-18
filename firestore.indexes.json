@@ -2,7 +2,7 @@
   "indexes": [
     {
       "collectionGroup": "videos",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "channelId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
@@ -10,7 +10,7 @@
     },
     {
       "collectionGroup": "videos",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "contentCategory", "order": "ASCENDING" },
         { "fieldPath": "channelId", "order": "ASCENDING" },
