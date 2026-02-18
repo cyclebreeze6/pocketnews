@@ -90,7 +90,6 @@ export default function CategoryPage() {
 
         const queryConstraints: any[] = [
             where('contentCategory', '==', categoryName),
-            orderBy('createdAt', 'desc')
         ];
 
         if (regionFilter !== 'Global') {
@@ -121,6 +120,7 @@ export default function CategoryPage() {
             queryConstraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
         }
 
+        queryConstraints.push(orderBy('createdAt', 'desc'));
         queryConstraints.push(limit(20)); // Limit to 20 results
 
         try {
@@ -128,8 +128,11 @@ export default function CategoryPage() {
           const snapshot = await getDocs(q);
           const videosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
           setVideos(videosData);
-        } catch (e) {
+        } catch (e: any) {
           console.error("Error fetching category videos:", e);
+          if (e.code === 'failed-precondition') {
+            console.error("This query requires a composite index. Please create it in your Firebase console.");
+          }
           setVideos([]); // Set to empty on error
         } finally {
           setVideosLoading(false);

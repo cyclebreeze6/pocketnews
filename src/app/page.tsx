@@ -162,7 +162,7 @@ export default function Home() {
     if (!channels) return; // Wait for channels to load
 
     const getQueryConstraints = () => {
-        const constraints: any[] = [orderBy('createdAt', 'desc')];
+        const constraints: any[] = [];
         
         if (regionFilter !== 'Global') {
             const expandedRegions = new Set<string>([regionFilter]);
@@ -180,7 +180,6 @@ export default function Home() {
                 .map(c => c.id);
 
             if (preferredChannelIds.length === 0) {
-                // Short-circuit if no channels match the region
                 return [where('channelId', '==', 'no-channels-found-for-this-region')];
             }
             
@@ -190,12 +189,14 @@ export default function Home() {
 
             constraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
         }
+        
+        constraints.push(orderBy('createdAt', 'desc'));
 
         if (loadMore && lastVisible) {
             constraints.push(startAfter(lastVisible));
         }
         
-        constraints.push(limit(PAGE_SIZE));
+        constraints.push(limit(40));
 
         return constraints;
     }
@@ -233,7 +234,7 @@ export default function Home() {
         const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
         setLastVisible(lastDoc);
-        setHasMore(newVideos.length === PAGE_SIZE);
+        setHasMore(newVideos.length === 40);
         
         if (loadMore) {
             setAllVideos(prev => [...prev, ...newVideos]);
@@ -607,15 +608,15 @@ export default function Home() {
                         </div>
                         )
                     })}
-                    <div ref={observerRef} />
+                    {isFetchingMore ? (
+                        <div className="flex justify-center items-center py-4">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : (
+                        <div ref={observerRef} />
+                    )}
                 </div>
             </ScrollArea>
-
-            {isFetchingMore && (
-                <div className="flex justify-center items-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-            )}
 
              <Card className="mt-8 bg-card/50">
                 <CardContent className="p-4 flex items-center justify-between">
