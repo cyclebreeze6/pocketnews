@@ -30,7 +30,8 @@ service cloud.firestore {
     }
 
     // Public content collections: anyone can read.
-    match /videos/{videoId} {
+    // This uses a collection group query format to support indexed queries across the app.
+    match /{path=**}/videos/{videoId} {
       allow get, list: if true;
       allow write: if isCreatorOrAdmin();
     }
