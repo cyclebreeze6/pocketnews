@@ -32,7 +32,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '../../../components/ui/popover';
-import { useRegion } from '../../../context/region-context';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -61,7 +60,6 @@ export default function CategoryPage() {
   const router = useRouter();
   const params = useParams();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
-  const { selectedRegion } = useRegion();
   
   const categoryName = decodeURIComponent(params.categoryName as string);
 
@@ -79,10 +77,6 @@ export default function CategoryPage() {
         
         queryConstraints.push(where('contentCategory', '==', categoryName));
         
-        if (selectedRegion && selectedRegion !== 'Global') {
-          queryConstraints.push(where('regions', 'array-contains', selectedRegion));
-        }
-
         queryConstraints.push(orderBy('createdAt', 'desc'));
         queryConstraints.push(limit(20)); // Limit to 20 results
 
@@ -103,7 +97,7 @@ export default function CategoryPage() {
     };
 
     fetchCategoryVideos();
-  }, [firestore, categoryName, selectedRegion]);
+  }, [firestore, categoryName]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
