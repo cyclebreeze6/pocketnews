@@ -98,6 +98,7 @@ async function runAutoSync(): Promise<AutoSyncResult> {
                     contentCategory: BREAKING_NEWS_CATEGORY,
                     views: Math.floor(Math.random() * 1000),
                     watchTime: Math.floor(Math.random() * 100),
+                    regions: channel.region || ['Global'],
                 }));
             
             if (newBreakingVideos.length > 0) {

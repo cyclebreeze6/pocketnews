@@ -88,6 +88,13 @@
           "type": "string",
           "description": "The date and time the video was uploaded.",
           "format": "date-time"
+        },
+        "regions": {
+          "type": "array",
+          "description": "The regions of the channel, denormalized for querying.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [

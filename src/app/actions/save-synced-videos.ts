@@ -13,6 +13,7 @@ type NewVideoData = {
   contentCategory: string;
   views: number;
   watchTime: number;
+  regions: string[];
 };
 
 /**

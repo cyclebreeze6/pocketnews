@@ -53,6 +53,7 @@ export async function importLatestVideoFromChannels(channelIds: string[]): Promi
                         contentCategory: 'News', // Default category for bulk import
                         views: Math.floor(Math.random() * 1000),
                         watchTime: Math.floor(Math.random() * 100),
+                        regions: channel.region || ['Global'],
                     });
                     existingYoutubeIds.add(latestVideo.videoId);
                 }

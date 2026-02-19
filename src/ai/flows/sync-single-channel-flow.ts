@@ -48,6 +48,7 @@ export const syncSingleYouTubeChannelFlow = ai.defineFlow(
                 contentCategory: 'News', // Default category for sync
                 views: Math.floor(Math.random() * 100),
                 watchTime: Math.floor(Math.random() * 100),
+                regions: channel.region || ['Global'],
             }));
 
         if (newVideosToSave.length > 0) {

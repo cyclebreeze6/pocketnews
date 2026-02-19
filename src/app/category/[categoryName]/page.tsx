@@ -83,8 +83,6 @@ export default function CategoryPage() {
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
   useEffect(() => {
-    if (!channels) return; // Don't fetch until channels are loaded
-
     const fetchCategoryVideos = async () => {
         setVideosLoading(true);
 
@@ -99,25 +97,7 @@ export default function CategoryPage() {
                 hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
             }
             
-            const preferredChannelIds = channels
-                .filter(c => {
-                    if (!c.region) return false;
-                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                    return channelRegions.some(cr => expandedRegions.has(cr));
-                })
-                .map(c => c.id);
-
-            if (preferredChannelIds.length === 0) {
-                setVideos([]);
-                setVideosLoading(false);
-                return; // Stop if no channels match the filter
-            }
-
-            if (preferredChannelIds.length > 30) {
-              console.warn(`Region filter matches more than 30 channels. Query will be limited.`);
-            }
-
-            queryConstraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            queryConstraints.push(where('regions', 'array-contains-any', Array.from(expandedRegions)));
         }
 
         queryConstraints.push(orderBy('createdAt', 'desc'));
@@ -140,7 +120,7 @@ export default function CategoryPage() {
     };
 
     fetchCategoryVideos();
-  }, [firestore, categoryName, regionFilter, channels]);
+  }, [firestore, categoryName, regionFilter]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 

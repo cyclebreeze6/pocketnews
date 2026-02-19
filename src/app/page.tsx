@@ -158,8 +158,6 @@ export default function Home() {
   };
   
   const fetchVideos = useCallback(async (loadMore = false) => {
-    if (!channels) return; // Wait for channels to load
-
     const getQueryConstraints = () => {
         const constraints: any[] = [];
         
@@ -169,24 +167,7 @@ export default function Home() {
             if (hierarchy) {
                 hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
             }
-            
-            const preferredChannelIds = channels
-                .filter(c => {
-                    if (!c.region) return false;
-                    const channelRegions = Array.isArray(c.region) ? c.region : [c.region];
-                    return channelRegions.some(cr => expandedRegions.has(cr));
-                })
-                .map(c => c.id);
-
-            if (preferredChannelIds.length === 0) {
-                return [where('channelId', '==', 'no-channels-found-for-this-region')];
-            }
-            
-            if (preferredChannelIds.length > 30) {
-                console.warn(`Region filter matches ${preferredChannelIds.length} channels. Firestore 'in' query is limited to 30.`);
-            }
-
-            constraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
+            constraints.push(where('regions', 'array-contains-any', Array.from(expandedRegions)));
         }
         
         constraints.push(orderBy('createdAt', 'desc'));
@@ -211,19 +192,6 @@ export default function Home() {
     }
     
     const queryConstraints = getQueryConstraints();
-    
-    // Check for the short-circuit case
-    const noChannelsFound = queryConstraints.some(
-        c => (c as any)._op === '==' && (c as any)._value === 'no-channels-found-for-this-region'
-    );
-
-    if (noChannelsFound) {
-        setAllVideos([]);
-        setHasMore(false);
-        setIsLoading(false);
-        setIsFetchingMore(false);
-        return;
-    }
 
     try {
         const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
@@ -247,14 +215,12 @@ export default function Home() {
         setIsLoading(false);
         setIsFetchingMore(false);
     }
-  }, [firestore, channels, regionFilter, isFetchingMore, hasMore, lastVisible]);
+  }, [firestore, regionFilter, isFetchingMore, hasMore, lastVisible]);
   
   // Initial fetch and refetch on filter change
   useEffect(() => {
-    if (channels) { // only fetch when channels are loaded
-        fetchVideos(false);
-    }
-  }, [regionFilter, channels]); // Note: fetchVideos is not in deps array to avoid re-running on its own state changes
+    fetchVideos(false);
+  }, [regionFilter]); // Note: fetchVideos is not in deps array to avoid re-running on its own state changes
   
   // Infinite scroll trigger
   useEffect(() => {

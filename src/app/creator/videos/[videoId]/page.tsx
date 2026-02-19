@@ -261,11 +261,14 @@ export default function VideoEditPage() {
       return;
     }
     
+    const selectedChannel = channels?.find(c => c.id === videoDetails.channelId);
+
     setIsSaving(true);
     const dataToSave: Partial<Video> = {
       ...videoDetails,
       views: videoDetails.views || Math.floor(Math.random() * 100000),
       watchTime: videoDetails.watchTime || Math.floor(Math.random() * 2000),
+      regions: selectedChannel?.region || ['Global'],
     };
 
     if (isNewVideo) {

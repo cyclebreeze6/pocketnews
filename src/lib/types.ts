@@ -35,6 +35,7 @@ export interface Video {
   uploadDate: Timestamp | Date | string;
   thumbnailUrl: string;
   contentCategory: string;
+  regions?: string[];
   // compatibility with existing data
   youtubeId?: string;
   createdAt: Timestamp | Date | string;
@@ -82,6 +83,7 @@ export interface Report {
     
 
     
+
 
 
 
