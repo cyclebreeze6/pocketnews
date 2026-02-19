@@ -75,12 +75,26 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
       throw new Error('YouTube channel not found after resolving ID.');
     }
 
+    const countryCode = channel.brandingSettings?.channel?.country;
+    let regionName: string | undefined = undefined;
+
+    if (countryCode) {
+        try {
+            // Map the two-letter country code to its full name
+            regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode);
+        } catch (e) {
+            console.warn(`Could not map country code "${countryCode}" to a region name.`);
+            // If mapping fails, it's better to return nothing than an invalid code
+            regionName = undefined; 
+        }
+    }
+
     return {
       name: channel.snippet?.title || 'Unknown Channel',
       logoUrl: channel.snippet?.thumbnails?.high?.url || '',
       description: channel.snippet?.description || '',
       language: channel.brandingSettings?.channel?.defaultLanguage,
-      region: channel.brandingSettings?.channel?.country,
+      region: regionName,
     };
   }
 );
