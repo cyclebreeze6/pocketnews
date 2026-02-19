@@ -28,6 +28,14 @@
       "collectionGroup": "videos",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
+        { "fieldPath": "regions", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "videos",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
         { "fieldPath": "contentCategory", "order": "ASCENDING" },
         { "fieldPath": "regions", "arrayConfig": "CONTAINS" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
