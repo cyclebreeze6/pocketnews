@@ -8,6 +8,7 @@ import Script from 'next/script';
 import { FirebaseMessagingProvider } from '../components/firebase-messaging-provider';
 import MobileNav from '../components/mobile-nav';
 import { CookieConsentBanner } from '../components/cookie-consent-banner';
+import { RegionProvider } from '../context/region-context';
 
 export const metadata: Metadata = {
   title: 'Pocketnews TV',
@@ -29,11 +30,13 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <div className="max-w-7xl mx-auto pb-16 sm:pb-0">
           <FirebaseClientProvider>
-            <FirebaseMessagingProvider />
-            <NetworkStatusIndicator />
-            {children}
-            <MobileNav />
-            <CookieConsentBanner />
+            <RegionProvider>
+              <FirebaseMessagingProvider />
+              <NetworkStatusIndicator />
+              {children}
+              <MobileNav />
+              <CookieConsentBanner />
+            </RegionProvider>
           </FirebaseClientProvider>
           <Toaster />
         </div>

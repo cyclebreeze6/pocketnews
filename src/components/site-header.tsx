@@ -12,7 +12,6 @@ import {
   LogOut,
   Shield,
   PlusSquare,
-  ListFilter,
   Package,
   Clapperboard,
   Menu,
@@ -54,6 +53,11 @@ import {
 } from './ui/dialog';
 import { SidebarTrigger } from './ui/sidebar';
 import { usePathname } from 'next/navigation';
+import { useRegion } from '../context/region-context';
+import { REGIONS } from '../lib/constants';
+import { ScrollArea } from './ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Label } from './ui/label';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -75,6 +79,8 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const router = useRouter(); 
   const pathname = usePathname();
+  const { selectedRegion, setSelectedRegion } = useRegion();
+  const [isRegionDialogOpen, setIsRegionDialogOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
@@ -158,6 +164,13 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
            <div className="flex items-center justify-end space-x-2">
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Search className="h-5 w-5" />
+              </Button>
+               <Button variant="ghost" className="hidden sm:inline-flex" onClick={() => setIsRegionDialogOpen(true)}>
+                  <Globe className="h-5 w-5 mr-2" />
+                  {selectedRegion}
+              </Button>
+              <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setIsRegionDialogOpen(true)}>
+                  <Globe className="h-5 w-5" />
               </Button>
                <Link href="/shorts" className='hidden sm:inline-flex'>
                 <Button variant="ghost">
@@ -311,6 +324,33 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
             <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
         </DialogFooter>
         </DialogContent>
+      </Dialog>
+      <Dialog open={isRegionDialogOpen} onOpenChange={setIsRegionDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                  <DialogTitle>Choose Your Region</DialogTitle>
+                  <DialogDescription>
+                      Your video feed will be tailored to your selection.
+                  </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="h-72">
+                  <RadioGroup
+                      value={selectedRegion}
+                      onValueChange={(value) => {
+                          setSelectedRegion(value);
+                          setIsRegionDialogOpen(false);
+                      }}
+                      className="p-1"
+                  >
+                      {REGIONS.map((region) => (
+                          <div key={region} className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent">
+                              <RadioGroupItem value={region} id={region} />
+                              <Label htmlFor={region} className="font-normal cursor-pointer flex-1">{region}</Label>
+                          </div>
+                      ))}
+                  </RadioGroup>
+              </ScrollArea>
+          </DialogContent>
       </Dialog>
     </>
   );

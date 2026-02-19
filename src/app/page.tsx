@@ -10,13 +10,13 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHorizontal, Settings2, Loader2, X, Globe } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc, collectionGroup } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -35,13 +35,10 @@ import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { initiateAnonymousSignIn, useAuth } from '../firebase';
 import { AuthDialog } from '../components/auth-dialog';
-import { Checkbox } from '../components/ui/checkbox';
-import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
-import { generateHeadline } from '../actions/generate-headline-flow';
-import type { GenerateHeadlineOutput } from '../ai/flows/generate-headline-flow';
+import { useRegion } from '../context/region-context';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -125,8 +122,8 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { selectedRegion } = useRegion();
 
-  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -148,8 +145,8 @@ export default function Home() {
     const getQueryConstraints = () => {
         const constraints: any[] = [];
         
-        if (selectedChannelIds.length > 0) {
-            constraints.push(where('channelId', 'in', selectedChannelIds));
+        if (selectedRegion && selectedRegion !== 'Global') {
+          constraints.push(where('regions', 'array-contains', selectedRegion));
         }
         
         constraints.push(orderBy('createdAt', 'desc'));
@@ -176,7 +173,7 @@ export default function Home() {
     const queryConstraints = getQueryConstraints();
 
     try {
-        const q = query(collection(firestore, 'videos'), ...queryConstraints);
+        const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
         const documentSnapshots = await getDocs(q);
         
         const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
@@ -197,12 +194,12 @@ export default function Home() {
         setIsLoading(false);
         setIsFetchingMore(false);
     }
-  }, [firestore, selectedChannelIds, isFetchingMore, hasMore, lastVisible]);
+  }, [firestore, selectedRegion, isFetchingMore, hasMore, lastVisible]);
   
   // Initial fetch and refetch on filter change
   useEffect(() => {
     fetchVideos(false);
-  }, [selectedChannelIds]);
+  }, [selectedRegion]);
   
   // Infinite scroll trigger
   useEffect(() => {
@@ -264,37 +261,16 @@ export default function Home() {
   }, [isUserLoading, user, auth]);
 
   useEffect(() => {
-    if (allVideos && allVideos.length > 0 && !currentVideo) {
-      const videoIdFromUrl = getVideoIdFromPath();
-      if (videoIdFromUrl) {
-        const videoFromList = allVideos.find(v => v.id === videoIdFromUrl);
-        if (videoFromList) {
-          setCurrentVideo(videoFromList);
-        } else {
-          // If the video from URL is not in the current list, fetch it directly
-          const videoRef = doc(firestore, 'videos', videoIdFromUrl);
-          getDoc(videoRef).then(docSnap => {
-            if (docSnap.exists()) {
-              setCurrentVideo({ id: docSnap.id, ...docSnap.data() } as Video);
-            } else {
-              // Fallback to the first video in the list if the URL one doesn't exist
-              setCurrentVideo(allVideos[0]);
-            }
-          });
-        }
-      } else {
-        // No video in URL, just play the first one
-        setCurrentVideo(allVideos[0]);
-      }
-    } else if (allVideos && allVideos.length > 0 && selectedChannelIds.length > 0) {
-      const isCurrentVideoInFilteredList = allVideos.some(v => v.id === currentVideo?.id);
-      if(!isCurrentVideoInFilteredList) {
+    if (allVideos && allVideos.length > 0) {
+      const isCurrentInList = allVideos.some(v => v.id === currentVideo?.id);
+      if (!isCurrentInList) {
+        // current video is not in the new filtered list, so switch to the first one.
         setCurrentVideo(allVideos[0]);
       }
     } else if (!isLoading && allVideos.length === 0) {
       setCurrentVideo(null); // No videos to display
     }
-  }, [allVideos, firestore, currentVideo, isLoading, selectedChannelIds]);
+  }, [allVideos, isLoading, currentVideo?.id]);
 
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
@@ -410,7 +386,7 @@ export default function Home() {
                  <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center text-center p-8">
                     <h2 className="text-2xl font-bold mb-2">No Videos Found</h2>
                     <p className="text-muted-foreground">
-                        Try adjusting your channel filter on the right.
+                        Try adjusting your region filter.
                     </p>
                 </div>
             ) : currentVideo && currentChannel ? (
@@ -520,50 +496,6 @@ export default function Home() {
              
             <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm">
-                            <ListFilter className="mr-2 h-4 w-4" />
-                            Filter Channels
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80">
-                        <div className="grid gap-4">
-                            <div className="space-y-2">
-                                <h4 className="font-medium leading-none">Filter by Channel</h4>
-                                <p className="text-sm text-muted-foreground">
-                                    Select channels to show in your feed.
-                                </p>
-                            </div>
-                            <Separator />
-                            <ScrollArea className="h-64">
-                                <div className="space-y-2 p-1">
-                                    {channels?.map((channel) => (
-                                        <div key={channel.id} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={channel.id}
-                                                checked={selectedChannelIds.includes(channel.id)}
-                                                onCheckedChange={(checked) => {
-                                                    setSelectedChannelIds((prev) =>
-                                                        checked
-                                                        ? [...prev, channel.id]
-                                                        : prev.filter((id) => id !== channel.id)
-                                                    );
-                                                }}
-                                            />
-                                            <Label htmlFor={channel.id} className="font-normal cursor-pointer">
-                                                {channel.name}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                             <Button onClick={() => setSelectedChannelIds([])} variant="ghost" size="sm" className="w-full">
-                                Clear Selection
-                            </Button>
-                        </div>
-                    </PopoverContent>
-                </Popover>
             </div>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
