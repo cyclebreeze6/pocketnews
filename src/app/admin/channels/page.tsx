@@ -67,10 +67,10 @@ export default function AdminChannelsPage() {
       const info = await fetchYouTubeChannelInfo({ channelUrl: youtubeChannelUrl });
       setChannelName(info.name);
       setChannelDescription(info.description || '');
-      setChannelRegions([]);
+      setChannelRegions(info.region ? [info.region] : []);
       setLogoPreview(info.logoUrl);
       setLogoFile(null); // Clear file if we fetched a new logo URL
-      toast({ title: "Channel info populated! Please select a Region." });
+      toast({ title: "Channel info populated! Please select a Region if not already set." });
     } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Failed to fetch info', description: error.message });
