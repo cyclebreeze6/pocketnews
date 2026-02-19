@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '../../../../components/ui/button';
@@ -108,7 +107,7 @@ export default function VideoEditPage() {
             const existingChannel = channels.find(c => c.youtubeChannelId === videoInfo.youtubeChannelId);
 
             if (existingChannel) {
-              setVideoDetails(prev => ({...prev, channelId: existingChannel.id}));
+              setVideoDetails(prev => ({...prev, channelId: existingChannel.id, regions: existingChannel.region || ['Global']}));
               toast({ title: 'Channel matched!', description: `"${existingChannel.name}" was automatically selected.`});
             } else {
               toast({ title: 'New channel detected', description: 'Creating and selecting it for you...'});
@@ -129,7 +128,7 @@ export default function VideoEditPage() {
                 
                 await setDoc(newChannelRef, newChannelData);
 
-                setVideoDetails(prev => ({ ...prev, channelId: newChannelRef.id }));
+                setVideoDetails(prev => ({ ...prev, channelId: newChannelRef.id, regions: newChannelData.region }));
                 toast({ title: 'Channel Created!', description: `"${newChannelInfo.name}" has been created and selected.` });
 
               } catch (channelError: any) {
@@ -168,7 +167,8 @@ export default function VideoEditPage() {
         setNewChannelLogoPreview(null);
         setIsChannelDialogOpen(true);
     } else {
-        setVideoDetails(prev => ({...prev, channelId: channelId}));
+        const selectedChannel = channels?.find(c => c.id === channelId);
+        setVideoDetails(prev => ({...prev, channelId: channelId, regions: selectedChannel?.region || ['Global']}));
     }
   }
   
@@ -268,7 +268,7 @@ export default function VideoEditPage() {
       ...videoDetails,
       views: videoDetails.views || Math.floor(Math.random() * 100000),
       watchTime: videoDetails.watchTime || Math.floor(Math.random() * 2000),
-      regions: selectedChannel?.region || ['Global'],
+      regions: videoDetails.regions || selectedChannel?.region || ['Global'],
     };
 
     if (isNewVideo) {
@@ -466,3 +466,5 @@ export default function VideoEditPage() {
     </div>
   );
 }
+
+    
