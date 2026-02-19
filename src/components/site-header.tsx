@@ -167,7 +167,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
               </Button>
                <Button variant="ghost" className="hidden sm:inline-flex" onClick={() => setIsRegionDialogOpen(true)}>
                   <Globe className="h-5 w-5 mr-2" />
-                  {selectedRegion}
+                  {selectedRegion === 'Global' ? 'All Regions' : selectedRegion}
               </Button>
               <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setIsRegionDialogOpen(true)}>
                   <Globe className="h-5 w-5" />
@@ -350,6 +350,18 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                       ))}
                   </RadioGroup>
               </ScrollArea>
+              <DialogFooter className="pt-4">
+                  <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                          setSelectedRegion('Global');
+                          setIsRegionDialogOpen(false);
+                      }}
+                  >
+                      Show All Regions (Default)
+                  </Button>
+              </DialogFooter>
           </DialogContent>
       </Dialog>
     </>
