@@ -42,7 +42,6 @@ import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { generateHeadline } from '../actions/generate-headline-flow';
 import type { GenerateHeadlineOutput } from '../ai/flows/generate-headline-flow';
-import { REGION_HIERARCHY } from '../lib/constants';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -127,7 +126,7 @@ export default function Home() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  const [regionFilter, setRegionFilter] = useState('Global');
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -144,30 +143,13 @@ export default function Home() {
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef(null);
-
-  useEffect(() => {
-    const savedRegion = localStorage.getItem('pocketnews-region-filter');
-    if (savedRegion) {
-      setRegionFilter(savedRegion);
-    }
-  }, []);
-
-  const handleRegionChange = (newRegion: string) => {
-    setRegionFilter(newRegion);
-    localStorage.setItem('pocketnews-region-filter', newRegion);
-  };
   
   const fetchVideos = useCallback(async (loadMore = false) => {
     const getQueryConstraints = () => {
         const constraints: any[] = [];
         
-        if (regionFilter !== 'Global') {
-            const expandedRegions = new Set<string>([regionFilter]);
-            const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
-            if (hierarchy) {
-                hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
-            }
-            constraints.push(where('regions', 'array-contains-any', Array.from(expandedRegions)));
+        if (selectedChannelIds.length > 0) {
+            constraints.push(where('channelId', 'in', selectedChannelIds));
         }
         
         constraints.push(orderBy('createdAt', 'desc'));
@@ -194,7 +176,7 @@ export default function Home() {
     const queryConstraints = getQueryConstraints();
 
     try {
-        const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
+        const q = query(collection(firestore, 'videos'), ...queryConstraints);
         const documentSnapshots = await getDocs(q);
         
         const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
@@ -215,12 +197,12 @@ export default function Home() {
         setIsLoading(false);
         setIsFetchingMore(false);
     }
-  }, [firestore, regionFilter, isFetchingMore, hasMore, lastVisible]);
+  }, [firestore, selectedChannelIds, isFetchingMore, hasMore, lastVisible]);
   
   // Initial fetch and refetch on filter change
   useEffect(() => {
     fetchVideos(false);
-  }, [regionFilter]); // Note: fetchVideos is not in deps array to avoid re-running on its own state changes
+  }, [selectedChannelIds]);
   
   // Infinite scroll trigger
   useEffect(() => {
@@ -254,6 +236,7 @@ export default function Home() {
   
   // This combines all initial loading states.
   const isInitiallyLoading = (isLoading && allVideos.length === 0) || channelsLoading || isUserLoading;
+  const isFeedEmpty = !isInitiallyLoading && allVideos.length === 0;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -303,10 +286,15 @@ export default function Home() {
         // No video in URL, just play the first one
         setCurrentVideo(allVideos[0]);
       }
-    } else if (allVideos && allVideos.length === 0 && !isLoading) {
+    } else if (allVideos && allVideos.length > 0 && selectedChannelIds.length > 0) {
+      const isCurrentVideoInFilteredList = allVideos.some(v => v.id === currentVideo?.id);
+      if(!isCurrentVideoInFilteredList) {
+        setCurrentVideo(allVideos[0]);
+      }
+    } else if (!isLoading && allVideos.length === 0) {
       setCurrentVideo(null); // No videos to display
     }
-  }, [allVideos, firestore, currentVideo, isLoading]);
+  }, [allVideos, firestore, currentVideo, isLoading, selectedChannelIds]);
 
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
@@ -408,145 +396,180 @@ export default function Home() {
       return <HomepageSkeleton />;
   }
 
-  if ((!allVideos || allVideos.length === 0) && !isLoading) {
-    return (
-      <div className="flex min-h-screen w-full flex-col">
-        <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
-        <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
-            <h2 className="text-2xl font-bold mb-4">No Videos Found</h2>
-            <p className="text-muted-foreground mb-6">
-              There are no videos available for your selected region.
-            </p>
-        </main>
-         <footer className="py-4 text-center text-sm text-muted-foreground">
-            Meet the #1 App to Stream News. Watch Free!
-        </footer>
-      </div>
-    );
-  }
-  
-  if (!currentVideo || !currentChannel) {
-      return <HomepageSkeleton />;
-  }
-
-  const currentIndex = allVideos?.findIndex(v => v.id === currentVideo.id) ?? -1;
+  const currentIndex = allVideos?.findIndex(v => v.id === currentVideo?.id) ?? -1;
   const hasNext = currentIndex > -1 && currentIndex < (allVideos?.length ?? 0) - 1;
   const hasPrevious = currentIndex > 0;
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
+      <SiteHeader />
       <main ref={mainRef} className="flex-1">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
           <div className="lg:col-span-2">
-            <div className="relative md:rounded-lg overflow-hidden">
-              <div
-                ref={playerContainerRef}
-                className={cn(
-                  'z-40 w-full bg-background',
-                  isPlayerSticky && isMobile
-                    ? 'fixed top-0 left-0 right-0'
-                    : 'relative'
-                )}
-              >
-                <div className="aspect-video">
-                  <VideoPlayer
-                    youtubeId={currentVideo.youtubeVideoId}
-                    videoUrl={currentVideo.videoUrl}
-                    onEnd={handleVideoEnd}
-                    onNext={handleNextVideo}
-                    onPrevious={handlePreviousVideo}
-                    hasNext={hasNext}
-                    hasPrevious={hasPrevious}
-                    key={currentVideo.id}
-                  />
+             {isFeedEmpty ? (
+                 <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center text-center p-8">
+                    <h2 className="text-2xl font-bold mb-2">No Videos Found</h2>
+                    <p className="text-muted-foreground">
+                        Try adjusting your channel filter on the right.
+                    </p>
                 </div>
-              </div>
-              {isPlayerSticky && isMobile && <div className="aspect-video" />}
-            </div>
+            ) : currentVideo && currentChannel ? (
+              <>
+                <div className="relative md:rounded-lg overflow-hidden">
+                  <div
+                    ref={playerContainerRef}
+                    className={cn(
+                      'z-40 w-full bg-background',
+                      isPlayerSticky && isMobile
+                        ? 'fixed top-0 left-0 right-0'
+                        : 'relative'
+                    )}
+                  >
+                    <div className="aspect-video">
+                      <VideoPlayer
+                        youtubeId={currentVideo.youtubeVideoId}
+                        videoUrl={currentVideo.videoUrl}
+                        onEnd={handleVideoEnd}
+                        onNext={handleNextVideo}
+                        onPrevious={handlePreviousVideo}
+                        hasNext={hasNext}
+                        hasPrevious={hasPrevious}
+                        key={currentVideo.id}
+                      />
+                    </div>
+                  </div>
+                  {isPlayerSticky && isMobile && <div className="aspect-video" />}
+                </div>
 
-            <div className="px-4 md:px-0 pt-4">
-                <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
+                <div className="px-4 md:px-0 pt-4">
+                    <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
 
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-3">
-                        <Link href={`/channels/${currentChannel.id}`}>
-                          <Avatar>
-                              <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
-                              <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                        </Link>
-                        <div>
-                            <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
-                                {currentChannel.region && currentChannel.region.length > 0 && (
-                                    <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
-                                        {currentChannel.region[0]}
-                                    </span>
-                                )}
-                                <p className="font-semibold hover:underline">{currentChannel.name}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                            <Link href={`/channels/${currentChannel.id}`}>
+                              <Avatar>
+                                  <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
+                                  <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
                             </Link>
-                            <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
+                            <div>
+                                <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
+                                    {currentChannel.region && currentChannel.region.length > 0 && (
+                                        <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
+                                            {currentChannel.region[0]}
+                                        </span>
+                                    )}
+                                    <p className="font-semibold hover:underline">{currentChannel.name}</p>
+                                </Link>
+                                <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant={'outline'} onClick={() => {
+                                  if (user?.isAnonymous) {
+                                    setIsAuthDialogOpen(true);
+                                  } else {
+                                    setIsPremiumDialogOpen(true)
+                                  }
+                                }}>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Follow
+                            </Button>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-2">
+                                    <div className="flex gap-2">
+                                        <Button size="icon" variant="outline" onClick={() => handleShare('facebook')}>
+                                            <FacebookIcon className="h-5 w-5" />
+                                        </Button>
+                                         <Button size="icon" variant="outline" onClick={() => handleShare('whatsapp')}>
+                                            <WhatsAppIcon className="h-5 w-5" />
+                                        </Button>
+                                        <Button size="icon" variant="outline" onClick={() => handleShare('copy')}>
+                                            <Copy className="h-5 w-5" />
+                                        </Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                             <Button variant="secondary" onClick={() => {
+                                  if (user?.isAnonymous) {
+                                    setIsAuthDialogOpen(true);
+                                  } else {
+                                    setIsReportDialogOpen(true);
+                                  }
+                                }}>
+                                <Flag className="mr-2 h-4 w-4" /> Report
+                            </Button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant={'outline'} onClick={() => {
-                              if (user?.isAnonymous) {
-                                setIsAuthDialogOpen(true);
-                              } else {
-                                setIsPremiumDialogOpen(true)
-                              }
-                            }}>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Follow
-                        </Button>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-2">
-                                <div className="flex gap-2">
-                                    <Button size="icon" variant="outline" onClick={() => handleShare('facebook')}>
-                                        <FacebookIcon className="h-5 w-5" />
-                                    </Button>
-                                     <Button size="icon" variant="outline" onClick={() => handleShare('whatsapp')}>
-                                        <WhatsAppIcon className="h-5 w-5" />
-                                    </Button>
-                                    <Button size="icon" variant="outline" onClick={() => handleShare('copy')}>
-                                        <Copy className="h-5 w-5" />
-                                    </Button>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                         <Button variant="secondary" onClick={() => {
-                              if (user?.isAnonymous) {
-                                setIsAuthDialogOpen(true);
-                              } else {
-                                setIsReportDialogOpen(true);
-                              }
-                            }}>
-                            <Flag className="mr-2 h-4 w-4" /> Report
-                        </Button>
+                    
+                    <div className="flex items-center gap-2 mt-4">
+                        <p className="text-sm font-medium">Related topics</p>
+                        <Badge variant="outline">#news</Badge>
+                        <Badge variant="outline">#technology</Badge>
+                        <Badge variant="outline">#sports</Badge>
                     </div>
                 </div>
-                
-                <div className="flex items-center gap-2 mt-4">
-                    <p className="text-sm font-medium">Related topics</p>
-                    <Badge variant="outline">#news</Badge>
-                    <Badge variant="outline">#technology</Badge>
-                    <Badge variant="outline">#sports</Badge>
-                </div>
-            </div>
-
+              </>
+            ) : <Skeleton className="aspect-video md:rounded-lg" /> }
           </div>
           
           <div className="lg:col-span-1 px-4 md:px-0">
              
-            <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
+            <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <ListFilter className="mr-2 h-4 w-4" />
+                            Filter Channels
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                        <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h4 className="font-medium leading-none">Filter by Channel</h4>
+                                <p className="text-sm text-muted-foreground">
+                                    Select channels to show in your feed.
+                                </p>
+                            </div>
+                            <Separator />
+                            <ScrollArea className="h-64">
+                                <div className="space-y-2 p-1">
+                                    {channels?.map((channel) => (
+                                        <div key={channel.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={channel.id}
+                                                checked={selectedChannelIds.includes(channel.id)}
+                                                onCheckedChange={(checked) => {
+                                                    setSelectedChannelIds((prev) =>
+                                                        checked
+                                                        ? [...prev, channel.id]
+                                                        : prev.filter((id) => id !== channel.id)
+                                                    );
+                                                }}
+                                            />
+                                            <Label htmlFor={channel.id} className="font-normal cursor-pointer">
+                                                {channel.name}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                             <Button onClick={() => setSelectedChannelIds([])} variant="ghost" size="sm" className="w-full">
+                                Clear Selection
+                            </Button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            </div>
             <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                 <div className="space-y-4">
                     {allVideos.map((video) => {
                         const videoChannel = channels.find(c => c.id === video.channelId);
-                        const isPlaying = video.id === currentVideo.id;
+                        const isPlaying = video.id === currentVideo?.id;
                         return (
                         <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
                             <div className="relative w-32 h-20 flex-shrink-0">

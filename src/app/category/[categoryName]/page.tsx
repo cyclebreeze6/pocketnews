@@ -31,7 +31,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '../../../components/ui/popover';
-import { REGION_HIERARCHY } from '../../../lib/constants';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -62,22 +61,9 @@ export default function CategoryPage() {
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   
   const categoryName = decodeURIComponent(params.categoryName as string);
-  const [regionFilter, setRegionFilter] = useState('Global');
 
   const [videos, setVideos] = useState<Video[] | null>(null);
   const [videosLoading, setVideosLoading] = useState(true);
-
-  useEffect(() => {
-    const savedRegion = localStorage.getItem('pocketnews-region-filter');
-    if (savedRegion) {
-      setRegionFilter(savedRegion);
-    }
-  }, []);
-
-  const handleRegionChange = (newRegion: string) => {
-    setRegionFilter(newRegion);
-    localStorage.setItem('pocketnews-region-filter', newRegion);
-  };
 
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
@@ -89,22 +75,11 @@ export default function CategoryPage() {
         const queryConstraints: any[] = [];
         
         queryConstraints.push(where('contentCategory', '==', categoryName));
-
-        if (regionFilter !== 'Global') {
-            const expandedRegions = new Set<string>([regionFilter]);
-            const hierarchy = REGION_HIERARCHY[regionFilter as keyof typeof REGION_HIERARCHY];
-            if (hierarchy) {
-                hierarchy.forEach(subRegion => expandedRegions.add(subRegion));
-            }
-            
-            queryConstraints.push(where('regions', 'array-contains-any', Array.from(expandedRegions)));
-        }
-
         queryConstraints.push(orderBy('createdAt', 'desc'));
         queryConstraints.push(limit(20)); // Limit to 20 results
 
         try {
-          const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
+          const q = query(collection(firestore, 'videos'), ...queryConstraints);
           const snapshot = await getDocs(q);
           const videosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
           setVideos(videosData);
@@ -120,7 +95,7 @@ export default function CategoryPage() {
     };
 
     fetchCategoryVideos();
-  }, [firestore, categoryName, regionFilter]);
+  }, [firestore, categoryName]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
@@ -191,12 +166,12 @@ export default function CategoryPage() {
   if (!videos || videos.length === 0) {
      return (
         <div className="flex min-h-screen w-full flex-col">
-            <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
+            <SiteHeader />
             <main className="flex-1 py-12 md:py-16 text-center">
                 <h2 className="text-2xl font-bold tracking-tight mb-4">
                     No videos in {categoryName}
                 </h2>
-                <p>No videos found in this category for your selected region. Check back later!</p>
+                <p>No videos found in this category. Check back later!</p>
             </main>
         </div>
      )
@@ -212,7 +187,7 @@ export default function CategoryPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader regionFilter={regionFilter} onRegionFilterChange={handleRegionChange} />
+      <SiteHeader />
       <main className="flex-1 md:py-8">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           <div className="lg:col-span-2">

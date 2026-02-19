@@ -54,7 +54,6 @@ import {
 } from './ui/dialog';
 import { SidebarTrigger } from './ui/sidebar';
 import { usePathname } from 'next/navigation';
-import { REGIONS } from '../lib/constants';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -65,12 +64,10 @@ const toDate = (timestamp: Timestamp | Date | string): Date => {
 
 interface SiteHeaderProps {
   hideCategoryNav?: boolean;
-  regionFilter?: string;
-  onRegionFilterChange?: (region: string) => void;
 }
 
 
-export default function SiteHeader({ hideCategoryNav = false, regionFilter, onRegionFilterChange }: SiteHeaderProps) {
+export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps) {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const { firestore } = useFirebase();
@@ -156,23 +153,6 @@ export default function SiteHeader({ hideCategoryNav = false, regionFilter, onRe
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input placeholder="Search news, topics, and channels" className="pl-9 bg-input" />
               </div>
-              {onRegionFilterChange && (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="hidden sm:inline-flex">
-                            <Globe className="mr-2 h-5 w-5" />
-                            {regionFilter || 'Global'}
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        {REGIONS.map(region => (
-                            <DropdownMenuItem key={region} onSelect={() => onRegionFilterChange(region)}>
-                                {region}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-              )}
           </div>
           
            <div className="flex items-center justify-end space-x-2">
