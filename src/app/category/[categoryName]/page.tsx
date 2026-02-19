@@ -13,7 +13,7 @@ import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucid
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardContent } from '../../../components/ui/card';
 import type { Video, Channel, UserProfile } from '../../../lib/types';
-import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit, getDocs, collectionGroup } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
@@ -88,9 +88,9 @@ export default function CategoryPage() {
     const fetchCategoryVideos = async () => {
         setVideosLoading(true);
 
-        const queryConstraints: any[] = [
-            where('contentCategory', '==', categoryName),
-        ];
+        const queryConstraints: any[] = [];
+        
+        queryConstraints.push(where('contentCategory', '==', categoryName));
 
         if (regionFilter !== 'Global') {
             const expandedRegions = new Set<string>([regionFilter]);
@@ -118,14 +118,13 @@ export default function CategoryPage() {
             }
 
             queryConstraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
-            queryConstraints.push(orderBy('channelId'));
         }
 
         queryConstraints.push(orderBy('createdAt', 'desc'));
         queryConstraints.push(limit(20)); // Limit to 20 results
 
         try {
-          const q = query(collection(firestore, 'videos'), ...queryConstraints);
+          const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
           const snapshot = await getDocs(q);
           const videosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
           setVideos(videosData);

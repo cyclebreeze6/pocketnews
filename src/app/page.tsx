@@ -14,7 +14,7 @@ import { Share, Flag, PlayCircle, Check, Copy, UserPlus, ListFilter, SlidersHori
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc, collectionGroup } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -144,7 +144,6 @@ export default function Home() {
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef(null);
-  const PAGE_SIZE = 12;
 
   useEffect(() => {
     const savedRegion = localStorage.getItem('pocketnews-region-filter');
@@ -188,7 +187,6 @@ export default function Home() {
             }
 
             constraints.push(where('channelId', 'in', preferredChannelIds.slice(0, 30)));
-            constraints.push(orderBy('channelId'));
         }
         
         constraints.push(orderBy('createdAt', 'desc'));
@@ -197,7 +195,7 @@ export default function Home() {
             constraints.push(startAfter(lastVisible));
         }
         
-        constraints.push(limit(40));
+        constraints.push(limit(10));
 
         return constraints;
     }
@@ -228,14 +226,14 @@ export default function Home() {
     }
 
     try {
-        const q = query(collection(firestore, 'videos'), ...queryConstraints);
+        const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
         const documentSnapshots = await getDocs(q);
         
         const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
         const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
         setLastVisible(lastDoc);
-        setHasMore(newVideos.length === 40);
+        setHasMore(newVideos.length === 10);
         
         if (loadMore) {
             setAllVideos(prev => [...prev, ...newVideos]);
