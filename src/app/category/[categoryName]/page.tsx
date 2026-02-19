@@ -79,7 +79,7 @@ export default function CategoryPage() {
         queryConstraints.push(limit(20)); // Limit to 20 results
 
         try {
-          const q = query(collection(firestore, 'videos'), ...queryConstraints);
+          const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
           const snapshot = await getDocs(q);
           const videosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
           setVideos(videosData);

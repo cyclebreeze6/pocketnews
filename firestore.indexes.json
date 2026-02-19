@@ -13,7 +13,6 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "contentCategory", "order": "ASCENDING" },
-        { "fieldPath": "channelId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
