@@ -43,6 +43,15 @@
       ]
     },
     {
+      "collectionGroup": "videos",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "contentCategory", "order": "ASCENDING" },
+        { "fieldPath": "regions", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "followedChannels",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

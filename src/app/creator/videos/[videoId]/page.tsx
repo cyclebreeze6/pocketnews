@@ -110,6 +110,25 @@ export default function VideoEditPage() {
             if (existingChannel) {
               setVideoDetails(prev => ({...prev, channelId: existingChannel.id, regions: existingChannel.region || ['Global']}));
               toast({ title: 'Channel matched!', description: `"${existingChannel.name}" was automatically selected.`});
+              
+              // Proactively update channel region if outdated
+              try {
+                const freshChannelInfo = await fetchYouTubeChannelInfo({ channelUrl: `https://www.youtube.com/channel/${videoInfo.youtubeChannelId}` });
+                const freshRegions = freshChannelInfo.region || [];
+                const existingRegions = existingChannel.region || [];
+                
+                const areRegionsDifferent = freshRegions.length !== existingRegions.length || freshRegions.some(r => !existingRegions.includes(r));
+
+                if (freshRegions.length > 0 && areRegionsDifferent) {
+                  const channelRef = doc(firestore, 'channels', existingChannel.id);
+                  updateDocumentNonBlocking(channelRef, { region: freshRegions });
+                  setVideoDetails(prev => ({...prev, regions: freshRegions}));
+                  toast({ title: 'Channel Updated', description: `Region info for "${existingChannel.name}" was updated.` });
+                }
+              } catch (updateError) {
+                console.warn("Could not auto-update channel region:", updateError);
+              }
+
             } else {
               toast({ title: 'New channel detected', description: 'Creating and selecting it for you...'});
               try {
@@ -123,7 +142,7 @@ export default function VideoEditPage() {
                     createdAt: serverTimestamp(),
                     logoUrl: newChannelInfo.logoUrl,
                     youtubeChannelUrl: `https://www.youtube.com/channel/${videoInfo.youtubeChannelId}`,
-                    region: newChannelInfo.region ? [newChannelInfo.region] : ['Global'],
+                    region: newChannelInfo.region || ['Global'],
                     youtubeChannelId: videoInfo.youtubeChannelId,
                 };
                 
