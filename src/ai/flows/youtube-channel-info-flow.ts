@@ -6,6 +6,7 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
+import { COUNTRY_TO_CONTINENT } from '../../lib/region-map';
 
 const YouTubeChannelInfoInputSchema = z.object({
   channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
@@ -17,7 +18,7 @@ const YouTubeChannelInfoSchema = z.object({
   logoUrl: z.string().url().describe("The URL for the channel's logo."),
   description: z.string().optional().describe("The channel's description."),
   language: z.string().optional().describe('The default language of the channel.'),
-  region: z.string().optional().describe('The country associated with the channel.'),
+  region: z.array(z.string()).optional().describe('The country and continent associated with the channel.'),
 });
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
@@ -76,16 +77,22 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
     }
 
     const countryCode = channel.brandingSettings?.channel?.country;
-    let regionName: string | undefined = undefined;
+    const regions: string[] = [];
 
     if (countryCode) {
         try {
             // Map the two-letter country code to its full name
-            regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode);
+            const regionName = new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode);
+            if (regionName) {
+                regions.push(regionName);
+                // Find and add the continent
+                const continent = COUNTRY_TO_CONTINENT[regionName];
+                if (continent && !regions.includes(continent)) {
+                    regions.push(continent);
+                }
+            }
         } catch (e) {
             console.warn(`Could not map country code "${countryCode}" to a region name.`);
-            // If mapping fails, it's better to return nothing than an invalid code
-            regionName = undefined; 
         }
     }
 
@@ -94,7 +101,7 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
       logoUrl: channel.snippet?.thumbnails?.high?.url || '',
       description: channel.snippet?.description || '',
       language: channel.brandingSettings?.channel?.defaultLanguage,
-      region: regionName,
+      region: regions.length > 0 ? regions : undefined,
     };
   }
 );
