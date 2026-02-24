@@ -1,3 +1,4 @@
+
 'use server';
 
 import { google, youtube_v3 } from 'googleapis';
@@ -42,8 +43,14 @@ export async function getYoutubeClient() {
                 const youtube = await getYouTubeClientInstance();
                 return await apiCall(youtube);
             } catch (error: any) {
-                // Check if it's a quota exceeded error.
-                if (error.code === 403 && (error.message?.includes('quotaExceeded') || error.message?.includes('dailyLimitExceeded'))) {
+                // Check if it's a quota exceeded error by inspecting the reason or message.
+                const isQuotaError = error.code === 403 && (
+                    error.errors?.[0]?.reason === 'quotaExceeded' ||
+                    error.errors?.[0]?.reason === 'dailyLimitExceeded' ||
+                    error.message?.toLowerCase().includes('quota')
+                );
+
+                if (isQuotaError) {
                     console.warn(`API key quota exceeded. Rotating to the next key.`);
                     await rotateApiKey();
                     
