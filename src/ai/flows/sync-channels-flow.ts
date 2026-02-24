@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview Flow to sync all YouTube channels and add new videos.
  */
