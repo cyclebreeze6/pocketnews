@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -23,9 +24,18 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
 
-      // User can manage their own subcollections.
-      match /{allPaths=**} {
+      // User can manage their own data subcollections.
+      match /collections/{collectionId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /history/{videoId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /fcmTokens/{tokenId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /followedChannels/{channelId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
 

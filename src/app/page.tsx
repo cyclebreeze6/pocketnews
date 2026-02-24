@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -10,7 +11,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X, UserCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
@@ -296,6 +297,10 @@ export default function Home() {
 
 
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
+  const followRef = useMemoFirebase(() => user && !user.isAnonymous && currentChannel ? doc(firestore, 'users', user.uid, 'followedChannels', currentChannel.id) : null, [firestore, user, currentChannel]);
+  const { data: followDoc } = useDoc(followRef);
+  const isFollowing = !!followDoc;
+
 
   useEffect(() => {
     if (currentVideo && user) {
@@ -364,6 +369,27 @@ export default function Home() {
         navigator.clipboard.writeText(videoUrl);
         toast({ title: "Link copied to clipboard!" });
         break;
+    }
+  };
+
+  const handleFollowToggle = () => {
+    if (!user || !currentChannel) return;
+    if (user.isAnonymous) {
+        setIsAuthDialogOpen(true);
+        return;
+    }
+
+    const followDocRef = doc(firestore, 'users', user.uid, 'followedChannels', currentChannel.id);
+
+    if (isFollowing) {
+        deleteDocumentNonBlocking(followDocRef);
+        toast({ title: 'Unfollowed', description: `You've unfollowed ${currentChannel.name}.` });
+    } else {
+        setDocumentNonBlocking(followDocRef, { 
+            channelId: currentChannel.id,
+            followedAt: serverTimestamp() 
+        }, {});
+        toast({ title: 'Followed!', description: `You're now following ${currentChannel.name}.` });
     }
   };
   
@@ -441,15 +467,9 @@ export default function Home() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button variant={'outline'} onClick={() => {
-                                  if (user?.isAnonymous) {
-                                    setIsAuthDialogOpen(true);
-                                  } else {
-                                    setIsPremiumDialogOpen(true)
-                                  }
-                                }}>
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Follow
+                            <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={handleFollowToggle}>
+                                {isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                                {isFollowing ? 'Following' : 'Follow'}
                             </Button>
                             <Popover>
                                 <PopoverTrigger asChild>

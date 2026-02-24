@@ -78,11 +78,18 @@ export interface Report {
     createdAt: Timestamp | Date | string;
     status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed';
 }
+
+export interface FollowedChannel {
+  id: string; // This will be the channelId
+  channelId: string;
+  followedAt: Timestamp;
+}
     
 
     
 
     
+
 
 
 

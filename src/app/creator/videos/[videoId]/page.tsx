@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '../../../../components/ui/button';
@@ -278,10 +279,10 @@ export default function VideoEditPage() {
       await setDoc(newDocRef, dataToSave, {});
 
       // Trigger notification for new manual upload
-      if (dataToSave.contentCategory) {
+      if (dataToSave.channelId) {
         sendNewVideoNotification({
           videoId: dataToSave.id,
-          category: dataToSave.contentCategory
+          channelId: dataToSave.channelId
         }).catch(err => console.error("Failed to send notification:", err));
       }
 

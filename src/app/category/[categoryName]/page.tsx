@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, useDoc } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '../../../firebase';
 import SiteHeader from '../../../components/site-header';
 import { VideoPlayer } from '../../../components/video-player';
 import { Badge } from '../../../components/ui/badge';
@@ -33,6 +33,7 @@ import {
   PopoverTrigger,
 } from '../../../components/ui/popover';
 import { useRegion } from '../../../context/region-context';
+import { AuthDialog } from '../../../components/auth-dialog';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -62,6 +63,7 @@ export default function CategoryPage() {
   const params = useParams();
   const { selectedRegion } = useRegion();
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   
   const categoryName = decodeURIComponent(params.categoryName as string);
 
@@ -116,6 +118,10 @@ export default function CategoryPage() {
   }, [videos]);
   
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
+
+  const followRef = useMemoFirebase(() => user && !user.isAnonymous && currentChannel ? doc(firestore, 'users', user.uid, 'followedChannels', currentChannel.id) : null, [firestore, user, currentChannel]);
+  const { data: followDoc } = useDoc(followRef);
+  const isFollowing = !!followDoc;
   
    useEffect(() => {
     if (currentVideo && user) {
@@ -164,6 +170,28 @@ export default function CategoryPage() {
             break;
         }
     };
+
+    const handleFollowToggle = () => {
+        if (!user || !currentChannel) return;
+        if (user.isAnonymous) {
+            setIsAuthDialogOpen(true);
+            return;
+        }
+
+        const followDocRef = doc(firestore, 'users', user.uid, 'followedChannels', currentChannel.id);
+
+        if (isFollowing) {
+            deleteDocumentNonBlocking(followDocRef);
+            toast({ title: 'Unfollowed', description: `You've unfollowed ${currentChannel.name}.` });
+        } else {
+            setDocumentNonBlocking(followDocRef, { 
+                channelId: currentChannel.id,
+                followedAt: serverTimestamp() 
+            }, {});
+            toast({ title: 'Followed!', description: `You're now following ${currentChannel.name}.` });
+        }
+    };
+
 
   const isLoading = videosLoading || channelsLoading || isUserLoading;
 
@@ -236,9 +264,9 @@ export default function CategoryPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                       <Button variant={'outline'} onClick={() => setIsPremiumDialogOpen(true)}>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Follow
+                       <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={handleFollowToggle}>
+                            {isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                            {isFollowing ? 'Following' : 'Follow'}
                         </Button>
                         <Popover>
                             <PopoverTrigger asChild>
@@ -331,6 +359,7 @@ export default function CategoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
     </div>
   );
 }

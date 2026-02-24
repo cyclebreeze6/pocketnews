@@ -32,7 +32,7 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
 
   const firestore = adminSDK.firestore();
   const batch = firestore.batch();
-  const newVideoNotifications: { videoId: string, category: string }[] = [];
+  const newVideoNotifications: { videoId: string, channelId: string }[] = [];
   const videosCollection = firestore.collection('videos');
 
   videos.forEach(video => {
@@ -44,15 +44,15 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
       uploadDate: FieldValue.serverTimestamp(),
     };
     batch.set(docRef, videoData);
-    newVideoNotifications.push({ videoId: docRef.id, category: video.contentCategory });
+    newVideoNotifications.push({ videoId: docRef.id, channelId: video.channelId });
   });
 
   await batch.commit();
 
   // After saving, trigger notifications for each new video.
   // This runs in the background and does not block the main function's response.
-  for (const { videoId, category } of newVideoNotifications) {
-    sendNewVideoNotification({ videoId, category })
+  for (const { videoId, channelId } of newVideoNotifications) {
+    sendNewVideoNotification({ videoId, channelId })
       .catch(err => console.error(`Failed to send notification for video ${videoId}:`, err));
   }
 }

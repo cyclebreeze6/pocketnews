@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A flow to send a push notification about a new video to relevant users.
+ * @fileOverview A flow to send a push notification about a new video to users following the channel.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import type { admin } from 'firebase-admin';
 
 const NotificationInputSchema = z.object({
   videoId: z.string(),
-  category: z.string(),
+  channelId: z.string(),
 });
 type NotificationInput = z.infer<typeof NotificationInputSchema>;
 
@@ -23,7 +23,7 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
     inputSchema: NotificationInputSchema,
     outputSchema: NotificationOutputSchema,
   },
-  async ({ videoId, category }: NotificationInput): Promise<NotificationOutput> => {
+  async ({ videoId, channelId }: NotificationInput): Promise<NotificationOutput> => {
     if (!isFirebaseAdminInitialized) {
         return { success: false, message: 'Notifications are disabled on the server.' };
     }
@@ -38,16 +38,16 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
         }
         const video = videoDoc.data();
 
-        // Find users who have subscribed to this category
-        const usersSnapshot = await db.collection('users')
-            .where('preferredCategories', 'array-contains', category)
+        // Find users who are following this channel
+        const followersSnapshot = await db.collectionGroup('followedChannels')
+            .where('channelId', '==', channelId)
             .get();
 
-        if (usersSnapshot.empty) {
-            return { success: true, message: 'No users subscribed to this category.' };
+        if (followersSnapshot.empty) {
+            return { success: true, message: 'No users are following this channel.' };
         }
 
-        const userIds = usersSnapshot.docs.map(doc => doc.id);
+        const userIds = followersSnapshot.docs.map(doc => doc.ref.parent.parent!.id);
         
         // Get FCM tokens for these users
         const tokenPromises = userIds.map(id => 
@@ -58,13 +58,16 @@ const sendNewVideoNotificationFlow = ai.defineFlow(
         const uniqueTokens = [...new Set(tokens)];
 
         if (uniqueTokens.length === 0) {
-            return { success: true, message: 'No registered devices for subscribed users.' };
+            return { success: true, message: 'No registered devices for followed users.' };
         }
+        
+        const channelDoc = await db.collection('channels').doc(channelId).get();
+        const channelName = channelDoc.data()?.name || 'a channel you follow';
         
         // Send notification
         const message: admin.messaging.MulticastMessage = {
             notification: {
-                title: `New Video in ${category}`,
+                title: `New video from ${channelName}`,
                 body: video?.title || 'A new video has been added!',
                 ...(video?.thumbnailUrl && { imageUrl: video.thumbnailUrl }),
             },
