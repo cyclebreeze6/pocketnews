@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { Button } from '../../../../components/ui/button';
@@ -317,7 +315,8 @@ export default function VideoEditPage() {
     if (redirectUrl) {
       router.push(redirectUrl);
     } else {
-      router.push('/creator/videos');
+      // Redirect vendor to channel list as requested
+      router.push('/creator/channels');
     }
   };
   
@@ -486,5 +485,3 @@ export default function VideoEditPage() {
     </div>
   );
 }
-
-    

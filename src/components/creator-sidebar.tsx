@@ -1,9 +1,8 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Tv, Video, Clapperboard, Search, RefreshCw, Archive } from 'lucide-react';
+import { LayoutDashboard, Tv, Video, Clapperboard, Search, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
   Sidebar,
@@ -19,8 +18,6 @@ const navItems = [
   { href: '/creator/shorts', label: 'Shorts', icon: Clapperboard },
   { href: '/creator/channels', label: 'Channels', icon: Tv },
   { href: '/creator/curate', label: 'Curate (Search)', icon: Search },
-  { href: '/creator/bulk-import', label: 'Curate (Bulk)', icon: Archive },
-  { href: '/creator/shorts-bulk-import', label: 'Bulk Import (Shorts)', icon: Clapperboard },
   { href: '/creator/sync', label: 'Curate (Sync)', icon: RefreshCw },
 ];
 
