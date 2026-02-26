@@ -1,5 +1,4 @@
 
-
 import { Timestamp } from 'firebase/firestore';
 
 export interface User {
@@ -21,6 +20,7 @@ export interface Channel {
   youtubeChannelId?: string; // For matching imported videos
   language?: string;
   region?: string[];
+  isAutoSyncEnabled?: boolean; // New field for managing auto-post
 }
 
 export interface Video {
@@ -84,13 +84,3 @@ export interface FollowedChannel {
   channelId: string;
   followedAt: Timestamp;
 }
-    
-
-    
-
-    
-
-
-
-
-

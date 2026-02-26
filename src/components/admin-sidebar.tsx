@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Settings, FolderKanban, Tv, Bell } from 'lucide-react';
+import { Home, Users, Settings, FolderKanban, Tv, Bell, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
   Sidebar,
@@ -14,6 +15,7 @@ import {
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
+  { href: '/admin/auto-post', label: 'Auto-Post', icon: Zap },
   { href: '/admin/channels', label: 'Channels', icon: Tv },
   { href: '/admin/categories', label: 'Categories', icon: FolderKanban },
   { href: '/admin/users', label: 'Users', icon: Users },

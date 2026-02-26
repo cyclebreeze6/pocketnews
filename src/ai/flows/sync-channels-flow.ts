@@ -21,10 +21,11 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     outputSchema: FetchResultSchema,
   },
   async (): Promise<FetchResult> => {
-    const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
+    // Only fetch channels that have Auto-Sync enabled for the background job
+    const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
     if (channelsToSync.length === 0) {
-      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are configured for syncing."] };
+      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are enabled for auto-sync."] };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -46,7 +47,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
                     description: video.description,
                     thumbnailUrl: video.thumbnailUrl,
                     channelId: channel.id,
-                    contentCategory: 'News', // Default category for sync
+                    contentCategory: 'News', // Default category for auto-sync
                     views: Math.floor(Math.random() * 100),
                     watchTime: Math.floor(Math.random() * 100),
                     regions: channel.region || ['Global'],
@@ -59,7 +60,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
             successfulSyncs++;
 
         } catch (error: any) {
-            console.error(`Failed to sync channel "${channel.name}":`, error.message);
+            console.error(`Failed to auto-sync channel "${channel.name}":`, error.message);
             errorMessages.push(`Channel "${channel.name}": ${error.message}`);
         }
     }
