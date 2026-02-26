@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,9 +8,8 @@ import { useToast } from '../../../hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '../../../firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import type { Channel } from '../../../lib/types';
-import { Loader2, Plus, Zap, Trash2, RefreshCw, Globe, Check, X } from 'lucide-react';
+import { Loader2, Plus, Zap, Trash2, Globe, Check, X } from 'lucide-react';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
-import { syncYouTubeChannels } from '../../actions/sync-channels-flow';
 import { Badge } from '../../../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Switch } from '../../../components/ui/switch';
@@ -23,7 +21,6 @@ export default function AdminAutoPostPage() {
   
   const [newChannelUrl, setNewChannelUrl] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [isSyncingNow, setIsSyncingNow] = useState(false);
 
   // Fetch channels that have a YouTube URL
   const autoSyncQuery = useMemoFirebase(() => 
@@ -96,38 +93,23 @@ export default function AdminAutoPostPage() {
     }
   };
 
-  const handleSyncNow = async () => {
-    setIsSyncingNow(true);
-    try {
-      const result = await syncYouTubeChannels();
-      toast({ 
-        title: 'Sync Complete', 
-        description: `Added ${result.newVideosAdded} new videos from ${result.syncedChannels} active channels.` 
-      });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Sync Failed', description: error.message });
-    } finally {
-      setIsSyncingNow(false);
-    }
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline">AI Auto-Post</h1>
-          <p className="text-muted-foreground">Manage channels that automatically post new videos to your platform.</p>
+          <p className="text-muted-foreground">Manage channels that automatically post the latest video to your platform every hour.</p>
         </div>
-        <Button onClick={handleSyncNow} disabled={isSyncingNow} variant="secondary">
-          {isSyncingNow ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-          Run Auto-Post Now
-        </Button>
+        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full border border-primary/20 text-sm font-medium">
+            <Zap className="h-4 w-4 animate-pulse" />
+            Background Automation Active
+        </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Add Source Channel</CardTitle>
-          <CardDescription>Paste a YouTube Channel URL to automatically fetch its details and enable auto-posting.</CardDescription>
+          <CardDescription>Paste a YouTube Channel URL to enable automatic posting of its latest video.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAddChannel} className="flex gap-2">
@@ -148,8 +130,8 @@ export default function AdminAutoPostPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Active Auto-Post Channels</CardTitle>
-          <CardDescription>These channels are checked every hour for new content.</CardDescription>
+          <CardTitle>Monitored Channels</CardTitle>
+          <CardDescription>These channels are checked every hour. Only the single most recent video is imported if it's new.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>

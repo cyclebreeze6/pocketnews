@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Flow to sync all YouTube channels and add new videos.
  */
@@ -37,8 +36,10 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 10 });
+            // Fetch ONLY the single most recent video
+            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
 
+            // Deduplication logic: skip if videoId already exists in our database
             const newVideosToSave = fetchedVideos
                 .filter(video => !existingIdsSet.has(video.videoId))
                 .map(video => ({
