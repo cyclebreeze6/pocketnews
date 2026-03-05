@@ -9,16 +9,20 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  // If a secret is configured, validate the bearer token
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // Validate the bearer token
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     console.error('Unauthorized cron trigger attempt: Invalid or missing token.');
     return new Response('Unauthorized', { status: 401 });
   }
 
   try {
     const result = await syncYouTubeChannels();
-    console.log('Auto-sync all channels cron job completed.', result);
-    return NextResponse.json({ success: true, ...result });
+    console.log('Auto-sync all channels completed successfully.', result);
+    return NextResponse.json({ 
+      success: true, 
+      message: `Sync completed. Added ${result.newVideosAdded} new videos across ${result.syncedChannels} authorized channels.`,
+      ...result 
+    });
   } catch (error: any) {
     console.error('Auto-sync all channels cron job failed:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
