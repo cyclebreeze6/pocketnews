@@ -5,8 +5,8 @@
       "collectionGroup": "channels",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "youtubeChannelUrl", "order": "ASCENDING" },
-        { "fieldPath": "isAutoSyncEnabled", "order": "ASCENDING" }
+        { "fieldPath": "isAutoSyncEnabled", "order": "ASCENDING" },
+        { "fieldPath": "youtubeChannelUrl", "order": "ASCENDING" }
       ]
     },
     {

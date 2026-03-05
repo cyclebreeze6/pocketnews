@@ -1,5 +1,7 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { syncYouTubeChannels } from '../../../actions/sync-channels-flow';
+import { isFirebaseAdminInitialized } from '../../../../lib/firebase-admin';
 
 /**
  * This route is called by a cron job to automatically sync all channels.
@@ -17,14 +19,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await syncYouTubeChannels();
-    console.log('Auto-sync all channels completed successfully.', result);
+    console.log('Auto-sync all channels completed.', result);
+    
     return NextResponse.json({ 
       success: true, 
-      message: `Sync completed. Added ${result.newVideosAdded} new videos across ${result.syncedChannels} authorized channels.`,
+      adminActive: isFirebaseAdminInitialized,
+      message: `Sync completed. Added ${result.newVideosAdded} new videos across ${result.syncedChannels} active channels.`,
       ...result 
     });
   } catch (error: any) {
     console.error('Auto-sync all channels cron job failed:', error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ 
+        success: false, 
+        adminActive: isFirebaseAdminInitialized,
+        message: error.message 
+    }, { status: 500 });
   }
 }

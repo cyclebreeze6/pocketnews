@@ -1,5 +1,7 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-news';
+import { isFirebaseAdminInitialized } from '../../../../lib/firebase-admin';
 
 /**
  * This route is called by a cron job to automatically sync breaking news.
@@ -17,14 +19,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await runAutoSyncBreakingNews();
-    console.log('Auto-sync breaking news completed successfully.', result);
+    console.log('Auto-sync breaking news completed.', result);
+    
     return NextResponse.json({ 
       success: true, 
+      adminActive: isFirebaseAdminInitialized,
       message: `Breaking News sync completed. Added ${result.newVideosAdded} new breaking news items.`,
       ...result 
     });
   } catch (error: any) {
     console.error('Auto-sync breaking news cron job failed:', error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ 
+        success: false, 
+        adminActive: isFirebaseAdminInitialized,
+        message: error.message 
+    }, { status: 500 });
   }
 }

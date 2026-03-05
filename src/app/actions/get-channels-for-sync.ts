@@ -33,20 +33,24 @@ export async function getChannelsForSync(options?: {
       }
     }
   } else {
-    let query: any = firestore.collection('channels').where('youtubeChannelUrl', '!=', null);
+    // We simplify the query here to avoid complex composite index requirements.
+    // If we want auto-sync only, we filter by that boolean flag first.
+    let query: any = firestore.collection('channels');
     
-    // If onlyAutoSync is requested, filter by that flag
     if (options?.onlyAutoSync) {
       query = query.where('isAutoSyncEnabled', '==', true);
+    } else {
+      query = query.where('youtubeChannelUrl', '!=', null);
     }
     
     const channelsSnapshot = await query.get();
-    channelsToSync = channelsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Channel));
+    channelsToSync = channelsSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Channel))
+        // Secondary safety check for URL
+        .filter(c => !!c.youtubeChannelUrl);
   }
 
   // Fetch all existing YouTube video IDs from the videos collection
-  // Note: For large datasets, this should be paginated or checked per video, 
-  // but for MVP this is efficient enough.
   const videosCollection = firestore.collection('videos');
   const videosSnapshot = await videosCollection.select('youtubeVideoId').get();
   const existingYoutubeIds = videosSnapshot.docs.map(doc => doc.data().youtubeVideoId);
