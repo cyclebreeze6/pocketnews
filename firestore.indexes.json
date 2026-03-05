@@ -2,6 +2,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "channels",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "youtubeChannelUrl", "order": "ASCENDING" },
+        { "fieldPath": "isAutoSyncEnabled", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "videos",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

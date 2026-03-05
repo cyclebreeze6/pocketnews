@@ -34,7 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AuthDialog } from './auth-dialog';
 import { useUser, useAuth, useFirebase, useCollection, useMemoFirebase, useDoc } from '../firebase';
 import type { Video, Channel, UserProfile } from '../lib/types';
@@ -58,6 +58,7 @@ import { REGIONS } from '../lib/constants';
 import { ScrollArea } from './ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
+import { COUNTRY_TO_CONTINENT, CONTINENTS } from '../lib/region-map';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -107,7 +108,6 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
   }, []);
 
   useEffect(() => {
-    // This effect runs only on the client side after the component has mounted
     if (hasMounted && recentVideos && recentVideos.length > 0) {
       const latestVideoTimestamp = toDate(recentVideos[0].createdAt).getTime();
       const lastSeenTimestamp = localStorage.getItem('lastSeenVideoTimestamp');
@@ -135,6 +135,28 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
     auth.signOut();
     router.push('/');
   };
+
+  // Group regions by continent for the selection UI
+  const groupedRegions = useMemo(() => {
+    const groups: Record<string, string[]> = {
+      'Main Regions': ['Global', ...CONTINENTS],
+    };
+
+    // Initialize continents
+    CONTINENTS.forEach(continent => {
+      groups[continent] = [];
+    });
+
+    // Populate with countries
+    REGIONS.forEach(region => {
+      if (region === 'Global' || CONTINENTS.includes(region)) return;
+      const continent = COUNTRY_TO_CONTINENT[region] || 'Other';
+      if (!groups[continent]) groups[continent] = [];
+      groups[continent].push(region);
+    });
+
+    return groups;
+  }, []);
   
 
   return (
@@ -326,31 +348,39 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
         </DialogContent>
       </Dialog>
       <Dialog open={isRegionDialogOpen} onOpenChange={setIsRegionDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-2xl">
               <DialogHeader>
                   <DialogTitle>Choose Your Region</DialogTitle>
                   <DialogDescription>
-                      Your video feed will be tailored to your selection.
+                      Your video feed will be tailored to your selection. Continent selections will show all news from that region.
                   </DialogDescription>
               </DialogHeader>
-              <ScrollArea className="h-72">
+              <ScrollArea className="h-[60vh] pr-4">
                   <RadioGroup
                       value={selectedRegion}
                       onValueChange={(value) => {
                           setSelectedRegion(value);
                           setIsRegionDialogOpen(false);
                       }}
-                      className="p-1"
+                      className="space-y-6 p-1"
                   >
-                      {REGIONS.map((region) => (
-                          <div key={region} className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent">
-                              <RadioGroupItem value={region} id={region} />
-                              <Label htmlFor={region} className="font-normal cursor-pointer flex-1">{region}</Label>
+                      {Object.entries(groupedRegions).map(([continent, regions]) => (
+                        <div key={continent} className="space-y-3">
+                          <h3 className="text-sm font-bold uppercase tracking-wider text-primary px-2">{continent}</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1">
+                            {regions.map((region) => (
+                                <div key={region} className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent transition-colors">
+                                    <RadioGroupItem value={region} id={region} />
+                                    <Label htmlFor={region} className="font-normal cursor-pointer flex-1 text-sm">{region}</Label>
+                                </div>
+                            ))}
                           </div>
+                          <Separator className="mt-4 opacity-50" />
+                        </div>
                       ))}
                   </RadioGroup>
               </ScrollArea>
-              <DialogFooter className="pt-4">
+              <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
                   <Button
                       variant="outline"
                       className="w-full"

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -38,6 +39,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useRegion } from '../context/region-context';
+import { COUNTRY_TO_CONTINENT } from '../lib/region-map';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -145,7 +147,15 @@ export default function Home() {
         const constraints: any[] = [];
         
         if (selectedRegion && selectedRegion !== 'Global') {
-          constraints.push(where('regions', 'array-contains', selectedRegion));
+          // Robust filtering: show content for the specific country, 
+          // the parent continent, AND any global news.
+          const searchRegions = [selectedRegion, 'Global'];
+          const continent = COUNTRY_TO_CONTINENT[selectedRegion];
+          if (continent && !searchRegions.includes(continent)) {
+            searchRegions.push(continent);
+          }
+          
+          constraints.push(where('regions', 'array-contains-any', searchRegions));
         }
         
         constraints.push(orderBy('createdAt', 'desc'));

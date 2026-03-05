@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '../../../firebase';
@@ -32,6 +33,7 @@ import {
 } from '../../../components/ui/popover';
 import { useRegion } from '../../../context/region-context';
 import { AuthDialog } from '../../../components/auth-dialog';
+import { COUNTRY_TO_CONTINENT } from '../../../lib/region-map';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -80,7 +82,13 @@ export default function CategoryPage() {
         queryConstraints.push(where('contentCategory', '==', categoryName));
         
         if (selectedRegion && selectedRegion !== 'Global') {
-          queryConstraints.push(where('regions', 'array-contains', selectedRegion));
+          // Broad region filtering: Country + Continent + Global
+          const searchRegions = [selectedRegion, 'Global'];
+          const continent = COUNTRY_TO_CONTINENT[selectedRegion];
+          if (continent && !searchRegions.includes(continent)) {
+            searchRegions.push(continent);
+          }
+          queryConstraints.push(where('regions', 'array-contains-any', searchRegions));
         }
 
         queryConstraints.push(orderBy('createdAt', 'desc'));
