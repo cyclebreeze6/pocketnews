@@ -1,14 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/request';
 import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-news';
 
-// This route is called by a cron job to automatically sync breaking news.
-export async function GET() {
+/**
+ * This route is called by a cron job to automatically sync breaking news.
+ * It now supports a CRON_SECRET for security when triggered externally.
+ */
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+
+  // If a secret is configured, validate the bearer token
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    console.error('Unauthorized breaking news cron trigger attempt.');
+    return new Response('Unauthorized', { status: 401 });
+  }
+
   try {
     const result = await runAutoSyncBreakingNews();
-    console.log('Auto-sync cron job completed.', result);
+    console.log('Auto-sync breaking news cron job completed.', result);
     return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
-    console.error('Auto-sync cron job failed:', error);
+    console.error('Auto-sync breaking news cron job failed:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
