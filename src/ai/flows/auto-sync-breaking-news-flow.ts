@@ -1,5 +1,5 @@
 /**
- * @fileOverview Flow to automatically sync breaking news from selected configured channels.
+ * @fileOverview Flow to automatically sync breaking news from configured channels.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
@@ -15,23 +15,6 @@ const AutoSyncResultSchema = z.object({
   errors: z.array(z.string()).optional().describe('A list of errors encountered during the sync process.'),
 });
 export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
-
-// Strictly restricted to the user's requested news channels
-const AUTHORIZED_BREAKING_NEWS_CHANNELS = [
-  'cnn', 
-  'aljazeera', 
-  'al jazeera',
-  'cbs', 
-  'fox news', 
-  'arise news', 
-  'channels television', 
-  'channels news',
-  'channels',
-  'itv', 
-  'dw news', 
-  'nbc news', 
-  'euronews'
-];
 
 const BREAKING_NEWS_CATEGORY = 'Breaking News';
 
@@ -67,14 +50,11 @@ async function runAutoSync(): Promise<AutoSyncResult> {
     
     await ensureBreakingNewsCategory();
 
-    const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
+    // Fetch channels enabled for auto-sync. We respect the Admin's managed list.
+    const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
-    const breakingNewsChannels = channelsToSync.filter(c => 
-      c.name && AUTHORIZED_BREAKING_NEWS_CHANNELS.some(name => c.name.toLowerCase().includes(name))
-    );
-
-    if (breakingNewsChannels.length === 0) {
-      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No authorized breaking news channels are currently configured for syncing."] };
+    if (channelsToSync.length === 0) {
+      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are currently configured for auto-sync in the Admin Panel."] };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -82,7 +62,7 @@ async function runAutoSync(): Promise<AutoSyncResult> {
     let successfulSyncs = 0;
     const errorMessages: string[] = [];
 
-    for (const channel of breakingNewsChannels) {
+    for (const channel of channelsToSync) {
         if (!channel.youtubeChannelUrl) continue;
         
         try {

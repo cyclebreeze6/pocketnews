@@ -1,5 +1,5 @@
 /**
- * @fileOverview Flow to sync selected YouTube channels and add new videos.
+ * @fileOverview Flow to sync all enabled YouTube channels and add new videos.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
@@ -14,39 +14,17 @@ export const FetchResultSchema = z.object({
 });
 export type FetchResult = z.infer<typeof FetchResultSchema>;
 
-// Strictly restricted to the user's requested news channels
-const AUTHORIZED_NEWS_CHANNELS = [
-  'cnn', 
-  'aljazeera', 
-  'al jazeera',
-  'cbs', 
-  'fox news', 
-  'arise news', 
-  'channels television', 
-  'channels news',
-  'channels',
-  'itv', 
-  'dw news', 
-  'nbc news', 
-  'euronews'
-];
-
 export const fetchNewYouTubeVideosFlow = ai.defineFlow(
   {
     name: 'fetchNewYouTubeVideosFlow',
     outputSchema: FetchResultSchema,
   },
   async (): Promise<FetchResult> => {
-    // Fetch channels enabled for auto-sync
+    // Fetch channels enabled for auto-sync via the Admin Panel
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
-    // Filter channels to strictly match the authorized news list
-    const filteredChannels = channelsToSync.filter(channel => 
-      channel.name && AUTHORIZED_NEWS_CHANNELS.some(name => channel.name.toLowerCase().includes(name))
-    );
-
-    if (filteredChannels.length === 0) {
-      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No authorized news channels are currently enabled for auto-sync."] };
+    if (channelsToSync.length === 0) {
+      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are currently enabled for auto-sync in the Admin Panel."] };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -54,7 +32,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     let successfulSyncs = 0;
     const errorMessages: string[] = [];
 
-    for (const channel of filteredChannels) {
+    for (const channel of channelsToSync) {
         if (!channel.youtubeChannelUrl) continue;
         
         try {

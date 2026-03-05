@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import Link from 'next/link';
@@ -15,7 +13,7 @@ import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X, User
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc, collectionGroup } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -174,7 +172,7 @@ export default function Home() {
     const queryConstraints = getQueryConstraints();
 
     try {
-        const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
+        const q = query(collection(firestore, 'videos'), ...queryConstraints);
         const documentSnapshots = await getDocs(q);
         
         const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));

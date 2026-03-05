@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '../../../firebase';
@@ -14,7 +12,7 @@ import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucid
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardContent } from '../../../components/ui/card';
 import type { Video, Channel, UserProfile } from '../../../lib/types';
-import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc, Timestamp, orderBy, limit, getDocs } from 'firebase/firestore';
 import { useToast } from '../../../hooks/use-toast';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
@@ -89,15 +87,12 @@ export default function CategoryPage() {
         queryConstraints.push(limit(20)); // Limit to 20 results
 
         try {
-          const q = query(collectionGroup(firestore, 'videos'), ...queryConstraints);
+          const q = query(collection(firestore, 'videos'), ...queryConstraints);
           const snapshot = await getDocs(q);
           const videosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
           setVideos(videosData);
         } catch (e: any) {
           console.error("Error fetching category videos:", e);
-          if (e.code === 'failed-precondition') {
-            console.error("This query requires a composite index. Please create it in your Firebase console.");
-          }
           setVideos([]); // Set to empty on error
         } finally {
           setVideosLoading(false);
