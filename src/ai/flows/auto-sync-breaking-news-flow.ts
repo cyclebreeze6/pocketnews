@@ -16,7 +16,7 @@ const AutoSyncResultSchema = z.object({
 });
 export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
 
-// The specific list of channels authorized for Breaking News background syncing
+// Strictly restricted to the user's requested news channels
 const AUTHORIZED_BREAKING_NEWS_CHANNELS = [
   'cnn', 
   'aljazeera', 
@@ -30,11 +30,7 @@ const AUTHORIZED_BREAKING_NEWS_CHANNELS = [
   'itv', 
   'dw news', 
   'nbc news', 
-  'euronews',
-  'abc news',
-  'sky news',
-  'reuters',
-  'bbc news'
+  'euronews'
 ];
 
 const BREAKING_NEWS_CATEGORY = 'Breaking News';

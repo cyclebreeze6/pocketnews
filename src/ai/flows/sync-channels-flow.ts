@@ -14,7 +14,7 @@ export const FetchResultSchema = z.object({
 });
 export type FetchResult = z.infer<typeof FetchResultSchema>;
 
-// The specific list of channels authorized for automatic background syncing
+// Strictly restricted to the user's requested news channels
 const AUTHORIZED_NEWS_CHANNELS = [
   'cnn', 
   'aljazeera', 
@@ -28,11 +28,7 @@ const AUTHORIZED_NEWS_CHANNELS = [
   'itv', 
   'dw news', 
   'nbc news', 
-  'euronews',
-  'abc news',
-  'sky news',
-  'reuters',
-  'bbc news'
+  'euronews'
 ];
 
 export const fetchNewYouTubeVideosFlow = ai.defineFlow(
@@ -44,7 +40,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     // Fetch channels enabled for auto-sync
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
-    // Filter channels to only those in the authorized news list
+    // Filter channels to strictly match the authorized news list
     const filteredChannels = channelsToSync.filter(channel => 
       channel.name && AUTHORIZED_NEWS_CHANNELS.some(name => channel.name.toLowerCase().includes(name))
     );

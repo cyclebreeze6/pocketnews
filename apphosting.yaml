@@ -7,9 +7,9 @@ env:
   - variable: NODE_ENV
     value: production
   - variable: CRON_SECRET
-    # IMPORTANT: Change this value in the Firebase Console Settings -> Secrets or Environment Variables.
-    # When triggering the sync externally, include this header: Authorization: Bearer <your_secret_here>
-    value: "change_me_to_a_secure_token"
+    # IMPORTANT: Change this value in the Firebase Console Settings -> Secrets or Environment Variables if you want to override this.
+    # When triggering the sync externally, include this header: Authorization: Bearer pNews_sync_7k2X9m5q8vR1tB4z
+    value: "pNews_sync_7k2X9m5q8vR1tB4z"
 
 cron:
   - schedule: "every 20 minutes"
