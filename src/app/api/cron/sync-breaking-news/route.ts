@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/request';
+import { NextRequest, NextResponse } from 'next/server';
 import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-news';
 
 /**
  * This route is called by a cron job to automatically sync breaking news.
- * It now supports a CRON_SECRET for security when triggered externally.
+ * It requires a Bearer token in the Authorization header that matches the CRON_SECRET environment variable.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   // If a secret is configured, validate the bearer token
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.error('Unauthorized breaking news cron trigger attempt.');
+    console.error('Unauthorized breaking news cron trigger attempt: Invalid or missing token.');
     return new Response('Unauthorized', { status: 401 });
   }
 

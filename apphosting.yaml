@@ -2,12 +2,14 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
   maxInstances: 1
 env:
   - variable: NODE_ENV
     value: production
+  - variable: CRON_SECRET
+    # This value should be set in the Firebase Console Secrets/Env Variables UI for production.
+    # It acts as a password for your cron endpoints.
+    value: "placeholder_change_in_console"
 
 cron:
   - schedule: "every 20 minutes"
