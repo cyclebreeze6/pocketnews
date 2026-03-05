@@ -1,5 +1,5 @@
 /**
- * @fileOverview Flow to sync all YouTube channels and add new videos.
+ * @fileOverview Flow to sync selected YouTube channels and add new videos.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
@@ -14,17 +14,43 @@ export const FetchResultSchema = z.object({
 });
 export type FetchResult = z.infer<typeof FetchResultSchema>;
 
+// The specific list of channels authorized for automatic background syncing
+const AUTHORIZED_NEWS_CHANNELS = [
+  'cnn', 
+  'aljazeera', 
+  'al jazeera',
+  'cbs', 
+  'fox news', 
+  'arise news', 
+  'channels television', 
+  'channels news',
+  'channels',
+  'itv', 
+  'dw news', 
+  'nbc news', 
+  'euronews',
+  'abc news',
+  'sky news',
+  'reuters',
+  'bbc news'
+];
+
 export const fetchNewYouTubeVideosFlow = ai.defineFlow(
   {
     name: 'fetchNewYouTubeVideosFlow',
     outputSchema: FetchResultSchema,
   },
   async (): Promise<FetchResult> => {
-    // Only fetch channels that have Auto-Sync enabled for the background job
+    // Fetch channels enabled for auto-sync
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
-    if (channelsToSync.length === 0) {
-      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are enabled for auto-sync."] };
+    // Filter channels to only those in the authorized news list
+    const filteredChannels = channelsToSync.filter(channel => 
+      channel.name && AUTHORIZED_NEWS_CHANNELS.some(name => channel.name.toLowerCase().includes(name))
+    );
+
+    if (filteredChannels.length === 0) {
+      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No authorized news channels are currently enabled for auto-sync."] };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -32,7 +58,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     let successfulSyncs = 0;
     const errorMessages: string[] = [];
 
-    for (const channel of channelsToSync) {
+    for (const channel of filteredChannels) {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
@@ -49,7 +75,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
                     thumbnailUrl: video.thumbnailUrl,
                     channelId: channel.id,
                     contentCategory: 'News', // Default category for auto-sync
-                    views: Math.floor(Math.random() * 100),
+                    views: Math.floor(Math.random() * 1000),
                     watchTime: Math.floor(Math.random() * 100),
                     regions: channel.region || ['Global'],
                 }));

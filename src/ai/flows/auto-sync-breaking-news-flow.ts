@@ -1,5 +1,5 @@
 /**
- * @fileOverview Flow to automatically sync breaking news from configured channels.
+ * @fileOverview Flow to automatically sync breaking news from selected configured channels.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
@@ -16,19 +16,25 @@ const AutoSyncResultSchema = z.object({
 });
 export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
 
-// A list of major news outlets to be considered for "Breaking News"
-const BREAKING_NEWS_CHANNEL_NAMES = [
+// The specific list of channels authorized for Breaking News background syncing
+const AUTHORIZED_BREAKING_NEWS_CHANNELS = [
   'cnn', 
-  'aljazeera',
-  'al jazeera english',
+  'aljazeera', 
+  'al jazeera',
+  'cbs', 
   'fox news', 
-  'abc news', 
-  'africa news', 
+  'arise news', 
+  'channels television', 
   'channels news',
-  'channels television',
-  'cbs news', 
-  'sky news', 
-  'reuters'
+  'channels',
+  'itv', 
+  'dw news', 
+  'nbc news', 
+  'euronews',
+  'abc news',
+  'sky news',
+  'reuters',
+  'bbc news'
 ];
 
 const BREAKING_NEWS_CATEGORY = 'Breaking News';
@@ -68,11 +74,11 @@ async function runAutoSync(): Promise<AutoSyncResult> {
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync();
     
     const breakingNewsChannels = channelsToSync.filter(c => 
-      c.name && BREAKING_NEWS_CHANNEL_NAMES.some(name => c.name.toLowerCase().includes(name))
+      c.name && AUTHORIZED_BREAKING_NEWS_CHANNELS.some(name => c.name.toLowerCase().includes(name))
     );
 
     if (breakingNewsChannels.length === 0) {
-      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No breaking news channels are configured for syncing."] };
+      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No authorized breaking news channels are currently configured for syncing."] };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -84,7 +90,7 @@ async function runAutoSync(): Promise<AutoSyncResult> {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Fetch ONLY the single most recent video for breaking news as well
+            // Fetch ONLY the single most recent video
             const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
 
             const newBreakingVideos = fetchedVideos
@@ -96,7 +102,7 @@ async function runAutoSync(): Promise<AutoSyncResult> {
                     thumbnailUrl: video.thumbnailUrl,
                     channelId: channel.id,
                     contentCategory: BREAKING_NEWS_CATEGORY,
-                    views: Math.floor(Math.random() * 1000),
+                    views: Math.floor(Math.random() * 10000),
                     watchTime: Math.floor(Math.random() * 100),
                     regions: channel.region || ['Global'],
                 }));
