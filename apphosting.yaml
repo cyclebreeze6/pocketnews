@@ -7,9 +7,9 @@ env:
   - variable: NODE_ENV
     value: production
   - variable: CRON_SECRET
-    # This value should be set in the Firebase Console Secrets/Env Variables UI for production.
-    # It acts as a password for your cron endpoints.
-    value: "placeholder_change_in_console"
+    # IMPORTANT: Change this value in the Firebase Console Settings -> Secrets or Environment Variables.
+    # When triggering the sync externally, include this header: Authorization: Bearer <your_secret_here>
+    value: "change_me_to_a_secure_token"
 
 cron:
   - schedule: "every 20 minutes"

@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview Flow to automatically sync breaking news from configured channels.
  */
@@ -85,7 +84,8 @@ async function runAutoSync(): Promise<AutoSyncResult> {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 15 });
+            // Fetch ONLY the single most recent video for breaking news as well
+            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
 
             const newBreakingVideos = fetchedVideos
                 .filter(video => !existingIdsSet.has(video.videoId))
