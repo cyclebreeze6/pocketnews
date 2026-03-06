@@ -1,18 +1,23 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '../../../../components/ui/alert';
-import { Monitor, RefreshCw, Zap, CheckCircle2, Clock } from 'lucide-react';
+import { Monitor, RefreshCw, Zap, CheckCircle2, Clock, PlayCircle, Loader2 } from 'lucide-react';
 import { useCollection, useFirebase, useMemoFirebase } from '../../../../firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Channel } from '../../../../lib/types';
 import { Badge } from '../../../../components/ui/badge';
 import Link from 'next/link';
 import { Button } from '../../../../components/ui/button';
+import { syncYouTubeChannels } from '../../../actions/sync-channels-flow';
+import { useToast } from '../../../../hooks/use-toast';
 
 export default function AdminSyncStatusPage() {
   const { firestore } = useFirebase();
+  const { toast } = useToast();
+  const [isTriggering, setIsTriggering] = useState(false);
   
   const activeSyncQuery = useMemoFirebase(() => 
     query(collection(firestore, 'channels'), where('isAutoSyncEnabled', '==', true)), 
@@ -20,9 +25,39 @@ export default function AdminSyncStatusPage() {
   );
   const { data: activeChannels, isLoading } = useCollection<Channel>(activeSyncQuery);
 
+  const handleManualTrigger = async () => {
+    setIsTriggering(true);
+    try {
+      const result = await syncYouTubeChannels();
+      toast({
+        title: 'Background Sync Triggered',
+        description: `Added ${result.newVideosAdded} videos from ${result.syncedChannels} channels.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Trigger Failed',
+        description: error.message,
+      });
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight font-headline">Content Sync Status</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold tracking-tight font-headline">Content Sync Status</h1>
+        <Button 
+          variant="default" 
+          onClick={handleManualTrigger} 
+          disabled={isTriggering}
+          className="bg-primary hover:bg-primary/90"
+        >
+          {isTriggering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+          Trigger Background Sync Now
+        </Button>
+      </div>
       
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
