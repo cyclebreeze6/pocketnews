@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Centralized Genkit configuration and initialization.
  */
@@ -9,6 +8,4 @@ export const ai = genkit({
   plugins: [
     googleAI(),
   ],
-  logLevel: 'warn', // Use 'warn' to reduce noise in production
-  enableTracingAndMetrics: false, // Explicitly disable this to prevent startup issues
 });
