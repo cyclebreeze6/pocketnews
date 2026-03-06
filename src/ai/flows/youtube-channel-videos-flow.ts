@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube RSS Feed.
  * This method bypasses API quota limits for video discovery.
@@ -34,36 +33,41 @@ function extractChannelIdFromUrl(url: string): string | null {
     return match ? match[1] : null;
 }
 
-async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, channelUrl: string): Promise<string> {
+async function resolveChannelId(channelUrl: string): Promise<string> {
     // Try regex extraction first (FREE, no API key needed)
     const extractedId = extractChannelIdFromUrl(channelUrl);
     if (extractedId) return extractedId;
 
-    // Try handle or user extraction which REQUIRES API
-    let match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
-    if (match) {
-        const handle = match[1];
-        const searchResponse = await youtube((client: any) => client.search.list({
+    // Need API for handles/users (@handle or user/name)
+    try {
+        const client = await getYoutubeClient();
+        
+        let match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
+        if (match) {
+            const handle = match[1];
+            const searchResponse = await client.execute(y => y.search.list({
+                part: ['snippet'],
+                q: handle,
+                type: ['channel'],
+                maxResults: 1
+            }));
+            const found = searchResponse.data.items?.[0]?.snippet?.channelId;
+            if (found) return found;
+        }
+        
+        const searchFallback = await client.execute(y => y.search.list({
             part: ['snippet'],
-            q: handle,
+            q: channelUrl,
             type: ['channel'],
             maxResults: 1
         }));
-        const foundChannelId = searchResponse.data.items?.[0]?.snippet?.channelId;
-        if (foundChannelId) return foundChannelId;
+        const fallbackId = searchFallback.data.items?.[0]?.snippet?.channelId;
+        if (fallbackId) return fallbackId;
+    } catch (e) {
+        console.warn("Could not resolve Channel ID via API. RSS sync might fail for handles.");
     }
-    
-    // Fallback to searching the whole string
-    const searchFallback = await youtube((client: any) => client.search.list({
-        part: ['snippet'],
-        q: channelUrl,
-        type: ['channel'],
-        maxResults: 1
-    }));
-    const fallbackId = searchFallback.data.items?.[0]?.snippet?.channelId;
-    if (fallbackId) return fallbackId;
 
-    throw new Error('Could not resolve a valid YouTube Channel ID. Please provide a full URL or set an API key.');
+    throw new Error('Could not resolve a valid YouTube Channel ID. Please use a full /channel/UC... URL if API keys are missing.');
 }
 
 /**
@@ -112,25 +116,17 @@ export const fetchChannelVideosFlow = ai.defineFlow(
     let resolvedId = channelId;
 
     if (!resolvedId) {
-        // Only attempt API resolution if ID isn't provided and URL regex fails
-        const extracted = extractChannelIdFromUrl(channelUrl);
-        if (extracted) {
-            resolvedId = extracted;
-        } else {
-            // Need API for handles/users
-            const client = await getYoutubeClient();
-            resolvedId = await getChannelIdFromUrl(client.execute, channelUrl);
-        }
+        resolvedId = await resolveChannelId(channelUrl);
     }
 
-    // Use RSS discovery
+    // Attempt RSS discovery first (Free)
     const rssVideos = await fetchVideosViaRss(resolvedId);
     
     if (rssVideos.length > 0) {
         return rssVideos.slice(0, maxResults);
     }
 
-    // Last resort: Fallback to API if RSS yields nothing (requires API key)
+    // Fallback to API if RSS yields nothing (Requires API key)
     try {
         const client = await getYoutubeClient();
         const response = await client.execute(clientApi => clientApi.search.list({
@@ -152,7 +148,7 @@ export const fetchChannelVideosFlow = ai.defineFlow(
             publishedAt: item.snippet?.publishedAt || '',
         })).filter(v => !!v.videoId);
     } catch (apiError) {
-        console.warn("RSS failed and API fallback also failed or disabled.", apiError);
+        console.warn("RSS and API fallback both failed for channel discovery.", apiError);
         return [];
     }
   }

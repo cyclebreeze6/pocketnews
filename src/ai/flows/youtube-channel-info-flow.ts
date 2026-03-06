@@ -14,6 +14,7 @@ const YouTubeChannelInfoInputSchema = z.object({
 export type YouTubeChannelInfoInput = z.infer<typeof YouTubeChannelInfoInputSchema>;
 
 const YouTubeChannelInfoSchema = z.object({
+  youtubeChannelId: z.string().describe("The unique YouTube ID of the channel (UC...)."),
   name: z.string().describe("The name of the channel."),
   logoUrl: z.string().url().describe("The URL for the channel's logo."),
   description: z.string().optional().describe("The channel's description."),
@@ -23,11 +24,11 @@ const YouTubeChannelInfoSchema = z.object({
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
 async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, channelUrl: string): Promise<string> {
-    // Try to extract from known URL patterns first
-    let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]+)/);
+    // Try to extract from known URL patterns first (Free)
+    let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]{24})/);
     if (match) return match[1];
 
-    // Try to extract handle and search for it
+    // Try to extract handle and search for it (Requires API)
     match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
     if (match) {
         const handle = match[1];
@@ -63,10 +64,10 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
     outputSchema: YouTubeChannelInfoSchema,
   },
   async ({ channelUrl }) => {
-    const youtube = await (await getYoutubeClient()).execute;
-    const channelId = await getChannelIdFromUrl(youtube, channelUrl);
+    const client = await getYoutubeClient();
+    const channelId = await getChannelIdFromUrl(client.execute, channelUrl);
 
-    const response = await youtube(client => client.channels.list({
+    const response = await client.execute(youtube => youtube.channels.list({
       part: ['snippet', 'brandingSettings', 'contentDetails'],
       id: [channelId],
     }));
@@ -97,6 +98,7 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
     }
 
     return {
+      youtubeChannelId: channelId,
       name: channel.snippet?.title || 'Unknown Channel',
       logoUrl: channel.snippet?.thumbnails?.high?.url || '',
       description: channel.snippet?.description || '',

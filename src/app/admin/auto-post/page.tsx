@@ -35,16 +35,19 @@ export default function AdminAutoPostPage() {
 
     setIsAdding(true);
     try {
-      // Use AI Flow to get channel details
+      // Use AI Flow to get channel details (Includes youtubeChannelId)
       const info = await fetchYouTubeChannelInfo({ channelUrl: newChannelUrl });
       
       // Check if channel already exists
-      const existingChannel = channels?.find(c => c.youtubeChannelUrl === newChannelUrl);
+      const existingChannel = channels?.find(c => c.youtubeChannelId === info.youtubeChannelId || c.youtubeChannelUrl === newChannelUrl);
       
       if (existingChannel) {
         // Just enable auto-sync if it exists
         const channelRef = doc(firestore, 'channels', existingChannel.id);
-        updateDocumentNonBlocking(channelRef, { isAutoSyncEnabled: true });
+        updateDocumentNonBlocking(channelRef, { 
+            isAutoSyncEnabled: true,
+            youtubeChannelId: info.youtubeChannelId // Ensure we have the ID for RSS sync
+        });
         toast({ title: 'Channel updated', description: `Auto-sync enabled for ${existingChannel.name}.` });
       } else {
         // Create new channel with auto-sync enabled
@@ -55,6 +58,7 @@ export default function AdminAutoPostPage() {
           description: info.description || 'Auto-added for post.',
           logoUrl: info.logoUrl,
           youtubeChannelUrl: newChannelUrl,
+          youtubeChannelId: info.youtubeChannelId, // CRITICAL for quota-free RSS sync
           region: info.region || ['Global'],
           createdAt: serverTimestamp(),
           isAutoSyncEnabled: true,
@@ -109,7 +113,7 @@ export default function AdminAutoPostPage() {
       <Card>
         <CardHeader>
           <CardTitle>Add Source Channel</CardTitle>
-          <CardDescription>Paste a YouTube Channel URL to enable automatic posting of its latest video.</CardDescription>
+          <CardDescription>Paste a YouTube Channel URL to enable automatic posting of its latest video via RSS.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAddChannel} className="flex gap-2">
@@ -131,7 +135,7 @@ export default function AdminAutoPostPage() {
       <Card>
         <CardHeader>
           <CardTitle>Monitored Channels</CardTitle>
-          <CardDescription>These channels are checked every hour. Only the single most recent video is imported if it's new.</CardDescription>
+          <CardDescription>These channels are checked frequently via RSS. Only the single most recent video is imported if it's new.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>

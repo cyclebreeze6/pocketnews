@@ -43,6 +43,7 @@ export default function AdminChannelsPage() {
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
+  const [youtubeChannelId, setYoutubeChannelId] = useState('');
   const [channelRegions, setChannelRegions] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -69,8 +70,9 @@ export default function AdminChannelsPage() {
       setChannelDescription(info.description || '');
       setChannelRegions(info.region || []);
       setLogoPreview(info.logoUrl);
+      setYoutubeChannelId(info.youtubeChannelId);
       setLogoFile(null); // Clear file if we fetched a new logo URL
-      toast({ title: "Channel info populated! Regions have been set automatically." });
+      toast({ title: "Channel info populated! ID and regions have been set automatically." });
     } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Failed to fetch info', description: error.message });
@@ -95,6 +97,7 @@ export default function AdminChannelsPage() {
     setChannelName('');
     setChannelDescription('');
     setYoutubeChannelUrl('');
+    setYoutubeChannelId('');
     setChannelRegions([]);
     setLogoFile(null);
     setLogoPreview(null);
@@ -107,6 +110,7 @@ export default function AdminChannelsPage() {
       setChannelName(channel.name);
       setChannelDescription(channel.description);
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
+      setYoutubeChannelId(channel.youtubeChannelId || '');
       setChannelRegions(Array.isArray(channel.region) ? channel.region : (channel.region ? [channel.region] : []));
       setLogoPreview(channel.logoUrl || null);
       setLogoFile(null);
@@ -131,7 +135,6 @@ export default function AdminChannelsPage() {
             const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
             finalLogoUrl = await uploadFile(storage, logoFile, filePath);
         } else if (logoPreview && !logoFile && (!editingChannel || editingChannel.logoUrl !== logoPreview)) {
-            // This case handles when a logo is fetched from youtube info or is different from original
             finalLogoUrl = logoPreview;
         }
 
@@ -139,6 +142,7 @@ export default function AdminChannelsPage() {
           name: channelName,
           description: channelDescription,
           youtubeChannelUrl: youtubeChannelUrl.trim(),
+          youtubeChannelId: youtubeChannelId.trim(),
           logoUrl: finalLogoUrl,
           region: channelRegions.length > 0 ? channelRegions : ['Global'],
         };
@@ -187,14 +191,17 @@ export default function AdminChannelsPage() {
     setIsSyncDialogOpen(true);
 
     try {
-        const videos = await fetchChannelVideos({ channelUrl: channel.youtubeChannelUrl });
+        const videos = await fetchChannelVideos({ 
+            channelUrl: channel.youtubeChannelUrl,
+            channelId: channel.youtubeChannelId 
+        });
         setVideosToImport(videos);
         if (videos.length === 0) {
             toast({ title: 'No recent videos found.' });
         }
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Failed to fetch videos', description: error.message || 'Could not fetch videos for this channel.' });
-        setIsSyncDialogOpen(false); // Close dialog on error
+        setIsSyncDialogOpen(false); 
     } finally {
         setIsSyncing(false);
         setSyncingChannelId(null);
@@ -203,9 +210,8 @@ export default function AdminChannelsPage() {
 
   const handleImportVideo = (video: YouTubeVideoDetails) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
-    // Redirect to the new video page with the URL pre-filled
     router.push(`/creator/videos/new?youtubeUrl=${encodeURIComponent(youtubeUrl)}`);
-    setIsSyncDialogOpen(false); // Close the dialog after initiating import
+    setIsSyncDialogOpen(false);
   };
 
   const filteredChannels = useMemo(() => {
@@ -247,7 +253,7 @@ export default function AdminChannelsPage() {
                       {isFetchingInfo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch Info'}
                     </Button>
                  </div>
-                 <p className="text-xs text-muted-foreground">Optional. Used for syncing videos from this channel.</p>
+                 <p className="text-xs text-muted-foreground">Required for background RSS syncing.</p>
                 </div>
                <div className="grid gap-2">
                   <Label htmlFor="name">Channel Name</Label>
@@ -292,7 +298,7 @@ export default function AdminChannelsPage() {
                 <Label htmlFor="logo">Channel Logo</Label>
                 <div className="relative w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
                     {logoPreview ? (
-                        <Image src={logoPreview} alt="Logo preview" layout="fill" className="object-cover rounded-lg" />
+                        <Image src={logoPreview} alt="Logo preview" fill className="object-cover rounded-lg" />
                     ) : (
                         <Tv className="w-16 h-16" />
                     )}
@@ -321,7 +327,7 @@ export default function AdminChannelsPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Channels</CardTitle>
-          <CardDescription>View, filter, and manage all channels in the system.</CardDescription>
+          <CardDescription>View and manage all news sources.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -343,9 +349,8 @@ export default function AdminChannelsPage() {
               <TableRow>
                 <TableHead>Logo</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
                 <TableHead>Region</TableHead>
-                <TableHead>YouTube URL</TableHead>
+                <TableHead>RSS Enabled</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -361,13 +366,18 @@ export default function AdminChannelsPage() {
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">{channel.name}</TableCell>
-                  <TableCell className="line-clamp-2">{channel.description}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1 max-w-xs">
-                        {channel.region && (Array.isArray(channel.region) ? channel.region : [channel.region]).map(r => <Badge key={r} variant="outline">{r}</Badge>)}
+                        {channel.region && (Array.isArray(channel.region) ? channel.region : [channel.region]).map(r => <Badge key={r} variant="outline" className="text-[10px]">{r}</Badge>)}
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground line-clamp-1">{channel.youtubeChannelUrl}</TableCell>
+                  <TableCell>
+                    {channel.youtubeChannelId ? (
+                        <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20">Active</Badge>
+                    ) : (
+                        <Badge variant="outline" className="text-yellow-500 border-yellow-500/20">Manual only</Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -385,7 +395,7 @@ export default function AdminChannelsPage() {
                           ) : (
                             <RefreshCw className="mr-2 h-4 w-4" />
                           )}
-                          Sync
+                          Sync Latest
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSetEditing(channel)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDelete(channel.id)} className="text-destructive">

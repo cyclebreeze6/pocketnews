@@ -1,4 +1,3 @@
-
 'use server';
 
 import { google, youtube_v3 } from 'googleapis';
@@ -40,11 +39,15 @@ export async function getYoutubeClient() {
             let attempts = 0;
             const maxAttempts = Math.max(apiKeys.length, 1);
 
+            if (apiKeys.length === 0) {
+                throw new Error('YouTube API functionality is currently restricted: No active API keys found in environment variables (YOUTUBE_API_KEY_1, etc).');
+            }
+
             while (attempts < maxAttempts) {
                 try {
                     const youtube = await getYouTubeClientInstance();
                     if (!youtube) {
-                        throw new Error('YouTube integration is disabled: No API keys configured in environment variables (YOUTUBE_API_KEY_1, etc).');
+                        throw new Error('No valid YouTube client instance could be created.');
                     }
                     return await apiCall(youtube);
                 } catch (error: any) {
@@ -75,7 +78,7 @@ export async function getYoutubeClient() {
                 }
             }
             
-            throw new Error('Could not complete request: All YouTube API keys failed.');
+            throw new Error('Could not complete request: All YouTube API keys failed or quotas exhausted.');
         }
     };
 }
