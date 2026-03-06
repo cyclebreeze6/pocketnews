@@ -8,6 +8,8 @@ import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 import { COUNTRY_TO_CONTINENT } from '../../lib/region-map';
+import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const FetchResultSchema = z.object({
   newVideosAdded: z.number().describe("The total number of new videos that were successfully added across all channels."),
@@ -16,17 +18,41 @@ export const FetchResultSchema = z.object({
 });
 export type FetchResult = z.infer<typeof FetchResultSchema>;
 
+const TARGET_CATEGORY = 'Breaking News';
+
+async function ensureTargetCategory() {
+    if (!isFirebaseAdminInitialized) return;
+    const firestore = adminSDK.firestore();
+    const categoriesRef = firestore.collection('categories');
+    const q = categoriesRef.where('name', '==', TARGET_CATEGORY);
+    const querySnapshot = await q.get();
+
+    if (querySnapshot.empty) {
+        const newCategoryRef = categoriesRef.doc();
+        await newCategoryRef.set({
+            id: newCategoryRef.id,
+            name: TARGET_CATEGORY,
+            createdAt: FieldValue.serverTimestamp(),
+        });
+    }
+}
+
 export const fetchNewYouTubeVideosFlow = ai.defineFlow(
   {
     name: 'fetchNewYouTubeVideosFlow',
     outputSchema: FetchResultSchema,
   },
   async (): Promise<FetchResult> => {
+    if (!isFirebaseAdminInitialized) {
+        return { newVideosAdded: 0, syncedChannels: 0, errors: ["Firebase Admin SDK not initialized on server."] };
+    }
+
+    await ensureTargetCategory();
+
     // Fetch channels enabled for auto-sync via the Admin Panel
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
     if (channelsToSync.length === 0) {
-      console.log("Auto-sync: No channels currently enabled for monitoring.");
       return { newVideosAdded: 0, syncedChannels: 0 };
     }
 
@@ -43,7 +69,6 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
             const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
 
             if (fetchedVideos.length === 0) {
-                console.log(`Auto-sync: No videos found for channel "${channel.name}".`);
                 successfulSyncs++;
                 continue;
             }
@@ -52,7 +77,6 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
 
             // Deduplication logic: skip if videoId already exists in our database
             if (existingIdsSet.has(latestVideo.videoId)) {
-                console.log(`Auto-sync: Latest video for "${channel.name}" already published. Skipping.`);
                 successfulSyncs++;
                 continue;
             }
@@ -72,7 +96,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
                 description: latestVideo.description,
                 thumbnailUrl: latestVideo.thumbnailUrl,
                 channelId: channel.id,
-                contentCategory: 'News', // Default category for auto-sync
+                contentCategory: TARGET_CATEGORY, // Published to Breaking News as requested
                 views: Math.floor(Math.random() * 1000),
                 watchTime: Math.floor(Math.random() * 100),
                 regions: videoRegions,
@@ -80,11 +104,9 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
             
             await saveSyncedVideos([videoToSave]);
             
-            // Update tracking
             existingIdsSet.add(latestVideo.videoId);
             totalNewVideos++;
             successfulSyncs++;
-            console.log(`Auto-sync: Published new video "${latestVideo.title}" from "${channel.name}".`);
 
         } catch (error: any) {
             console.error(`Failed to auto-sync channel "${channel.name}":`, error.message);

@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       adminActive: isFirebaseAdminInitialized,
-      message: `Sync completed. Added ${result.newVideosAdded} new videos across ${result.syncedChannels} active channels.`,
+      targetCategory: 'Breaking News',
+      message: `Sync completed. Added ${result.newVideosAdded} new videos across ${result.syncedChannels} active channels to Breaking News.`,
       ...result 
     });
   } catch (error: any) {
