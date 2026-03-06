@@ -8,8 +8,8 @@
 
 const HARDCODED_KEYS: string[] = [
     // Paste your YouTube Data API v3 keys here:
-    '', // Key 1
-    '', // Key 2
+    'AIzaSyDtu3MgR_5sy8KtPReaCkU3tpADpo8XrpQ', // Key 1
+    'AIzaSyC4qwAWrFsG749_UQEOQF-zMpOqBHU8sXc', // Key 2
     '', // Key 3
     '', // Key 4
     '', // Key 5
