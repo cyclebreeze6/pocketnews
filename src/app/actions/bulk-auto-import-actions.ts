@@ -1,7 +1,7 @@
 'use server';
 
 import { getChannelsForSync } from './get-channels-for-sync';
-import { fetchChannelVideosFlow } from '../../ai/flows/youtube-channel-videos-flow';
+import { fetchChannelVideos } from '../../ai/flows/youtube-channel-videos-flow';
 import { saveSyncedVideos } from './save-synced-videos';
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 
@@ -17,24 +17,23 @@ export interface DiscoveredVideo {
 }
 
 /**
- * Step 1: Discovers the single latest video from all active auto-sync channels.
- * Filters out videos that already exist in the database.
+ * Unified 1-step action: Discovers and commits new videos.
  */
-export async function discoverLatestVideos(): Promise<DiscoveredVideo[]> {
+export async function syncAllChannelsAction(): Promise<{ count: number, synced: number }> {
     if (!isFirebaseAdminInitialized) {
         throw new Error("Admin SDK not initialized.");
     }
 
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     const existingIdsSet = new Set(existingYoutubeIds);
-    const discovered: DiscoveredVideo[] = [];
+    const videosToSave: any[] = [];
+    let syncedCount = 0;
 
     for (const channel of channelsToSync) {
         if (!channel.youtubeChannelUrl) continue;
 
         try {
-            // Use high-efficiency playlist fetch (1 unit)
-            const videos = await fetchChannelVideosFlow({ 
+            const videos = await fetchChannelVideos({ 
                 channelUrl: channel.youtubeChannelUrl, 
                 channelId: channel.youtubeChannelId,
                 maxResults: 1 
@@ -43,44 +42,28 @@ export async function discoverLatestVideos(): Promise<DiscoveredVideo[]> {
             if (videos.length > 0) {
                 const latest = videos[0];
                 if (!existingIdsSet.has(latest.videoId)) {
-                    discovered.push({
+                    videosToSave.push({
                         youtubeVideoId: latest.videoId,
                         title: latest.title,
                         description: latest.description,
                         thumbnailUrl: latest.thumbnailUrl,
                         channelId: channel.id,
-                        channelName: channel.name,
-                        publishedAt: latest.publishedAt,
+                        contentCategory: 'Breaking News',
+                        views: Math.floor(Math.random() * 5000),
+                        watchTime: Math.floor(Math.random() * 50),
                         regions: channel.region || ['Global'],
                     });
                 }
             }
+            syncedCount++;
         } catch (error: any) {
-            console.error(`Discovery failed for ${channel.name}:`, error.message);
+            console.error(`Sync failed for ${channel.name}:`, error.message);
         }
     }
 
-    return discovered;
-}
+    if (videosToSave.length > 0) {
+        await saveSyncedVideos(videosToSave);
+    }
 
-/**
- * Step 3: Commits the discovered videos to the database under 'Breaking News'.
- */
-export async function commitBulkImport(videos: DiscoveredVideo[]): Promise<{ count: number }> {
-    if (videos.length === 0) return { count: 0 };
-
-    const videosToSave = videos.map(v => ({
-        youtubeVideoId: v.youtubeVideoId,
-        title: v.title,
-        description: v.description,
-        thumbnailUrl: v.thumbnailUrl,
-        channelId: v.channelId,
-        contentCategory: 'Breaking News',
-        views: Math.floor(Math.random() * 5000),
-        watchTime: Math.floor(Math.random() * 50),
-        regions: v.regions,
-    }));
-
-    await saveSyncedVideos(videosToSave);
-    return { count: videosToSave.length };
+    return { count: videosToSave.length, synced: syncedCount };
 }

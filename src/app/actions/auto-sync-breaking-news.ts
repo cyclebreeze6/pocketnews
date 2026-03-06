@@ -1,9 +1,7 @@
-
 'use server';
 
-import { runAutoSyncBreakingNewsFlow } from '../../ai/flows/auto-sync-breaking-news-flow';
-import type { AutoSyncResult } from '../../ai/flows/auto-sync-breaking-news-flow';
+import { runAutoSync } from '../../ai/flows/auto-sync-breaking-news-flow';
 
-export async function runAutoSyncBreakingNews(): Promise<AutoSyncResult> {
-  return runAutoSyncBreakingNewsFlow();
+export async function runAutoSyncBreakingNews() {
+  return runAutoSync();
 }

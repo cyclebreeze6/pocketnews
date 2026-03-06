@@ -1,20 +1,11 @@
 /**
- * @fileOverview Flow to automatically sync breaking news from configured channels using the YouTube Data API.
+ * @fileOverview logic to automatically sync breaking news from configured channels using the YouTube Data API.
  */
-import { ai } from '../genkit';
-import { z } from 'genkit';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
-import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
+import { fetchChannelVideos } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-
-const AutoSyncResultSchema = z.object({
-  newVideosAdded: z.number().describe("The total number of new videos added as Breaking News."),
-  syncedChannels: z.number().describe("The number of channels that were processed."),
-  errors: z.array(z.string()).optional().describe('A list of errors encountered during the sync process.'),
-});
-export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
 
 const BREAKING_NEWS_CATEGORY = 'Breaking News';
 
@@ -35,8 +26,7 @@ async function ensureBreakingNewsCategory() {
     }
 }
 
-
-async function runAutoSync(): Promise<AutoSyncResult> {
+export async function runAutoSync() {
     if (!isFirebaseAdminInitialized) {
         return { newVideosAdded: 0, syncedChannels: 0, errors: ["Admin SDK not initialized."] };
     }
@@ -58,8 +48,8 @@ async function runAutoSync(): Promise<AutoSyncResult> {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Using the API-based flow for discovery
-            const fetchedVideos = await fetchChannelVideosFlow({ 
+            // Using direct function instead of flow to avoid metadata errors
+            const fetchedVideos = await fetchChannelVideos({ 
                 channelUrl: channel.youtubeChannelUrl, 
                 channelId: channel.youtubeChannelId,
                 maxResults: 1 
@@ -97,12 +87,3 @@ async function runAutoSync(): Promise<AutoSyncResult> {
       errors: errorMessages.length > 0 ? errorMessages : undefined,
     };
 }
-
-
-export const runAutoSyncBreakingNewsFlow = ai.defineFlow(
-  {
-    name: 'autoSyncBreakingNewsFlow',
-    outputSchema: AutoSyncResultSchema,
-  },
-  runAutoSync
-);

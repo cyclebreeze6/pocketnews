@@ -1,18 +1,10 @@
 /**
- * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube Data API.
+ * @fileOverview Utility for fetching recent videos from a YouTube channel using the YouTube Data API.
  * Uses the PlaylistItems method which is significantly cheaper (1 unit) than Search (100 units).
  */
 
-import { ai } from '../genkit';
-import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
-
-const YouTubeChannelVideosInputSchema = z.object({
-  channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
-  channelId: z.string().optional().describe('The resolved YouTube Channel ID, if already known.'),
-  maxResults: z.number().optional().default(15).describe('The maximum number of videos to fetch.'),
-});
-export type YouTubeChannelVideosInput = z.infer<typeof YouTubeChannelVideosInputSchema>;
+import { z } from 'zod';
 
 export const YouTubeVideoDetailsSchema = z.object({
   videoId: z.string().describe('The unique ID of the YouTube video.'),
@@ -24,8 +16,7 @@ export const YouTubeVideoDetailsSchema = z.object({
 });
 export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 
-const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
-export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
+export type YouTubeVideoList = YouTubeVideoDetails[];
 
 function extractChannelIdFromUrl(url: string): string | null {
     const match = url.match(/channel\/([a-zA-Z0-9_-]{24})/);
@@ -71,13 +62,11 @@ async function resolveChannelIdAndPlaylist(channelUrl: string, knownId?: string)
     return { channelId: channelId!, uploadsPlaylistId };
 }
 
-export const fetchChannelVideosFlow = ai.defineFlow(
-  {
-    name: 'fetchChannelVideosFlow',
-    inputSchema: YouTubeChannelVideosInputSchema,
-    outputSchema: YouTubeVideoListSchema,
-  },
-  async ({ channelUrl, channelId, maxResults }) => {
+/**
+ * Fetches recent videos from a channel. This is a standard async function to avoid Genkit metadata overhead.
+ */
+export async function fetchChannelVideos(input: { channelUrl: string, channelId?: string, maxResults?: number }): Promise<YouTubeVideoList> {
+    const { channelUrl, channelId, maxResults = 15 } = input;
     try {
         const client = await getYoutubeClient();
         const { uploadsPlaylistId } = await resolveChannelIdAndPlaylist(channelUrl, channelId);
@@ -104,5 +93,4 @@ export const fetchChannelVideosFlow = ai.defineFlow(
         console.error("API Video Fetch failed:", error.message);
         throw error;
     }
-  }
-);
+}

@@ -8,14 +8,12 @@ import { useToast } from '../../../hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '../../../firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import type { Channel } from '../../../lib/types';
-import { Loader2, Plus, Zap, Trash2, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, Video } from 'lucide-react';
+import { Loader2, Plus, Zap, Trash2, CheckCircle2, RefreshCw, Video } from 'lucide-react';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
-import { Badge } from '../../../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Switch } from '../../../components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { discoverLatestVideos, commitBulkImport, type DiscoveredVideo } from '../../actions/bulk-auto-import-actions';
-import Image from 'next/image';
+import { syncAllChannelsAction } from '../../actions/bulk-auto-import-actions';
 
 export default function AdminAutoPostPage() {
   const { firestore } = useFirebase();
@@ -23,12 +21,7 @@ export default function AdminAutoPostPage() {
   
   const [newChannelUrl, setNewChannelUrl] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-
-  // Discovery Wizard State
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [isDiscovering, setIsDiscovering] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [discoveredVideos, setDiscoveredVideos] = useState<DiscoveredVideo[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch channels that have a YouTube URL
   const autoSyncQuery = useMemoFirebase(() => 
@@ -78,38 +71,19 @@ export default function AdminAutoPostPage() {
     }
   };
 
-  const handleStartDiscovery = async () => {
-    setIsDiscovering(true);
+  const handleQuickSync = async () => {
+    setIsSyncing(true);
     try {
-        const discovered = await discoverLatestVideos();
-        setDiscoveredVideos(discovered);
-        setStep(2);
-        if (discovered.length === 0) {
-            toast({ title: "No new content", description: "All monitored channels are up to date." });
-        }
+        const result = await syncAllChannelsAction();
+        toast({ 
+            title: "Sync Successful", 
+            description: `Scanned ${result.synced} channels. Added ${result.count} new videos to Breaking News.` 
+        });
     } catch (error: any) {
-        toast({ variant: 'destructive', title: "Discovery failed", description: error.message });
+        toast({ variant: 'destructive', title: "Sync failed", description: error.message });
     } finally {
-        setIsDiscovering(false);
+        setIsSyncing(false);
     }
-  };
-
-  const handleBulkImport = async () => {
-    setIsImporting(true);
-    try {
-        const result = await commitBulkImport(discoveredVideos);
-        toast({ title: "Import Successful", description: `Added ${result.count} new videos to Breaking News.` });
-        setStep(3);
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: "Import failed", description: error.message });
-    } finally {
-        setIsImporting(false);
-    }
-  };
-
-  const resetWizard = () => {
-    setStep(1);
-    setDiscoveredVideos([]);
   };
 
   const toggleAutoSync = (channel: Channel) => {
@@ -140,95 +114,23 @@ export default function AdminAutoPostPage() {
         </div>
       </div>
 
-      {/* Auto Import Wizard */}
+      {/* Quick Sync Button */}
       <Card className="border-primary/20 shadow-md">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-                <CardTitle className="flex items-center gap-2">
-                    <RefreshCw className="h-5 w-5 text-primary" />
-                    Bulk Auto-Import Wizard
-                </CardTitle>
-                <CardDescription>A 3-step manual trigger to refresh all news sources instantly.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-                {[1, 2, 3].map((s) => (
-                    <div 
-                        key={s} 
-                        className={`h-2 w-8 rounded-full transition-colors ${s === step ? 'bg-primary' : s < step ? 'bg-primary/40' : 'bg-muted'}`} 
-                    />
-                ))}
-            </div>
-          </div>
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-primary" />
+                Quick Sync
+            </CardTitle>
+            <CardDescription>Instantly check all monitored channels for new content and post them to Breaking News.</CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 1 && (
-            <div className="py-6 text-center space-y-4">
-                <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Video className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold">Check for Fresh News</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">This will scan all enabled channels for their latest upload. No duplicates will be imported.</p>
-                </div>
-                <Button onClick={handleStartDiscovery} disabled={isDiscovering || !channels?.some(c => c.isAutoSyncEnabled)} size="lg">
-                    {isDiscovering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    Check for New Content
+            <div className="py-4 text-center">
+                <Button onClick={handleQuickSync} disabled={isSyncing || !channels?.some(c => c.isAutoSyncEnabled)} size="lg" className="px-8">
+                    {isSyncing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCw className="mr-2 h-5 w-5" />}
+                    {isSyncing ? 'Syncing Channels...' : 'Sync All Channels Now'}
                 </Button>
+                <p className="text-[10px] text-muted-foreground mt-4 uppercase tracking-widest font-bold">Safe: No duplicate videos will be imported</p>
             </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h3 className="font-semibold flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        Discovered {discoveredVideos.length} New Videos
-                    </h3>
-                    <Button variant="ghost" size="sm" onClick={resetWizard}>Cancel</Button>
-                </div>
-                {discoveredVideos.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto p-1">
-                        {discoveredVideos.map((video) => (
-                            <div key={video.youtubeVideoId} className="flex gap-3 p-2 rounded-lg border bg-card">
-                                <div className="relative w-24 h-14 flex-shrink-0">
-                                    <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover rounded" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-bold line-clamp-2 leading-tight">{video.title}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-1 truncate">{video.channelName}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="py-12 text-center border-2 border-dashed rounded-lg">
-                        <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">No new videos found since last sync.</p>
-                    </div>
-                )}
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                    <Button variant="outline" onClick={resetWizard}>Back</Button>
-                    <Button onClick={handleBulkImport} disabled={isImporting || discoveredVideos.length === 0}>
-                        {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-                        Import All to Breaking News
-                    </Button>
-                </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="py-8 text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <CheckCircle2 className="h-10 w-10 text-green-500" />
-                </div>
-                <div>
-                    <h3 className="text-xl font-bold">Import Complete!</h3>
-                    <p className="text-sm text-muted-foreground">Your feed is now updated and notifications have been sent to followers.</p>
-                </div>
-                <Button variant="outline" onClick={resetWizard}>Done</Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
