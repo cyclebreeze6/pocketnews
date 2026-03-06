@@ -1,4 +1,3 @@
-
 'use server';
 
 import { google, youtube_v3 } from 'googleapis';
@@ -13,7 +12,9 @@ async function getYouTubeClientInstance() {
     if (apiKeys.length === 0) {
         throw new Error('No YouTube API keys are configured.');
     }
-    const apiKey = apiKeys[currentKeyIndex];
+    // Ensure index is within bounds
+    const index = currentKeyIndex % apiKeys.length;
+    const apiKey = apiKeys[index];
     return google.youtube({
         version: 'v3',
         auth: apiKey,
@@ -28,7 +29,8 @@ async function rotateApiKey() {
 }
 
 /**
- * Executes a YouTube Data API call with automatic API key rotation on quota errors.
+ * Executes a YouTube Data API call with exhaustive API key rotation.
+ * It will attempt every key in the pool before giving up.
  * @param apiCall A function that receives the YouTube client and performs the API call.
  */
 export async function getYoutubeClient() {
@@ -39,28 +41,42 @@ export async function getYoutubeClient() {
                 throw new Error('YouTube integration is disabled: No API keys configured.');
             }
 
-            try {
-                const youtube = await getYouTubeClientInstance();
-                return await apiCall(youtube);
-            } catch (error: any) {
-                // Check if it's a quota exceeded error by inspecting the reason or message.
-                const isQuotaError = error.code === 403 && (
-                    error.errors?.[0]?.reason === 'quotaExceeded' ||
-                    error.errors?.[0]?.reason === 'dailyLimitExceeded' ||
-                    error.message?.toLowerCase().includes('quota')
-                );
+            let attempts = 0;
+            const maxAttempts = apiKeys.length;
 
-                if (isQuotaError) {
-                    console.warn(`API key quota exceeded. Rotating to the next key.`);
-                    await rotateApiKey();
-                    
-                    // Retry with the new key
+            while (attempts < maxAttempts) {
+                try {
                     const youtube = await getYouTubeClientInstance();
                     return await apiCall(youtube);
+                } catch (error: any) {
+                    // Check if it's a quota exceeded error by inspecting code and message patterns.
+                    const isQuotaError = 
+                        (error.code === 403 || error.code === 429) && (
+                        error.errors?.[0]?.reason === 'quotaExceeded' ||
+                        error.errors?.[0]?.reason === 'dailyLimitExceeded' ||
+                        error.errors?.[0]?.reason === 'rateLimitExceeded' ||
+                        error.message?.toLowerCase().includes('quota') ||
+                        error.message?.toLowerCase().includes('limit')
+                    );
+
+                    if (isQuotaError) {
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                            console.warn(`YouTube Quota limit hit for key index ${currentKeyIndex % maxAttempts}. Rotating to next key... (Attempt ${attempts + 1}/${maxAttempts})`);
+                            await rotateApiKey();
+                            continue; // Retry the loop with the newly rotated key
+                        }
+                    }
+                    
+                    // If it's not a quota error, or we've exhausted all keys, throw the final error.
+                    if (attempts >= maxAttempts) {
+                        console.error('CRITICAL: All YouTube API keys have exhausted their daily quota.');
+                    }
+                    throw error;
                 }
-                // For other errors, re-throw them.
-                throw error;
             }
+            
+            throw new Error('Could not complete request: All YouTube API keys are currently at their limit.');
         }
     };
 }
