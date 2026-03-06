@@ -1,5 +1,5 @@
 /**
- * @fileOverview Flow to sync all enabled YouTube channels using RSS discovery for real-time updates.
+ * @fileOverview Flow to sync all enabled YouTube channels using the official YouTube Data API.
  */
 import { ai } from '../genkit';
 import { z } from 'genkit';
@@ -63,7 +63,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Pass the youtubeChannelId if we have it to bypass API key requirement for URL resolution
+            // Using the API-based flow
             const fetchedVideos = await fetchChannelVideosFlow({ 
                 channelUrl: channel.youtubeChannelUrl, 
                 channelId: channel.youtubeChannelId,

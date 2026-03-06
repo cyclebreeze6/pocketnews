@@ -1,5 +1,5 @@
 /**
- * @fileOverview Flow to automatically sync breaking news from configured channels.
+ * @fileOverview Flow to automatically sync breaking news from configured channels using the YouTube Data API.
  */
 import { ai } from '../genkit';
 import { z } from 'genkit';
@@ -58,7 +58,7 @@ async function runAutoSync(): Promise<AutoSyncResult> {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Pass the youtubeChannelId if we have it to bypass API key requirement
+            // Using the API-based flow for discovery
             const fetchedVideos = await fetchChannelVideosFlow({ 
                 channelUrl: channel.youtubeChannelUrl, 
                 channelId: channel.youtubeChannelId,

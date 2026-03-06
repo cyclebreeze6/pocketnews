@@ -1,6 +1,6 @@
 /**
- * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube RSS Feed.
- * This method bypasses API quota limits for video discovery.
+ * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube Data API.
+ * Uses the PlaylistItems method which is significantly cheaper (1 unit) than Search (100 units).
  */
 
 import { ai } from '../genkit';
@@ -28,82 +28,47 @@ const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
 export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 
 function extractChannelIdFromUrl(url: string): string | null {
-    // Matches youtube.com/channel/UC...
     const match = url.match(/channel\/([a-zA-Z0-9_-]{24})/);
     return match ? match[1] : null;
 }
 
-async function resolveChannelId(channelUrl: string): Promise<string> {
-    // Try regex extraction first (FREE, no API key needed)
-    const extractedId = extractChannelIdFromUrl(channelUrl);
-    if (extractedId) return extractedId;
+async function resolveChannelIdAndPlaylist(channelUrl: string, knownId?: string): Promise<{ channelId: string, uploadsPlaylistId: string }> {
+    const client = await getYoutubeClient();
+    let channelId = knownId || extractChannelIdFromUrl(channelUrl);
 
-    // Need API for handles/users (@handle or user/name)
-    try {
-        const client = await getYoutubeClient();
-        
-        let match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
-        if (match) {
-            const handle = match[1];
-            const searchResponse = await client.execute(y => y.search.list({
-                part: ['snippet'],
-                q: handle,
-                type: ['channel'],
-                maxResults: 1
-            }));
-            const found = searchResponse.data.items?.[0]?.snippet?.channelId;
-            if (found) return found;
-        }
-        
-        const searchFallback = await client.execute(y => y.search.list({
+    // If we don't have an ID, we need to find it via handle or search
+    if (!channelId) {
+        let handleMatch = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
+        let query = handleMatch ? handleMatch[1] : channelUrl;
+
+        const searchResponse = await client.execute(y => y.search.list({
             part: ['snippet'],
-            q: channelUrl,
+            q: query,
             type: ['channel'],
             maxResults: 1
         }));
-        const fallbackId = searchFallback.data.items?.[0]?.snippet?.channelId;
-        if (fallbackId) return fallbackId;
-    } catch (e) {
-        console.warn("Could not resolve Channel ID via API. RSS sync might fail for handles.");
-    }
-
-    throw new Error('Could not resolve a valid YouTube Channel ID. Please use a full /channel/UC... URL if API keys are missing.');
-}
-
-/**
- * Fetches videos via the YouTube RSS feed.
- * This does not use any YouTube Data API quota.
- */
-async function fetchVideosViaRss(channelId: string): Promise<YouTubeVideoList> {
-    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-    try {
-        const response = await fetch(feedUrl);
-        if (!response.ok) return [];
-        const xml = await response.text();
-
-        const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
         
-        return entries.map(entry => {
-            const videoId = entry.match(/<yt:videoId>([\s\S]*?)<\/yt:videoId>/)?.[1] || '';
-            const title = entry.match(/<title>([\s\S]*?)<\/title>/)?.[1] || 'Untitled';
-            const description = entry.match(/<media:description>([\s\S]*?)<\/media:description>/)?.[1] || '';
-            const authorName = entry.match(/<name>([\s\S]*?)<\/name>/)?.[1] || '';
-            const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-            const publishedAt = entry.match(/<published>([\s\S]*?)<\/published>/)?.[1] || '';
-
-            return {
-                videoId,
-                title: title.replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
-                description: description.replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
-                authorName,
-                thumbnailUrl,
-                publishedAt
-            };
-        }).filter(v => !!v.videoId);
-    } catch (error) {
-        console.error(`RSS fetch failed for ${channelId}:`, error);
-        return [];
+        channelId = searchResponse.data.items?.[0]?.snippet?.channelId || null;
     }
+
+    if (!channelId) {
+        throw new Error('Could not resolve a valid YouTube Channel ID from the URL.');
+    }
+
+    // Now get the uploads playlist ID (this is the most efficient way to get videos)
+    const channelResponse = await client.execute(y => y.channels.list({
+        part: ['contentDetails', 'snippet'],
+        id: [channelId!]
+    }));
+
+    const channel = channelResponse.data.items?.[0];
+    const uploadsPlaylistId = channel?.contentDetails?.relatedPlaylists?.uploads;
+
+    if (!uploadsPlaylistId) {
+        throw new Error('Could not find the uploads playlist for this channel.');
+    }
+
+    return { channelId: channelId!, uploadsPlaylistId };
 }
 
 export const fetchChannelVideosFlow = ai.defineFlow(
@@ -113,43 +78,31 @@ export const fetchChannelVideosFlow = ai.defineFlow(
     outputSchema: YouTubeVideoListSchema,
   },
   async ({ channelUrl, channelId, maxResults }) => {
-    let resolvedId = channelId;
-
-    if (!resolvedId) {
-        resolvedId = await resolveChannelId(channelUrl);
-    }
-
-    // Attempt RSS discovery first (Free)
-    const rssVideos = await fetchVideosViaRss(resolvedId);
-    
-    if (rssVideos.length > 0) {
-        return rssVideos.slice(0, maxResults);
-    }
-
-    // Fallback to API if RSS yields nothing (Requires API key)
     try {
         const client = await getYoutubeClient();
-        const response = await client.execute(clientApi => clientApi.search.list({
-            part: ['snippet'],
-            channelId: resolvedId,
-            maxResults: maxResults,
-            order: 'date',
-            type: ['video'],
+        const { uploadsPlaylistId } = await resolveChannelIdAndPlaylist(channelUrl, channelId);
+
+        // Fetch videos from the uploads playlist (Cost: 1 unit)
+        const response = await client.execute(y => y.playlistItems.list({
+            part: ['snippet', 'contentDetails'],
+            playlistId: uploadsPlaylistId,
+            maxResults: maxResults
         }));
 
         if (!response.data.items) return [];
 
         return response.data.items.map(item => ({
-            videoId: item.id?.videoId || '',
+            videoId: item.contentDetails?.videoId || '',
             title: item.snippet?.title || 'Untitled Video',
             description: item.snippet?.description || '',
             authorName: item.snippet?.channelTitle || '',
-            thumbnailUrl: item.snippet?.thumbnails?.high?.url || '',
+            thumbnailUrl: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || '',
             publishedAt: item.snippet?.publishedAt || '',
         })).filter(v => !!v.videoId);
-    } catch (apiError) {
-        console.warn("RSS and API fallback both failed for channel discovery.", apiError);
-        return [];
+
+    } catch (error: any) {
+        console.error("API Video Fetch failed:", error.message);
+        throw error;
     }
   }
 );

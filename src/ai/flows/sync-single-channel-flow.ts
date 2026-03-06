@@ -1,5 +1,5 @@
 /**
- * @fileOverview Flow to sync a single YouTube channel.
+ * @fileOverview Flow to sync a single YouTube channel using the YouTube Data API.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
@@ -34,6 +34,8 @@ export const syncSingleYouTubeChannelFlow = ai.defineFlow(
         }
 
         const existingIdsSet = new Set(existingYoutubeIds);
+        
+        // Using API-based discovery
         const fetchedVideos = await fetchChannelVideosFlow({ 
             channelUrl: channel.youtubeChannelUrl, 
             channelId: channel.youtubeChannelId,
@@ -48,7 +50,7 @@ export const syncSingleYouTubeChannelFlow = ai.defineFlow(
                 description: video.description,
                 thumbnailUrl: video.thumbnailUrl,
                 channelId: channel.id,
-                contentCategory: 'News', // Default category for sync
+                contentCategory: 'Breaking News',
                 views: Math.floor(Math.random() * 100),
                 watchTime: Math.floor(Math.random() * 100),
                 regions: channel.region || ['Global'],
