@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A flow for searching for recent videos on YouTube by a query.
  */

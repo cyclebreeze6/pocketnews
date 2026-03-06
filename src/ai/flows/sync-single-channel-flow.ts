@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview Flow to sync a single YouTube channel.
  */
@@ -23,7 +22,7 @@ export const syncSingleYouTubeChannelFlow = ai.defineFlow(
   },
   async (channelId: string): Promise<SyncResult> => {
     try {
-        const { channelsToSync, existingYoutubeIds } = await getChannelsForSync(channelId);
+        const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ channelId });
         
         if (channelsToSync.length === 0) {
             return { newVideosAdded: 0, errors: ["Channel not found or not configured for syncing."] };
@@ -35,7 +34,11 @@ export const syncSingleYouTubeChannelFlow = ai.defineFlow(
         }
 
         const existingIdsSet = new Set(existingYoutubeIds);
-        const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 10 });
+        const fetchedVideos = await fetchChannelVideosFlow({ 
+            channelUrl: channel.youtubeChannelUrl, 
+            channelId: channel.youtubeChannelId,
+            maxResults: 10 
+        });
         
         const newVideosToSave = fetchedVideos
             .filter(video => !existingIdsSet.has(video.videoId))

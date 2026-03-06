@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A flow for generating a personalized homepage configuration for a user.
  */
@@ -41,7 +40,7 @@ const generateHeadlinePrompt = ai.definePrompt({
     `,
 });
 
-const generateHeadlineFlow = ai.defineFlow(
+export const generateHeadlineFlow = ai.defineFlow(
   {
     name: 'generateHeadlineFlow',
     inputSchema: GenerateHeadlineInputSchema,
@@ -69,7 +68,6 @@ const generateHeadlineFlow = ai.defineFlow(
     }
   }
 );
-
 
 export async function generateHeadlineConfig(input: GenerateHeadlineInput): Promise<GenerateHeadlineOutput> {
   return generateHeadlineFlow(input);

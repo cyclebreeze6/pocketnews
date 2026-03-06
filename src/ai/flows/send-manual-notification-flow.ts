@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A flow to send a manual push notification to all users with a valid FCM token.
  */

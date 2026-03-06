@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A flow to send a push notification about a new video to users following the channel.
  */
@@ -17,7 +16,7 @@ const NotificationOutputSchema = z.object({ success: z.boolean(), message: z.str
 type NotificationOutput = z.infer<typeof NotificationOutputSchema>;
 
 
-const sendNewVideoNotificationFlow = ai.defineFlow(
+export const sendNewVideoNotificationFlow = ai.defineFlow(
   {
     name: 'sendNewVideoNotificationFlow',
     inputSchema: NotificationInputSchema,
