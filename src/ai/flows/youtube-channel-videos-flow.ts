@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview A flow for fetching recent videos from a YouTube channel using the YouTube RSS Feed.
  * This method bypasses API quota limits for video discovery.
@@ -9,6 +10,7 @@ import { getYoutubeClient } from '../../lib/youtube-client';
 
 const YouTubeChannelVideosInputSchema = z.object({
   channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
+  channelId: z.string().optional().describe('The resolved YouTube Channel ID, if already known.'),
   maxResults: z.number().optional().default(15).describe('The maximum number of videos to fetch.'),
 });
 export type YouTubeChannelVideosInput = z.infer<typeof YouTubeChannelVideosInputSchema>;
@@ -26,13 +28,19 @@ export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
 export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 
-async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, channelUrl: string): Promise<string> {
-    // Check if the URL already contains the ID
-    let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]+)/);
-    if (match) return match[1];
+function extractChannelIdFromUrl(url: string): string | null {
+    // Matches youtube.com/channel/UC...
+    const match = url.match(/channel\/([a-zA-Z0-9_-]{24})/);
+    return match ? match[1] : null;
+}
 
-    // Try handle
-    match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
+async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, channelUrl: string): Promise<string> {
+    // Try regex extraction first (FREE, no API key needed)
+    const extractedId = extractChannelIdFromUrl(channelUrl);
+    if (extractedId) return extractedId;
+
+    // Try handle or user extraction which REQUIRES API
+    let match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
     if (match) {
         const handle = match[1];
         const searchResponse = await youtube((client: any) => client.search.list({
@@ -55,7 +63,7 @@ async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, chan
     const fallbackId = searchFallback.data.items?.[0]?.snippet?.channelId;
     if (fallbackId) return fallbackId;
 
-    throw new Error('Could not resolve a valid YouTube Channel ID from the provided URL.');
+    throw new Error('Could not resolve a valid YouTube Channel ID. Please provide a full URL or set an API key.');
 }
 
 /**
@@ -66,9 +74,9 @@ async function fetchVideosViaRss(channelId: string): Promise<YouTubeVideoList> {
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
     try {
         const response = await fetch(feedUrl);
+        if (!response.ok) return [];
         const xml = await response.text();
 
-        // Simple XML parsing using regex to avoid heavy dependencies
         const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
         
         return entries.map(entry => {
@@ -81,8 +89,8 @@ async function fetchVideosViaRss(channelId: string): Promise<YouTubeVideoList> {
 
             return {
                 videoId,
-                title: title.replace(/<!\[CDATA\[|\]\]>/g, ''),
-                description: description.replace(/<!\[CDATA\[|\]\]>/g, ''),
+                title: title.replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
+                description: description.replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
                 authorName,
                 thumbnailUrl,
                 publishedAt
@@ -100,37 +108,52 @@ export const fetchChannelVideosFlow = ai.defineFlow(
     inputSchema: YouTubeChannelVideosInputSchema,
     outputSchema: YouTubeVideoListSchema,
   },
-  async ({ channelUrl, maxResults }) => {
-    const youtube = await (await getYoutubeClient()).execute;
-    const channelId = await getChannelIdFromUrl(youtube, channelUrl);
+  async ({ channelUrl, channelId, maxResults }) => {
+    let resolvedId = channelId;
 
-    // Prefer RSS discovery to save quota
-    const rssVideos = await fetchVideosViaRss(channelId);
+    if (!resolvedId) {
+        // Only attempt API resolution if ID isn't provided and URL regex fails
+        const extracted = extractChannelIdFromUrl(channelUrl);
+        if (extracted) {
+            resolvedId = extracted;
+        } else {
+            // Need API for handles/users
+            const client = await getYoutubeClient();
+            resolvedId = await getChannelIdFromUrl(client.execute, channelUrl);
+        }
+    }
+
+    // Use RSS discovery
+    const rssVideos = await fetchVideosViaRss(resolvedId);
     
     if (rssVideos.length > 0) {
         return rssVideos.slice(0, maxResults);
     }
 
-    // Fallback to API if RSS fails
-    const response = await youtube(client => client.search.list({
-        part: ['snippet'],
-        channelId: channelId,
-        maxResults: maxResults,
-        order: 'date',
-        type: ['video'],
-    }));
+    // Last resort: Fallback to API if RSS yields nothing (requires API key)
+    try {
+        const client = await getYoutubeClient();
+        const response = await client.execute(clientApi => clientApi.search.list({
+            part: ['snippet'],
+            channelId: resolvedId,
+            maxResults: maxResults,
+            order: 'date',
+            type: ['video'],
+        }));
 
-    if (!response.data.items) {
-      return [];
+        if (!response.data.items) return [];
+
+        return response.data.items.map(item => ({
+            videoId: item.id?.videoId || '',
+            title: item.snippet?.title || 'Untitled Video',
+            description: item.snippet?.description || '',
+            authorName: item.snippet?.channelTitle || '',
+            thumbnailUrl: item.snippet?.thumbnails?.high?.url || '',
+            publishedAt: item.snippet?.publishedAt || '',
+        })).filter(v => !!v.videoId);
+    } catch (apiError) {
+        console.warn("RSS failed and API fallback also failed or disabled.", apiError);
+        return [];
     }
-
-    return response.data.items.map(item => ({
-      videoId: item.id?.videoId || '',
-      title: item.snippet?.title || 'Untitled Video',
-      description: item.snippet?.description || '',
-      authorName: item.snippet?.channelTitle || '',
-      thumbnailUrl: item.snippet?.thumbnails?.high?.url || '',
-      publishedAt: item.snippet?.publishedAt || '',
-    })).filter(v => !!v.videoId);
   }
 );

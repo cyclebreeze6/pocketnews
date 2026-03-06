@@ -1,3 +1,4 @@
+
 'use server';
 
 import { google, youtube_v3 } from 'googleapis';
@@ -9,7 +10,7 @@ let currentKeyIndex = 0;
 async function getYouTubeClientInstance() {
     const apiKeys = await getApiKeys();
     if (apiKeys.length === 0) {
-        throw new Error('No YouTube API keys are configured.');
+        return null;
     }
     // Ensure index is within bounds
     const index = currentKeyIndex % apiKeys.length;
@@ -30,31 +31,26 @@ async function rotateApiKey() {
 /**
  * Executes a YouTube Data API call with exhaustive API key rotation.
  * It will attempt every key in the pool if it hits an authorization or quota error.
- * @param apiCall A function that receives the YouTube client and performs the API call.
  */
 export async function getYoutubeClient() {
     return {
         execute: async function execute<T>(apiCall: (client: youtube_v3.Youtube) => Promise<T>): Promise<T> {
             const apiKeys = await getApiKeys();
-            if (apiKeys.length === 0) {
-                throw new Error('YouTube integration is disabled: No API keys configured.');
-            }
-
+            
             let attempts = 0;
-            const maxAttempts = apiKeys.length;
+            const maxAttempts = Math.max(apiKeys.length, 1);
 
             while (attempts < maxAttempts) {
                 try {
                     const youtube = await getYouTubeClientInstance();
+                    if (!youtube) {
+                        throw new Error('YouTube integration is disabled: No API keys configured in environment variables (YOUTUBE_API_KEY_1, etc).');
+                    }
                     return await apiCall(youtube);
                 } catch (error: any) {
                     const errorMessage = error.message?.toLowerCase() || '';
                     const errorReason = error.errors?.[0]?.reason || '';
                     
-                    // Identify errors that should trigger a key rotation:
-                    // 403: Quota exceeded or Access not configured
-                    // 400: Invalid key (keyInvalid)
-                    // 429: Rate limit exceeded
                     const isRetryable = 
                         error.code === 403 || 
                         error.code === 400 || 
@@ -66,24 +62,20 @@ export async function getYoutubeClient() {
                         errorReason === 'keyInvalid' ||
                         errorReason === 'quotaExceeded';
 
-                    if (isRetryable) {
+                    if (isRetryable && apiKeys.length > 1) {
                         attempts++;
                         if (attempts < maxAttempts) {
-                            console.warn(`YouTube API error with key index ${currentKeyIndex % apiKeys.length}. Reason: ${errorReason || errorMessage}. Rotating to next key... (Attempt ${attempts + 1}/${maxAttempts})`);
+                            console.warn(`YouTube API error with key index ${currentKeyIndex % apiKeys.length}. Reason: ${errorReason || errorMessage}. Rotating...`);
                             await rotateApiKey();
-                            continue; // Retry the loop with the newly rotated key
+                            continue;
                         }
                     }
                     
-                    // If it's not a retryable error, or we've exhausted all keys, throw the final error.
-                    if (attempts >= maxAttempts) {
-                        console.error('CRITICAL: All available YouTube API keys have failed or exhausted their daily quota.');
-                    }
                     throw error;
                 }
             }
             
-            throw new Error('Could not complete request: All YouTube API keys in the pool failed.');
+            throw new Error('Could not complete request: All YouTube API keys failed.');
         }
     };
 }

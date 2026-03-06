@@ -1,8 +1,9 @@
+
 /**
  * @fileOverview Flow to automatically sync breaking news from configured channels.
  */
 import { ai } from '../genkit';
-import { z } from 'zod';
+import { z } from 'genkit';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
@@ -19,42 +20,34 @@ export type AutoSyncResult = z.infer<typeof AutoSyncResultSchema>;
 const BREAKING_NEWS_CATEGORY = 'Breaking News';
 
 async function ensureBreakingNewsCategory() {
-    if (!isFirebaseAdminInitialized) {
-        console.warn("Firebase Admin SDK is not initialized. Cannot ensure 'Breaking News' category exists.");
-        return;
-    }
+    if (!isFirebaseAdminInitialized) return;
     const firestore = adminSDK.firestore();
     const categoriesRef = firestore.collection('categories');
     const q = categoriesRef.where('name', '==', BREAKING_NEWS_CATEGORY);
     const querySnapshot = await q.get();
 
     if (querySnapshot.empty) {
-        console.log(`'${BREAKING_NEWS_CATEGORY}' category not found. Creating it...`);
         const newCategoryRef = categoriesRef.doc();
         await newCategoryRef.set({
             id: newCategoryRef.id,
             name: BREAKING_NEWS_CATEGORY,
             createdAt: FieldValue.serverTimestamp(),
         });
-        console.log(`'${BREAKING_NEWS_CATEGORY}' category created.`);
     }
 }
 
 
 async function runAutoSync(): Promise<AutoSyncResult> {
     if (!isFirebaseAdminInitialized) {
-        const errorMsg = "Auto-sync failed: Firebase Admin SDK is not configured on the server. Please provide service account credentials.";
-        console.error(errorMsg);
-        return { newVideosAdded: 0, syncedChannels: 0, errors: [errorMsg] };
+        return { newVideosAdded: 0, syncedChannels: 0, errors: ["Admin SDK not initialized."] };
     }
     
     await ensureBreakingNewsCategory();
 
-    // Fetch channels enabled for auto-sync. We respect the Admin's managed list.
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
     if (channelsToSync.length === 0) {
-      return { newVideosAdded: 0, syncedChannels: 0, errors: ["No channels are currently configured for auto-sync in the Admin Panel."] };
+      return { newVideosAdded: 0, syncedChannels: 0 };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -66,8 +59,12 @@ async function runAutoSync(): Promise<AutoSyncResult> {
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Fetch ONLY the single most recent video
-            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
+            // Pass the youtubeChannelId if we have it to bypass API key requirement
+            const fetchedVideos = await fetchChannelVideosFlow({ 
+                channelUrl: channel.youtubeChannelUrl, 
+                channelId: channel.youtubeChannelId,
+                maxResults: 1 
+            });
 
             const newBreakingVideos = fetchedVideos
                 .filter(video => !existingIdsSet.has(video.videoId))

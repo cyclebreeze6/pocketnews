@@ -1,8 +1,9 @@
+
 /**
  * @fileOverview Flow to sync all enabled YouTube channels using RSS discovery for real-time updates.
  */
 import { ai } from '../genkit';
-import { z } from 'zod';
+import { z } from 'genkit';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
@@ -48,7 +49,6 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
 
     await ensureTargetCategory();
 
-    // Fetch channels enabled for auto-sync via the Admin Panel
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
     if (channelsToSync.length === 0) {
@@ -64,8 +64,12 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Use the RSS-preferring flow to fetch ONLY the latest video
-            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
+            // Pass the youtubeChannelId if we have it to bypass API key requirement for URL resolution
+            const fetchedVideos = await fetchChannelVideosFlow({ 
+                channelUrl: channel.youtubeChannelUrl, 
+                channelId: channel.youtubeChannelId,
+                maxResults: 1 
+            });
 
             if (fetchedVideos.length === 0) {
                 successfulSyncs++;
@@ -74,13 +78,11 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
 
             const latestVideo = fetchedVideos[0];
 
-            // Deduplication logic: skip if videoId already exists in our database
             if (existingIdsSet.has(latestVideo.videoId)) {
                 successfulSyncs++;
                 continue;
             }
 
-            // Region grouping logic
             const videoRegions = [...(channel.region || ['Global'])];
             videoRegions.forEach(r => {
                 const continent = COUNTRY_TO_CONTINENT[r];
