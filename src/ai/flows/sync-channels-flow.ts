@@ -1,6 +1,5 @@
-
 /**
- * @fileOverview Flow to sync all enabled YouTube channels and add new videos.
+ * @fileOverview Flow to sync all enabled YouTube channels using RSS discovery for real-time updates.
  */
 import { ai } from '../genkit';
 import { z } from 'zod';
@@ -65,7 +64,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Fetch ONLY the single most recent video to keep the site lean
+            // Use the RSS-preferring flow to fetch ONLY the latest video
             const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
 
             if (fetchedVideos.length === 0) {
@@ -81,7 +80,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
                 continue;
             }
 
-            // Group country into continent automatically for broader region filtering
+            // Region grouping logic
             const videoRegions = [...(channel.region || ['Global'])];
             videoRegions.forEach(r => {
                 const continent = COUNTRY_TO_CONTINENT[r];
@@ -96,7 +95,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
                 description: latestVideo.description,
                 thumbnailUrl: latestVideo.thumbnailUrl,
                 channelId: channel.id,
-                contentCategory: TARGET_CATEGORY, // Published to Breaking News as requested
+                contentCategory: TARGET_CATEGORY,
                 views: Math.floor(Math.random() * 1000),
                 watchTime: Math.floor(Math.random() * 100),
                 regions: videoRegions,
