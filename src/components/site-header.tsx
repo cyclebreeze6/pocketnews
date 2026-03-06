@@ -16,6 +16,7 @@ import {
   Clapperboard,
   Menu,
   Globe,
+  Zap,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -194,6 +195,16 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
               <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setIsRegionDialogOpen(true)}>
                   <Globe className="h-5 w-5" />
               </Button>
+
+              {userProfile?.isAdmin && (
+                <Link href="/admin/auto-post" className='hidden sm:inline-flex'>
+                  <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10">
+                      <Zap className="h-5 w-5 mr-2 fill-primary/20 animate-pulse" />
+                      Auto-Post
+                  </Button>
+                </Link>
+              )}
+
                <Link href="/shorts" className='hidden sm:inline-flex'>
                 <Button variant="ghost">
                     <Clapperboard className="h-5 w-5 mr-2" />
