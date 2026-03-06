@@ -25,7 +25,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '../../../../components/ui/dialog';
-import { sendNewVideoNotification } from '../../../../ai/flows/send-notification-flow';
+import { sendNewVideoNotification } from '../../../actions/send-notification';
 
 export default function VideoEditPage() {
   const { firestore } = useFirebase();
@@ -295,7 +295,7 @@ export default function VideoEditPage() {
       dataToSave.id = newDocRef.id;
       await setDoc(newDocRef, dataToSave, {});
 
-      // Trigger notification for new manual upload
+      // Trigger notification for new manual upload via server action
       if (dataToSave.channelId) {
         sendNewVideoNotification({
           videoId: dataToSave.id,
@@ -355,7 +355,7 @@ export default function VideoEditPage() {
                             disabled={isFetching}
                             />
                             <Button onClick={() => handleFetchDetails()} disabled={isFetching || !videoInputUrl}>
-                            {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch'}
+                            {isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Fetch'}
                             </Button>
                         </div>
                     </div>
@@ -449,7 +449,7 @@ export default function VideoEditPage() {
                         <Label htmlFor="logo">Channel Logo</Label>
                         <div className="relative w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
                             {newChannelLogoPreview ? (
-                                <Image src={newChannelLogoPreview} alt="Logo preview" layout="fill" className="object-cover rounded-lg" />
+                                <Image src={newChannelLogoPreview} alt="Logo preview" fill className="object-cover rounded-lg" />
                             ) : (
                                 <span>Logo</span>
                             )}

@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Flow to automatically sync breaking news from configured channels.
  */
