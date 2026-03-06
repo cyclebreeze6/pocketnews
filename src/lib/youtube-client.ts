@@ -4,7 +4,6 @@ import { google, youtube_v3 } from 'googleapis';
 import { getApiKeys } from '../app/actions/api-key-actions';
 
 // Simple in-memory store for the current API key index.
-// This will reset on server restart, which is acceptable.
 let currentKeyIndex = 0;
 
 async function getYouTubeClientInstance() {
@@ -30,7 +29,7 @@ async function rotateApiKey() {
 
 /**
  * Executes a YouTube Data API call with exhaustive API key rotation.
- * It will attempt every key in the pool before giving up.
+ * It will attempt every key in the pool if it hits an authorization or quota error.
  * @param apiCall A function that receives the YouTube client and performs the API call.
  */
 export async function getYoutubeClient() {
@@ -49,34 +48,42 @@ export async function getYoutubeClient() {
                     const youtube = await getYouTubeClientInstance();
                     return await apiCall(youtube);
                 } catch (error: any) {
-                    // Check if it's a quota exceeded error by inspecting code and message patterns.
-                    const isQuotaError = 
-                        (error.code === 403 || error.code === 429) && (
-                        error.errors?.[0]?.reason === 'quotaExceeded' ||
-                        error.errors?.[0]?.reason === 'dailyLimitExceeded' ||
-                        error.errors?.[0]?.reason === 'rateLimitExceeded' ||
-                        error.message?.toLowerCase().includes('quota') ||
-                        error.message?.toLowerCase().includes('limit')
-                    );
+                    const errorMessage = error.message?.toLowerCase() || '';
+                    const errorReason = error.errors?.[0]?.reason || '';
+                    
+                    // Identify errors that should trigger a key rotation:
+                    // 403: Quota exceeded or Access not configured
+                    // 400: Invalid key (keyInvalid)
+                    // 429: Rate limit exceeded
+                    const isRetryable = 
+                        error.code === 403 || 
+                        error.code === 400 || 
+                        error.code === 429 ||
+                        errorMessage.includes('quota') ||
+                        errorMessage.includes('limit') ||
+                        errorMessage.includes('key') ||
+                        errorMessage.includes('invalid') ||
+                        errorReason === 'keyInvalid' ||
+                        errorReason === 'quotaExceeded';
 
-                    if (isQuotaError) {
+                    if (isRetryable) {
                         attempts++;
                         if (attempts < maxAttempts) {
-                            console.warn(`YouTube Quota limit hit for key index ${currentKeyIndex % maxAttempts}. Rotating to next key... (Attempt ${attempts + 1}/${maxAttempts})`);
+                            console.warn(`YouTube API error with key index ${currentKeyIndex % apiKeys.length}. Reason: ${errorReason || errorMessage}. Rotating to next key... (Attempt ${attempts + 1}/${maxAttempts})`);
                             await rotateApiKey();
                             continue; // Retry the loop with the newly rotated key
                         }
                     }
                     
-                    // If it's not a quota error, or we've exhausted all keys, throw the final error.
+                    // If it's not a retryable error, or we've exhausted all keys, throw the final error.
                     if (attempts >= maxAttempts) {
-                        console.error('CRITICAL: All YouTube API keys have exhausted their daily quota.');
+                        console.error('CRITICAL: All available YouTube API keys have failed or exhausted their daily quota.');
                     }
                     throw error;
                 }
             }
             
-            throw new Error('Could not complete request: All YouTube API keys are currently at their limit.');
+            throw new Error('Could not complete request: All YouTube API keys in the pool failed.');
         }
     };
 }
