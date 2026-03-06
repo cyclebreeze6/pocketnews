@@ -198,9 +198,9 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
 
               {userProfile?.isAdmin && (
                 <Link href="/admin/auto-post" className='hidden sm:inline-flex'>
-                  <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10">
-                      <Zap className="h-5 w-5 mr-2 fill-primary/20 animate-pulse" />
-                      Auto-Post
+                  <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10">
+                      <Zap className="h-5 w-5 fill-primary/20 animate-pulse" />
+                      <span className="sr-only">Auto-Post</span>
                   </Button>
                 </Link>
               )}
