@@ -1,3 +1,4 @@
+
 'use server';
 
 import { google, youtube_v3 } from 'googleapis';
@@ -59,21 +60,21 @@ export async function getYoutubeClient() {
                     const errorReason = error.errors?.[0]?.reason || '';
                     
                     // Detect common reasons to rotate: Quota full, Invalid Key, or Rate Limited
-                    const isRetryable = 
+                    const isQuotaError = 
                         error.code === 403 || 
-                        error.code === 400 || 
-                        error.code === 429 ||
-                        errorMessage.includes('quota') ||
-                        errorMessage.includes('limit') ||
-                        errorMessage.includes('key') ||
-                        errorMessage.includes('invalid') ||
-                        errorReason === 'keyInvalid' ||
+                        errorMessage.includes('quota') || 
                         errorReason === 'quotaExceeded';
 
-                    if (isRetryable && apiKeys.length > 1) {
+                    const isKeyError = 
+                        error.code === 400 || 
+                        errorMessage.includes('key') || 
+                        errorMessage.includes('invalid') ||
+                        errorReason === 'keyInvalid';
+
+                    if ((isQuotaError || isKeyError) && apiKeys.length > 1) {
                         attempts++;
                         if (attempts < maxAttempts) {
-                            console.error(`[YouTube API] Key error (${errorReason || 'Unknown'}). Rotating...`);
+                            console.error(`[YouTube API] Key ${currentKeyIndex + 1} failed (${errorReason || 'Limit'}). Rotating...`);
                             await rotateApiKey();
                             continue;
                         }
