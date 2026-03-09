@@ -14,6 +14,9 @@ async function getYouTubeClientInstance() {
     // Ensure index is within bounds
     const index = currentKeyIndex % apiKeys.length;
     const apiKey = apiKeys[index];
+    
+    console.log(`[YouTube API] Using key index ${index + 1} of ${apiKeys.length}`);
+    
     return google.youtube({
         version: 'v3',
         auth: apiKey,
@@ -24,6 +27,7 @@ async function rotateApiKey() {
     const apiKeys = await getApiKeys();
     if (apiKeys.length > 0) {
         currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+        console.warn(`[YouTube API] Rotated to key index ${(currentKeyIndex % apiKeys.length) + 1}`);
     }
 }
 
@@ -37,10 +41,10 @@ export async function getYoutubeClient() {
             const apiKeys = await getApiKeys();
             
             let attempts = 0;
-            const maxAttempts = Math.max(apiKeys.length, 1);
+            const maxAttempts = apiKeys.length > 0 ? apiKeys.length : 1;
 
             if (apiKeys.length === 0) {
-                throw new Error('YouTube API functionality is currently restricted: No active API keys found in environment variables (YOUTUBE_API_KEY_1, etc).');
+                throw new Error('YouTube API is restricted: No active API keys configured.');
             }
 
             while (attempts < maxAttempts) {
@@ -54,6 +58,7 @@ export async function getYoutubeClient() {
                     const errorMessage = error.message?.toLowerCase() || '';
                     const errorReason = error.errors?.[0]?.reason || '';
                     
+                    // Detect common reasons to rotate: Quota full, Invalid Key, or Rate Limited
                     const isRetryable = 
                         error.code === 403 || 
                         error.code === 400 || 
@@ -68,17 +73,19 @@ export async function getYoutubeClient() {
                     if (isRetryable && apiKeys.length > 1) {
                         attempts++;
                         if (attempts < maxAttempts) {
-                            console.warn(`YouTube API error with key index ${currentKeyIndex % apiKeys.length}. Reason: ${errorReason || errorMessage}. Rotating...`);
+                            console.error(`[YouTube API] Key error (${errorReason || 'Unknown'}). Rotating...`);
                             await rotateApiKey();
                             continue;
                         }
                     }
                     
+                    // If we've exhausted all keys or it's a non-retryable error
+                    console.error(`[YouTube API] Critical failure:`, errorMessage);
                     throw error;
                 }
             }
             
-            throw new Error('Could not complete request: All YouTube API keys failed or quotas exhausted.');
+            throw new Error('All YouTube API keys have failed or exhausted their quotas.');
         }
     };
 }
