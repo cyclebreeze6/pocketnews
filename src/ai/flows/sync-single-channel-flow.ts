@@ -4,7 +4,7 @@
 import { ai } from '../genkit';
 import { z } from 'zod';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
-import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
+import { fetchChannelVideos } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 
 export const SyncResultSchema = z.object({
@@ -35,8 +35,8 @@ export const syncSingleYouTubeChannelFlow = ai.defineFlow(
 
         const existingIdsSet = new Set(existingYoutubeIds);
         
-        // Using API-based discovery
-        const fetchedVideos = await fetchChannelVideosFlow({ 
+        // Using optimized API fetcher
+        const fetchedVideos = await fetchChannelVideos({ 
             channelUrl: channel.youtubeChannelUrl, 
             channelId: channel.youtubeChannelId,
             maxResults: 10 

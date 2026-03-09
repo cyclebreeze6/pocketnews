@@ -4,7 +4,7 @@
 import { ai } from '../genkit';
 import { z } from 'genkit';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
-import { fetchChannelVideosFlow } from './youtube-channel-videos-flow';
+import { fetchChannelVideos } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 import { COUNTRY_TO_CONTINENT } from '../../lib/region-map';
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
@@ -63,8 +63,8 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Using the API-based flow
-            const fetchedVideos = await fetchChannelVideosFlow({ 
+            // Using the optimized API fetcher
+            const fetchedVideos = await fetchChannelVideos({ 
                 channelUrl: channel.youtubeChannelUrl, 
                 channelId: channel.youtubeChannelId,
                 maxResults: 1 

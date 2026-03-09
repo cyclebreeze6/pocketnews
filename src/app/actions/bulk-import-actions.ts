@@ -1,8 +1,7 @@
-
 'use server';
 
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
-import { fetchChannelVideosFlow } from '../../ai/flows/youtube-channel-videos-flow';
+import { fetchChannelVideos } from '../../ai/flows/youtube-channel-videos-flow';
 import { saveSyncedVideos } from './save-synced-videos';
 import type { Channel } from '../../lib/types';
 
@@ -38,7 +37,11 @@ export async function importLatestVideoFromChannels(channelIds: string[]): Promi
         }
 
         try {
-            const fetchedVideos = await fetchChannelVideosFlow({ channelUrl: channel.youtubeChannelUrl, maxResults: 1 });
+            const fetchedVideos = await fetchChannelVideos({ 
+                channelUrl: channel.youtubeChannelUrl, 
+                channelId: channel.youtubeChannelId, 
+                maxResults: 1 
+            });
 
             if (fetchedVideos.length > 0) {
                 const latestVideo = fetchedVideos[0];
