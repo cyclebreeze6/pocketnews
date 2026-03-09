@@ -1,7 +1,7 @@
 'use server';
 
 import { getChannelsForSync } from './get-channels-for-sync';
-import { fetchChannelShorts } from '../actions/youtube-channel-shorts-flow';
+import { fetchChannelShorts } from '../../ai/flows/youtube-channel-shorts-flow';
 import type { YouTubeShortDetails } from '../../ai/flows/youtube-channel-shorts-flow';
 import { initializeFirebase } from '../../firebase';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';

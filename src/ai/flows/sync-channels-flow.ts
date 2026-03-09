@@ -63,7 +63,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
         if (!channel.youtubeChannelUrl) continue;
         
         try {
-            // Using the optimized API fetcher
+            // Using the optimized API fetcher (not a flow to avoid metadata overhead)
             const fetchedVideos = await fetchChannelVideos({ 
                 channelUrl: channel.youtubeChannelUrl, 
                 channelId: channel.youtubeChannelId,

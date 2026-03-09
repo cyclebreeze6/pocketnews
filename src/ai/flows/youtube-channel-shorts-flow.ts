@@ -1,15 +1,9 @@
 /**
- * @fileOverview A flow for fetching recent shorts from a YouTube channel using the YouTube Data API.
+ * @fileOverview Standard utility for fetching recent shorts from a YouTube channel using the YouTube Data API.
+ * Converted to standard async function to avoid Genkit metadata authentication errors.
  */
-import { ai } from '../genkit';
-import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
-
-const YouTubeChannelShortsInputSchema = z.object({
-  channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
-  maxResults: z.number().optional().default(25).describe('The maximum number of shorts to fetch.'),
-});
-export type YouTubeChannelShortsInput = z.infer<typeof YouTubeChannelShortsInputSchema>;
+import { z } from 'zod';
 
 export const YouTubeShortDetailsSchema = z.object({
   youtubeVideoId: z.string().describe('The unique ID of the YouTube short.'),
@@ -18,11 +12,10 @@ export const YouTubeShortDetailsSchema = z.object({
 });
 export type YouTubeShortDetails = z.infer<typeof YouTubeShortDetailsSchema>;
 
-const YouTubeShortListSchema = z.array(YouTubeShortDetailsSchema);
-export type YouTubeShortList = z.infer<typeof YouTubeShortListSchema>;
+export type YouTubeShortList = YouTubeShortDetails[];
 
 async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, channelUrl: string): Promise<string> {
-    let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]+)/);
+    let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]{24})/);
     if (match) return match[1];
 
     match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
@@ -44,35 +37,37 @@ async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, chan
     throw new Error('Could not resolve YouTube Channel ID from URL.');
 }
 
-export const fetchChannelShortsFlow = ai.defineFlow(
-  {
-    name: 'fetchChannelShortsFlow',
-    inputSchema: YouTubeChannelShortsInputSchema,
-    outputSchema: YouTubeShortListSchema,
-  },
-  async ({ channelUrl, maxResults }) => {
-    const youtube = await (await getYoutubeClient()).execute;
-    const channelId = await getChannelIdFromUrl(youtube, channelUrl);
+/**
+ * Fetches recent shorts from a channel. This is a standard async function to avoid Genkit metadata overhead.
+ */
+export async function fetchChannelShorts(input: { channelUrl: string, maxResults?: number }): Promise<YouTubeShortList> {
+    const { channelUrl, maxResults = 25 } = input;
+    try {
+        const youtube = await (await getYoutubeClient()).execute;
+        const channelId = await getChannelIdFromUrl(youtube, channelUrl);
 
-    const response = await youtube(client => client.search.list({
-        part: ['snippet'],
-        channelId: channelId,
-        maxResults: maxResults,
-        order: 'date',
-        type: ['video'],
-        videoDuration: 'short',
-    }));
+        const response = await youtube(client => client.search.list({
+            part: ['snippet'],
+            channelId: channelId,
+            maxResults: maxResults,
+            order: 'date',
+            type: ['video'],
+            videoDuration: 'short',
+        }));
 
-    if (!response.data.items) {
-      return [];
+        if (!response.data.items) {
+            return [];
+        }
+
+        const shorts: YouTubeShortDetails[] = response.data.items.map(item => ({
+            youtubeVideoId: item.id?.videoId || '',
+            title: item.snippet?.title || 'Untitled Short',
+            thumbnailUrl: item.snippet?.thumbnails?.high?.url || '',
+        }));
+
+        return shorts.filter(short => !!short.youtubeVideoId);
+    } catch (error: any) {
+        console.error("API Shorts Fetch failed:", error.message);
+        throw error;
     }
-
-    const shorts: YouTubeShortDetails[] = response.data.items.map(item => ({
-      youtubeVideoId: item.id?.videoId || '',
-      title: item.snippet?.title || 'Untitled Short',
-      thumbnailUrl: item.snippet?.thumbnails?.high?.url || '',
-    }));
-
-    return shorts.filter(short => short.youtubeVideoId);
-  }
-);
+}

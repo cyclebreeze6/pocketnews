@@ -1,8 +1,11 @@
 'use server';
 
-import { fetchChannelShortsFlow } from '../../ai/flows/youtube-channel-shorts-flow';
-import type { YouTubeChannelShortsInput, YouTubeShortList } from '../../ai/flows/youtube-channel-shorts-flow';
+import { fetchChannelShorts } from '../../ai/flows/youtube-channel-shorts-flow';
+import type { YouTubeShortList } from '../../ai/flows/youtube-channel-shorts-flow';
 
-export async function fetchChannelShorts(input: YouTubeChannelShortsInput): Promise<YouTubeShortList> {
-  return fetchChannelShortsFlow(input);
+/**
+ * Server action wrapper for fetching channel shorts.
+ */
+export async function fetchChannelShortsAction(input: { channelUrl: string, maxResults?: number }): Promise<YouTubeShortList> {
+  return fetchChannelShorts(input);
 }
