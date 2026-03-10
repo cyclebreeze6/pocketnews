@@ -1,6 +1,6 @@
 
 /**
- * @fileOverview High-efficiency utility for fetching recent videos from a YouTube channel.
+ * @fileOverview High-efficiency utility for fetching recent videos from a channel.
  * Uses the PlaylistItems trick (1 unit cost) and features an RSS failsafe.
  */
 
@@ -69,7 +69,6 @@ async function fetchViaRSS(channelId: string): Promise<YouTubeVideoList> {
  * Resolves a channel handle to an ID (Costs 100 units).
  */
 async function resolveChannelId(channelUrl: string): Promise<string | null> {
-    // Stop handle matching at the first slash to prevent garbage matching
     const handleMatch = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
     if (!handleMatch) return null;
     
@@ -90,30 +89,32 @@ async function resolveChannelId(channelUrl: string): Promise<string | null> {
 }
 
 /**
+ * Robustly extracts a YouTube Channel ID (UC...) from a URL string.
+ */
+function extractChannelIdFromUrl(url: string): string | null {
+    // 1. Try strict /channel/ path
+    let match = url.match(/\/channel\/(UC[a-zA-Z0-9\-_]{22})/);
+    if (match) return match[1];
+
+    // 2. Try loose extraction: look for any UC string that is 24 chars long
+    // Ensures it's not followed by more ID characters to avoid capturing partial strings
+    match = url.match(/(UC[a-zA-Z0-9\-_]{22})(?![a-zA-Z0-9\-_])/);
+    if (match) return match[1];
+
+    return null;
+}
+
+/**
  * Fetches recent videos from a channel using the most quota-efficient method possible.
  */
 export async function fetchChannelVideos(input: { channelUrl: string, channelId?: string, maxResults?: number }): Promise<YouTubeVideoList> {
     const { channelUrl, maxResults = 5 } = input;
-    let channelId = input.channelId;
+    
+    // Resolve Channel ID from input, then URL, then search
+    let channelId = input.channelId || extractChannelIdFromUrl(channelUrl) || undefined;
 
-    // 1. Ensure we have an ID
     if (!channelId) {
-        // Try strict pattern
-        let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]{24})/);
-        if (match) {
-            channelId = match[1];
-        } else {
-            // Try loose pattern: Search for any string starting with UC and having 24 chars total
-            match = channelUrl.match(/(UC[a-zA-Z0-9_-]{22})/);
-            if (match) {
-                channelId = match[1];
-            }
-        }
-        
-        // If still no ID, try resolving the handle
-        if (!channelId) {
-            channelId = await resolveChannelId(channelUrl) || undefined;
-        }
+        channelId = await resolveChannelId(channelUrl) || undefined;
     }
 
     if (!channelId) {
