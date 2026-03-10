@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview logic to automatically sync breaking news from configured channels using the YouTube Data API.
  */
@@ -45,8 +44,8 @@ export async function runAutoSync() {
     const videosToSave: any[] = [];
     let successfulSyncs = 0;
 
-    // Process in batches to prevent timeouts
-    const batchSize = 10;
+    // Process in larger batches to prevent timeouts and maximize throughput
+    const batchSize = 15;
     for (let i = 0; i < channelsToSync.length; i += batchSize) {
         const chunk = channelsToSync.slice(i, i + batchSize);
         

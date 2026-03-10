@@ -1,9 +1,8 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-news';
 import { isFirebaseAdminInitialized } from '../../../../lib/firebase-admin';
 
-export const maxDuration = 300; // 5 minutes
+export const maxDuration = 540; // 9 minutes to match apphosting.yaml
 
 /**
  * This route is called by a cron job to automatically sync breaking news.

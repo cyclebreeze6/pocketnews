@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Flow to sync all enabled YouTube channels using the official YouTube Data API.
  */
@@ -60,8 +59,8 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     const videosToSave: any[] = [];
     let successfulSyncs = 0;
 
-    // Process in smaller batches to avoid overwhelming the network or API
-    const batchSize = 10;
+    // Process in larger batches to maximize throughput within cron limits
+    const batchSize = 15;
     for (let i = 0; i < channelsToSync.length; i += batchSize) {
         const chunk = channelsToSync.slice(i, i + batchSize);
         

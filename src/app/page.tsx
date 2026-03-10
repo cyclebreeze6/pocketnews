@@ -460,7 +460,7 @@ export default function Home() {
                         hasNext={hasNext}
                         hasPrevious={hasPrevious}
                         isTheaterMode={isTheaterMode}
-                        onToggleTheater={() => setIsTheaterMode(!isTheaterMode)}
+                        onToggleTheater={isMobile ? undefined : () => setIsTheaterMode(!isTheaterMode)}
                         key={currentVideo.id}
                       />
                     </div>
