@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview logic to automatically sync breaking news from configured channels using the YouTube Data API.
  */
@@ -40,49 +41,75 @@ export async function runAutoSync() {
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
-    let totalNewVideos = 0;
-    let successfulSyncs = 0;
     const errorMessages: string[] = [];
+    const videosToSave: any[] = [];
+    let successfulSyncs = 0;
 
-    for (const channel of channelsToSync) {
-        if (!channel.youtubeChannelUrl) continue;
+    // Process in batches to prevent timeouts
+    const batchSize = 10;
+    for (let i = 0; i < channelsToSync.length; i += batchSize) {
+        const chunk = channelsToSync.slice(i, i + batchSize);
         
-        try {
-            // Using direct function instead of flow to avoid metadata errors
-            const fetchedVideos = await fetchChannelVideos({ 
-                channelUrl: channel.youtubeChannelUrl, 
-                channelId: channel.youtubeChannelId,
-                maxResults: 1 
-            });
+        const results = await Promise.all(chunk.map(async (channel) => {
+            if (!channel.youtubeChannelUrl) return null;
+            
+            try {
+                const fetchedVideos = await fetchChannelVideos({ 
+                    channelUrl: channel.youtubeChannelUrl, 
+                    channelId: channel.youtubeChannelId,
+                    maxResults: 1 
+                });
 
-            const newBreakingVideos = fetchedVideos
-                .filter(video => !existingIdsSet.has(video.videoId))
-                .map(video => ({
-                    youtubeVideoId: video.videoId,
-                    title: video.title,
-                    description: video.description,
-                    thumbnailUrl: video.thumbnailUrl,
+                if (fetchedVideos.length === 0) {
+                    return { success: true };
+                }
+
+                const latestVideo = fetchedVideos[0];
+
+                if (existingIdsSet.has(latestVideo.videoId)) {
+                    return { success: true };
+                }
+
+                const videoData = {
+                    youtubeVideoId: latestVideo.videoId,
+                    title: latestVideo.title,
+                    description: latestVideo.description,
+                    thumbnailUrl: latestVideo.thumbnailUrl,
                     channelId: channel.id,
                     contentCategory: BREAKING_NEWS_CATEGORY,
                     views: Math.floor(Math.random() * 10000),
                     watchTime: Math.floor(Math.random() * 100),
                     regions: channel.region || ['Global'],
-                }));
-            
-            if (newBreakingVideos.length > 0) {
-                await saveSyncedVideos(newBreakingVideos);
-                totalNewVideos += newBreakingVideos.length;
-            }
-            successfulSyncs++;
+                };
+                
+                return { success: true, video: videoData };
 
-        } catch (error: any) {
-            console.error(`Failed to sync breaking news for channel "${channel.name}":`, error.message);
-            errorMessages.push(`Channel "${channel.name}": ${error.message}`);
+            } catch (error: any) {
+                console.error(`Failed to sync breaking news for channel "${channel.name}":`, error.message);
+                return { success: false, error: `Channel "${channel.name}": ${error.message}` };
+            }
+        }));
+
+        for (const result of results) {
+            if (!result) continue;
+            if (result.success) {
+                successfulSyncs++;
+                if (result.video) {
+                    videosToSave.push(result.video);
+                    existingIdsSet.add(result.video.youtubeVideoId);
+                }
+            } else if (result.error) {
+                errorMessages.push(result.error);
+            }
         }
     }
 
+    if (videosToSave.length > 0) {
+        await saveSyncedVideos(videosToSave);
+    }
+
     return {
-      newVideosAdded: totalNewVideos,
+      newVideosAdded: videosToSave.length,
       syncedChannels: successfulSyncs,
       errors: errorMessages.length > 0 ? errorMessages : undefined,
     };

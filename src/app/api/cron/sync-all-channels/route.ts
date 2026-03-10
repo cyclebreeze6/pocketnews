@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { syncYouTubeChannels } from '../../../actions/sync-channels-flow';
 import { isFirebaseAdminInitialized } from '../../../../lib/firebase-admin';
 
+export const maxDuration = 300; // 5 minutes
+
 /**
  * This route is called by a cron job to automatically sync all channels.
  * It requires a Bearer token in the Authorization header that matches the CRON_SECRET environment variable.

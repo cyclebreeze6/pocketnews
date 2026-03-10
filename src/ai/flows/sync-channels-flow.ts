@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Flow to sync all enabled YouTube channels using the official YouTube Data API.
  */
@@ -55,67 +56,83 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
-    let totalNewVideos = 0;
-    let successfulSyncs = 0;
     const errorMessages: string[] = [];
+    const videosToSave: any[] = [];
+    let successfulSyncs = 0;
 
-    for (const channel of channelsToSync) {
-        if (!channel.youtubeChannelUrl) continue;
+    // Process in smaller batches to avoid overwhelming the network or API
+    const batchSize = 10;
+    for (let i = 0; i < channelsToSync.length; i += batchSize) {
+        const chunk = channelsToSync.slice(i, i + batchSize);
         
-        try {
-            // Using the optimized API fetcher (not a flow to avoid metadata overhead)
-            const fetchedVideos = await fetchChannelVideos({ 
-                channelUrl: channel.youtubeChannelUrl, 
-                channelId: channel.youtubeChannelId,
-                maxResults: 1 
-            });
+        const results = await Promise.all(chunk.map(async (channel) => {
+            if (!channel.youtubeChannelUrl) return null;
+            
+            try {
+                const fetchedVideos = await fetchChannelVideos({ 
+                    channelUrl: channel.youtubeChannelUrl, 
+                    channelId: channel.youtubeChannelId,
+                    maxResults: 1 
+                });
 
-            if (fetchedVideos.length === 0) {
-                successfulSyncs++;
-                continue;
-            }
-
-            const latestVideo = fetchedVideos[0];
-
-            if (existingIdsSet.has(latestVideo.videoId)) {
-                successfulSyncs++;
-                continue;
-            }
-
-            const videoRegions = [...(channel.region || ['Global'])];
-            videoRegions.forEach(r => {
-                const continent = COUNTRY_TO_CONTINENT[r];
-                if (continent && !videoRegions.includes(continent)) {
-                    videoRegions.push(continent);
+                if (fetchedVideos.length === 0) {
+                    return { success: true };
                 }
-            });
 
-            const videoToSave = {
-                youtubeVideoId: latestVideo.videoId,
-                title: latestVideo.title,
-                description: latestVideo.description,
-                thumbnailUrl: latestVideo.thumbnailUrl,
-                channelId: channel.id,
-                contentCategory: TARGET_CATEGORY,
-                views: Math.floor(Math.random() * 1000),
-                watchTime: Math.floor(Math.random() * 100),
-                regions: videoRegions,
-            };
-            
-            await saveSyncedVideos([videoToSave]);
-            
-            existingIdsSet.add(latestVideo.videoId);
-            totalNewVideos++;
-            successfulSyncs++;
+                const latestVideo = fetchedVideos[0];
 
-        } catch (error: any) {
-            console.error(`Failed to auto-sync channel "${channel.name}":`, error.message);
-            errorMessages.push(`Channel "${channel.name}": ${error.message}`);
+                if (existingIdsSet.has(latestVideo.videoId)) {
+                    return { success: true };
+                }
+
+                const videoRegions = [...(channel.region || ['Global'])];
+                videoRegions.forEach(r => {
+                    const continent = COUNTRY_TO_CONTINENT[r];
+                    if (continent && !videoRegions.includes(continent)) {
+                        videoRegions.push(continent);
+                    }
+                });
+
+                const videoData = {
+                    youtubeVideoId: latestVideo.videoId,
+                    title: latestVideo.title,
+                    description: latestVideo.description,
+                    thumbnailUrl: latestVideo.thumbnailUrl,
+                    channelId: channel.id,
+                    contentCategory: TARGET_CATEGORY,
+                    views: Math.floor(Math.random() * 1000),
+                    watchTime: Math.floor(Math.random() * 100),
+                    regions: videoRegions,
+                };
+                
+                return { success: true, video: videoData };
+
+            } catch (error: any) {
+                console.error(`Failed to auto-sync channel "${channel.name}":`, error.message);
+                return { success: false, error: `Channel "${channel.name}": ${error.message}` };
+            }
+        }));
+
+        for (const result of results) {
+            if (!result) continue;
+            if (result.success) {
+                successfulSyncs++;
+                if (result.video) {
+                    videosToSave.push(result.video);
+                    existingIdsSet.add(result.video.youtubeVideoId);
+                }
+            } else if (result.error) {
+                errorMessages.push(result.error);
+            }
         }
     }
 
+    if (videosToSave.length > 0) {
+        await saveSyncedVideos(videosToSave);
+    }
+
     return {
-      newVideosAdded: totalNewVideos,
+      newVideosAdded: videosToSave.length,
       syncedChannels: successfulSyncs,
       errors: errorMessages.length > 0 ? errorMessages : undefined,
     };

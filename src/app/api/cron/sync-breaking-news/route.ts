@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runAutoSyncBreakingNews } from '../../../actions/auto-sync-breaking-news';
 import { isFirebaseAdminInitialized } from '../../../../lib/firebase-admin';
 
+export const maxDuration = 300; // 5 minutes
+
 /**
  * This route is called by a cron job to automatically sync breaking news.
  * It requires a Bearer token in the Authorization header that matches the CRON_SECRET environment variable.
