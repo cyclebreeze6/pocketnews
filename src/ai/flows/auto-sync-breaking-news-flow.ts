@@ -44,8 +44,9 @@ export async function runAutoSync() {
     const videosToSave: any[] = [];
     let successfulSyncs = 0;
 
-    // Process in larger batches to prevent timeouts and maximize throughput
-    const batchSize = 15;
+    // CRITICAL OPTIMIZATION:
+    // Process in large batches (25) to maximize throughput and finish within the 30s cron window.
+    const batchSize = 25;
     for (let i = 0; i < channelsToSync.length; i += batchSize) {
         const chunk = channelsToSync.slice(i, i + batchSize);
         

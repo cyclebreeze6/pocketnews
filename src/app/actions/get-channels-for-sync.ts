@@ -1,4 +1,3 @@
-
 'use server';
 
 import type { Channel } from '../../lib/types';
@@ -40,8 +39,15 @@ export async function getChannelsForSync(options?: {
         .filter(c => !!c.youtubeChannelUrl);
   }
 
-  // Optimized select to only fetch IDs, saving read costs
-  const videosSnapshot = await firestore.collection('videos').select('youtubeVideoId').get();
+  // CRITICAL OPTIMIZATION: 
+  // Only fetch the last 1000 video IDs to prevent timeouts as the collection grows.
+  // Checking against the last 1000 videos is enough to prevent duplicates during hourly/daily syncs.
+  const videosSnapshot = await firestore.collection('videos')
+    .orderBy('createdAt', 'desc')
+    .limit(1000)
+    .select('youtubeVideoId')
+    .get();
+    
   const existingYoutubeIds = videosSnapshot.docs.map(doc => doc.data().youtubeVideoId);
 
   return { channelsToSync, existingYoutubeIds };
