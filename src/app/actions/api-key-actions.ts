@@ -9,9 +9,9 @@
 const HARDCODED_KEYS: string[] = [
     'AIzaSyDtu3MgR_5sy8KtPReaCkU3tpADpo8XrpQ', // Key 1
     'AIzaSyC4qwAWrFsG749_UQEOQF-zMpOqBHU8sXc', // Key 2
-    '', // Key 3
-    '', // Key 4
-    '', // Key 5
+    'AIzaSyBMf0WTsLQFteR6cPmTVps8_Gk4dpwGvVM', // Key 3
+    'AIzaSyCblNc5gY1jAK6zyGvmb7Trtt0ao7xstiY', // Key 4
+    'AIzaSyAEgBSJdvTTUjX6X7mIaiMCifEIm9oDzIU', // Key 5
     '', // Key 6
     '', // Key 7
     '', // Key 8
