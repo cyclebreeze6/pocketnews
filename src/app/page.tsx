@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -10,7 +9,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X, UserCheck } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X, UserCheck, Maximize2, Minimize2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, UserProfile, Category } from '../lib/types';
@@ -128,6 +127,7 @@ export default function Home() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
@@ -147,8 +147,6 @@ export default function Home() {
         const constraints: any[] = [];
         
         if (selectedRegion && selectedRegion !== 'Global') {
-          // Robust filtering: show content for the specific country, 
-          // the parent continent, AND any global news.
           const searchRegions = [selectedRegion, 'Global'];
           const continent = COUNTRY_TO_CONTINENT[selectedRegion];
           if (continent && !searchRegions.includes(continent)) {
@@ -174,7 +172,7 @@ export default function Home() {
         setIsFetchingMore(true);
     } else {
         setIsLoading(true);
-        setAllVideos([]); // Clear old videos on new filter/initial load
+        setAllVideos([]);
         setLastVisible(null);
         setHasMore(true);
     }
@@ -205,12 +203,10 @@ export default function Home() {
     }
   }, [firestore, selectedRegion, isFetchingMore, hasMore, lastVisible]);
   
-  // Initial fetch and refetch on filter change
   useEffect(() => {
     fetchVideos(false);
   }, [selectedRegion]);
   
-  // Infinite scroll trigger
   useEffect(() => {
     const observer = new IntersectionObserver(
         (entries) => {
@@ -234,20 +230,18 @@ export default function Home() {
   }, [hasMore, isLoading, isFetchingMore, fetchVideos]);
   
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-  
   const [isPlayerSticky, setIsPlayerSticky] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const HEADER_HEIGHT = 0;
   
-  // This combines all initial loading states.
   const isInitiallyLoading = (isLoading && allVideos.length === 0) || channelsLoading || isUserLoading;
   const isFeedEmpty = !isInitiallyLoading && allVideos.length === 0;
 
   useEffect(() => {
     const handleScroll = () => {
         const container = playerContainerRef.current?.parentElement;
-        if (!container || !isMobile) return;
+        if (!container || !isMobile || isTheaterMode) return;
 
         const playerTop = container.getBoundingClientRect().top;
         
@@ -260,9 +254,8 @@ export default function Home() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-}, [isPlayerSticky, isMobile]);
+}, [isPlayerSticky, isMobile, isTheaterMode]);
 
-  
   useEffect(() => {
     if (!isUserLoading && !user) {
       initiateAnonymousSignIn(auth);
@@ -273,23 +266,23 @@ export default function Home() {
     if (allVideos && allVideos.length > 0) {
       const isCurrentInList = allVideos.some(v => v.id === currentVideo?.id);
       if (!isCurrentInList) {
-        // current video is not in the new filtered list, so switch to the first one.
         setCurrentVideo(allVideos[0]);
       }
     } else if (!isLoading && allVideos.length === 0) {
-      setCurrentVideo(null); // No videos to display
+      setCurrentVideo(null);
     }
   }, [allVideos, isLoading, currentVideo?.id]);
 
-
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
-    const container = playerContainerRef.current?.parentElement;
-    if(isPlayerSticky && container) {
-        container.scrollIntoView({ behavior: 'smooth' });
+    if (!isTheaterMode) {
+        const container = playerContainerRef.current?.parentElement;
+        if(isPlayerSticky && container) {
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
     }
     window.history.pushState({}, '', `/watch/${video.id}`);
-  }, [isPlayerSticky]);
+  }, [isPlayerSticky, isTheaterMode]);
   
   useEffect(() => {
     const handlePopState = () => {
@@ -303,12 +296,10 @@ export default function Home() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [allVideos]);
 
-
   const currentChannel = channels?.find((c) => c.id === currentVideo?.channelId);
   const followRef = useMemoFirebase(() => user && !user.isAnonymous && currentChannel ? doc(firestore, 'users', user.uid, 'followedChannels', currentChannel.id) : null, [firestore, user, currentChannel]);
   const { data: followDoc } = useDoc(followRef);
   const isFollowing = !!followDoc;
-
 
   useEffect(() => {
     if (currentVideo && user) {
@@ -361,7 +352,6 @@ export default function Home() {
     setReportDetails('');
   };
 
-
   const handleShare = (platform: 'facebook' | 'whatsapp' | 'copy') => {
     if (!currentVideo) return;
     const videoUrl = `${window.location.origin}/watch/${currentVideo.id}`;
@@ -400,7 +390,27 @@ export default function Home() {
         toast({ title: 'Followed!', description: `You're now following ${currentChannel.name}.` });
     }
   };
-  
+
+  // Keyboard shortcut for Esc to exit Theater Mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isTheaterMode) {
+        setIsTheaterMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTheaterMode]);
+
+  // Lock body scroll in theater mode
+  useEffect(() => {
+    if (isTheaterMode) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isTheaterMode]);
   
   if (isInitiallyLoading) {
       return <HomepageSkeleton />;
@@ -415,7 +425,7 @@ export default function Home() {
       <SiteHeader />
       <main ref={mainRef} className="flex-1">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
-          <div className="lg:col-span-2">
+          <div className={cn("lg:col-span-2", isTheaterMode && "z-[100]")}>
              {isFeedEmpty ? (
                  <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center text-center p-8">
                     <h2 className="text-2xl font-bold mb-2">No Videos Found</h2>
@@ -425,17 +435,22 @@ export default function Home() {
                 </div>
             ) : currentVideo && currentChannel ? (
               <>
-                <div className="relative md:rounded-lg overflow-hidden">
+                <div 
+                  className={cn(
+                    "relative md:rounded-lg overflow-hidden",
+                    isTheaterMode && "fixed inset-0 z-[100] bg-black md:rounded-none"
+                  )}
+                >
                   <div
                     ref={playerContainerRef}
                     className={cn(
-                      'z-40 w-full bg-background',
-                      isPlayerSticky && isMobile
+                      'z-40 w-full bg-background h-full',
+                      isPlayerSticky && isMobile && !isTheaterMode
                         ? 'fixed top-0 left-0 right-0'
                         : 'relative'
                     )}
                   >
-                    <div className="aspect-video">
+                    <div className={cn("aspect-video", isTheaterMode && "h-full")}>
                       <VideoPlayer
                         youtubeId={currentVideo.youtubeVideoId}
                         videoUrl={currentVideo.videoUrl}
@@ -444,78 +459,143 @@ export default function Home() {
                         onPrevious={handlePreviousVideo}
                         hasNext={hasNext}
                         hasPrevious={hasPrevious}
+                        isTheaterMode={isTheaterMode}
+                        onToggleTheater={() => setIsTheaterMode(!isTheaterMode)}
                         key={currentVideo.id}
                       />
                     </div>
-                  </div>
-                  {isPlayerSticky && isMobile && <div className="aspect-video" />}
-                </div>
 
-                <div className="px-4 md:px-0 pt-4">
-                    <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3">
-                            <Link href={`/channels/${currentChannel.id}`}>
-                              <Avatar>
-                                  <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
+                    {/* Theater Mode Overlays */}
+                    {isTheaterMode && (
+                      <>
+                        {/* Title Overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="max-w-4xl space-y-4">
+                            <h2 className="text-3xl md:text-4xl font-bold text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.8)]">
+                              {currentVideo.title}
+                            </h2>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-10 w-10 border border-white/20">
+                                  <AvatarImage src={currentChannel.logoUrl} />
                                   <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                            </Link>
-                            <div>
-                                <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
-                                    {currentChannel.region && currentChannel.region.length > 0 && (
-                                        <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
-                                            {currentChannel.region[0]}
-                                        </span>
-                                    )}
-                                    <p className="font-semibold hover:underline">{currentChannel.name}</p>
-                                </Link>
-                                <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
+                                </Avatar>
+                                <span className="font-semibold text-white">{currentChannel.name}</span>
+                              </div>
+                              <Badge variant="outline" className="text-white border-white/40 bg-white/10 backdrop-blur-md">
+                                {currentVideo.contentCategory}
+                              </Badge>
                             </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={handleFollowToggle}>
-                                {isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                                {isFollowing ? 'Following' : 'Follow'}
-                            </Button>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-2">
-                                    <div className="flex gap-2">
-                                        <Button size="icon" variant="outline" onClick={() => handleShare('facebook')}>
-                                            <FacebookIcon className="h-5 w-5" />
-                                        </Button>
-                                         <Button size="icon" variant="outline" onClick={() => handleShare('whatsapp')}>
-                                            <WhatsAppIcon className="h-5 w-5" />
-                                        </Button>
-                                        <Button size="icon" variant="outline" onClick={() => handleShare('copy')}>
-                                            <Copy className="h-5 w-5" />
-                                        </Button>
+
+                        {/* Playlist Overlay (Right Side) */}
+                        <div className="absolute top-0 right-0 bottom-0 w-80 bg-black/60 backdrop-blur-xl border-l border-white/10 hidden xl:flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="p-6 border-b border-white/10">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                              <Maximize2 className="h-4 w-4" />
+                              Up Next
+                            </h3>
+                          </div>
+                          <ScrollArea className="flex-1">
+                            <div className="p-4 space-y-4">
+                              {allVideos.map((video) => {
+                                const isPlaying = video.id === currentVideo.id;
+                                return (
+                                  <div 
+                                    key={video.id} 
+                                    onClick={() => handleSetCurrentVideo(video)}
+                                    className={cn(
+                                      "group/item cursor-pointer p-2 rounded-lg transition-colors pointer-events-auto",
+                                      isPlaying ? "bg-primary/20 border border-primary/30" : "hover:bg-white/10"
+                                    )}
+                                  >
+                                    <div className="relative aspect-video rounded-md overflow-hidden mb-2">
+                                      <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" />
+                                      {isPlaying && <div className="absolute inset-0 bg-primary/40 flex items-center justify-center"><PlayCircle className="text-white h-8 w-8" /></div>}
                                     </div>
-                                </PopoverContent>
-                            </Popover>
-                             <Button variant="secondary" onClick={() => {
-                                  if (user?.isAnonymous) {
-                                    setIsAuthDialogOpen(true);
-                                  } else {
-                                    setIsReportDialogOpen(true);
-                                  }
-                                }}>
-                                <Flag className="mr-2 h-4 w-4" /> Report
-                            </Button>
+                                    <p className={cn("text-xs font-medium line-clamp-2", isPlaying ? "text-primary" : "text-white/80")}>
+                                      {video.title}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
                         </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mt-4">
-                        <p className="text-sm font-medium">Related topics</p>
-                        <Badge variant="outline">#news</Badge>
-                        <Badge variant="outline">#technology</Badge>
-                        <Badge variant="outline">#sports</Badge>
-                    </div>
+                      </>
+                    )}
+                  </div>
+                  {isPlayerSticky && isMobile && !isTheaterMode && <div className="aspect-video" />}
                 </div>
+
+                {!isTheaterMode && (
+                  <div className="px-4 md:px-0 pt-4">
+                      <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-3">
+                              <Link href={`/channels/${currentChannel.id}`}>
+                                <Avatar>
+                                    <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
+                                    <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                              </Link>
+                              <div>
+                                  <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
+                                      {currentChannel.region && currentChannel.region.length > 0 && (
+                                          <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
+                                              {currentChannel.region[0]}
+                                          </span>
+                                      )}
+                                      <p className="font-semibold hover:underline">{currentChannel.name}</p>
+                                  </Link>
+                                  <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                              <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={handleFollowToggle}>
+                                  {isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                                  {isFollowing ? 'Following' : 'Follow'}
+                              </Button>
+                              <Popover>
+                                  <PopoverTrigger asChild>
+                                      <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-2">
+                                      <div className="flex gap-2">
+                                          <Button size="icon" variant="outline" onClick={() => handleShare('facebook')}>
+                                              <FacebookIcon className="h-5 w-5" />
+                                          </Button>
+                                           <Button size="icon" variant="outline" onClick={() => handleShare('whatsapp')}>
+                                              <WhatsAppIcon className="h-5 w-5" />
+                                          </Button>
+                                          <Button size="icon" variant="outline" onClick={() => handleShare('copy')}>
+                                              <Copy className="h-5 w-5" />
+                                          </Button>
+                                      </div>
+                                  </PopoverContent>
+                              </Popover>
+                               <Button variant="secondary" onClick={() => {
+                                    if (user?.isAnonymous) {
+                                      setIsAuthDialogOpen(true);
+                                    } else {
+                                      setIsReportDialogOpen(true);
+                                    }
+                                  }}>
+                                  <Flag className="mr-2 h-4 w-4" /> Report
+                              </Button>
+                          </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mt-4">
+                          <p className="text-sm font-medium">Related topics</p>
+                          <Badge variant="outline">#news</Badge>
+                          <Badge variant="outline">#technology</Badge>
+                          <Badge variant="outline">#sports</Badge>
+                      </div>
+                  </div>
+                )}
               </>
             ) : <Skeleton className="aspect-video md:rounded-lg" /> }
           </div>
