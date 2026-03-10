@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Standard utility for fetching recent shorts from a YouTube channel using the YouTube Data API.
  * Converted to standard async function to avoid Genkit metadata authentication errors.
@@ -15,17 +16,24 @@ export type YouTubeShortDetails = z.infer<typeof YouTubeShortDetailsSchema>;
 export type YouTubeShortList = YouTubeShortDetails[];
 
 async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, channelUrl: string): Promise<string> {
+    // 1. Try strict extraction
     let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]{24})/);
     if (match) return match[1];
 
+    // 2. Try loose extraction (UC... ID present anywhere)
+    match = channelUrl.match(/(UC[a-zA-Z0-9_-]{22})/);
+    if (match) return match[1];
+
+    // 3. Try handle search
     match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
     if (match) {
-        const handle = match[1];
+        const handle = match[1].split('/')[0];
         const searchResponse = await youtube((client: any) => client.search.list({ part: ['snippet'], q: handle, type: ['channel'], maxResults: 1 }));
         const foundId = searchResponse.data.items?.[0]?.snippet?.channelId;
         if (foundId) return foundId;
     }
     
+    // 4. Try legacy username
     match = channelUrl.match(/user\/([a-zA-Z0-9_-]+)/);
     if (match) {
          const username = match[1];

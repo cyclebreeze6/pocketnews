@@ -69,14 +69,17 @@ async function fetchViaRSS(channelId: string): Promise<YouTubeVideoList> {
  * Resolves a channel handle to an ID (Costs 100 units).
  */
 async function resolveChannelId(channelUrl: string): Promise<string | null> {
+    // Stop handle matching at the first slash to prevent garbage matching
     const handleMatch = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
     if (!handleMatch) return null;
+    
+    const handle = handleMatch[1].split('/')[0];
 
     try {
         const client = await getYoutubeClient();
         const res = await client.execute(y => y.search.list({
             part: ['snippet'],
-            q: handleMatch[1],
+            q: handle,
             type: ['channel'],
             maxResults: 1
         }));
@@ -95,8 +98,22 @@ export async function fetchChannelVideos(input: { channelUrl: string, channelId?
 
     // 1. Ensure we have an ID
     if (!channelId) {
-        const match = channelUrl.match(/channel\/([a-zA-Z0-9_-]{24})/);
-        channelId = match ? match[1] : await resolveChannelId(channelUrl) || undefined;
+        // Try strict pattern
+        let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]{24})/);
+        if (match) {
+            channelId = match[1];
+        } else {
+            // Try loose pattern: Search for any string starting with UC and having 24 chars total
+            match = channelUrl.match(/(UC[a-zA-Z0-9_-]{22})/);
+            if (match) {
+                channelId = match[1];
+            }
+        }
+        
+        // If still no ID, try resolving the handle
+        if (!channelId) {
+            channelId = await resolveChannelId(channelUrl) || undefined;
+        }
     }
 
     if (!channelId) {

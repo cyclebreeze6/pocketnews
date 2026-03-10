@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview A flow for fetching basic info from a YouTube channel using the YouTube Data API.
  */
@@ -23,14 +24,18 @@ const YouTubeChannelInfoSchema = z.object({
 export type YouTubeChannelInfo = z.infer<typeof YouTubeChannelInfoSchema>;
 
 async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, channelUrl: string): Promise<string> {
-    // Try to extract from known URL patterns first (Free)
+    // 1. Try strict /channel/ ID extraction
     let match = channelUrl.match(/channel\/([a-zA-Z0-9_-]{24})/);
     if (match) return match[1];
 
-    // Try to extract handle and search for it (Requires API)
+    // 2. Try loose extraction (any UC... string in the URL)
+    match = channelUrl.match(/(UC[a-zA-Z0-9_-]{22})/);
+    if (match) return match[1];
+
+    // 3. Try handle extraction and search
     match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
     if (match) {
-        const handle = match[1];
+        const handle = match[1].split('/')[0];
         const searchResponse = await youtube((client: any) => client.search.list({
             part: ['snippet'],
             q: handle,
@@ -41,7 +46,7 @@ async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, chan
         if (foundChannelId) return foundChannelId;
     }
     
-    // Try legacy username
+    // 4. Try legacy username
     match = channelUrl.match(/user\/([a-zA-Z0-9_-]+)/);
     if (match) {
          const username = match[1];
