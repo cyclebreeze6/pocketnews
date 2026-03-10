@@ -12,11 +12,12 @@ const HARDCODED_KEYS: string[] = [
     'AIzaSyBMf0WTsLQFteR6cPmTVps8_Gk4dpwGvVM', // Key 3
     'AIzaSyCblNc5gY1jAK6zyGvmb7Trtt0ao7xstiY', // Key 4
     'AIzaSyAEgBSJdvTTUjX6X7mIaiMCifEIm9oDzIU', // Key 5
-    '', // Key 6
-    '', // Key 7
-    '', // Key 8
-    '', // Key 9
-    '', // Key 10
+    'AIzaSyAR2ZrdM0ebaCdsaLMk9e7Q4uRoiRwDijE', // Key 6
+    'AIzaSyBmCbc2D0SZvVLVPKHpI3-7Lms3YUHzuSE', // Key 7
+    'AIzaSyD8QJQH4e1O5oA1sPwCbeE1wCUMBxkvD2Q', // Key 8
+    'AIzaSyClsxXyBAk3JVclUKzRKlH-64W_D9lhEsI', // Key 9
+    'AIzaSyAr5BrZBq6HSvGkL9mauKtd8Ark6S14PVY', // Key 10
+    'AIzaSyAEUauTicNs6B1qbyadTrgEDCykxZ6VrLU', // Key 11
 ];
 
 const ENV_KEYS = [
