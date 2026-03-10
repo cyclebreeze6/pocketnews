@@ -23,6 +23,9 @@ const HARDCODED_KEYS: string[] = [
     'AIzaSyDNYMIlIfFq8VZssJD2ZdqFd73P7EbyieA', // Key 14
     'AIzaSyDTy__pDXoCS07YMjB7FSdz5cZWg5NBJ6c', // Key 15
     'AIzaSyCK2by0_-veDpXJctHO_tgUfjVfztEiKFE', // Key 16
+    'AIzaSyCRSllf2Iuf6u48_eaYQiSrMS5ge5wpAN4', // Key 17
+    'AIzaSyBiRhaQYFpKOrtZSyFZD_74iMyzZxxWR_w', // Key 18
+    'AIzaSyDr7N8DhXjM-RYKptjRwyc8oKXbTzUqx7E', // Key 19
 ];
 
 const ENV_KEYS = [
