@@ -1,8 +1,11 @@
 'use server';
 
-import { fetchNewYouTubeVideosFlow } from '../../ai/flows/sync-channels-flow';
-import type { FetchResult } from '../../ai/flows/sync-channels-flow';
+import { syncChannelsInRange } from '../../ai/flows/sync-channels-flow';
 
-export async function syncYouTubeChannels(): Promise<FetchResult> {
-  return fetchNewYouTubeVideosFlow();
+/**
+ * Server Action to trigger channel synchronization.
+ * Supports range filtering to prevent timeouts.
+ */
+export async function syncYouTubeChannels(range?: { start: string, end: string }) {
+  return syncChannelsInRange(range);
 }

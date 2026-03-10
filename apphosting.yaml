@@ -18,3 +18,9 @@ cron:
   - schedule: "every 1 hours"
     uri: "/api/cron/sync-all-channels"
     timeoutSeconds: 540
+  - schedule: "30 * * * *"
+    uri: "/api/cron/sync-remaining-channels"
+    timeoutSeconds: 540
+  - schedule: "every 2 hours"
+    uri: "/api/cron/sync-shorts"
+    timeoutSeconds: 540

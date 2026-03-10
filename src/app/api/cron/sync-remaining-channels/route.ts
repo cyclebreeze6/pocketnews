@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncYouTubeChannels } from '../../../actions/sync-channels-flow';
-import { isFirebaseAdminInitialized } from '../../../../lib/firebase-admin';
 
 export const maxDuration = 540;
 
 /**
- * CRON Group A: Syncs channels starting with A-L.
+ * CRON Group B: Syncs channels starting with M-Z.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -16,17 +15,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Process only first half of alphabet to ensure < 30s completion
-    const result = await syncYouTubeChannels({ start: 'A', end: 'L' });
+    // Process second half of alphabet
+    const result = await syncYouTubeChannels({ start: 'M', end: 'Z' });
     
     return NextResponse.json({ 
       success: true, 
-      group: 'A-L',
-      message: `Sync A-L completed. Added ${result.newVideosAdded} videos.`,
+      group: 'M-Z',
+      message: `Sync M-Z completed. Added ${result.newVideosAdded} videos.`,
       ...result 
     });
   } catch (error: any) {
-    console.error('Cron A-L failed:', error);
+    console.error('Cron M-Z failed:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

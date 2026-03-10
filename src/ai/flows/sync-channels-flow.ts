@@ -1,21 +1,12 @@
 /**
- * @fileOverview Flow to sync all enabled YouTube channels using the official YouTube Data API.
+ * @fileOverview Optimized flow to sync YouTube channels in batches to prevent cron timeouts.
  */
-import { ai } from '../genkit';
-import { z } from 'genkit';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideos } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 import { COUNTRY_TO_CONTINENT } from '../../lib/region-map';
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-
-export const FetchResultSchema = z.object({
-  newVideosAdded: z.number().describe("The total number of new videos that were successfully added across all channels."),
-  syncedChannels: z.number().describe("The number of channels that were successfully synced."),
-  errors: z.array(z.string()).optional().describe('A list of errors encountered during the sync process.'),
-});
-export type FetchResult = z.infer<typeof FetchResultSchema>;
 
 const TARGET_CATEGORY = 'Breaking News';
 
@@ -36,19 +27,21 @@ async function ensureTargetCategory() {
     }
 }
 
-export const fetchNewYouTubeVideosFlow = ai.defineFlow(
-  {
-    name: 'fetchNewYouTubeVideosFlow',
-    outputSchema: FetchResultSchema,
-  },
-  async (): Promise<FetchResult> => {
+/**
+ * High-performance sync function that supports range filtering for cron stability.
+ */
+export async function syncChannelsInRange(range?: { start: string, end: string }) {
     if (!isFirebaseAdminInitialized) {
-        return { newVideosAdded: 0, syncedChannels: 0, errors: ["Firebase Admin SDK not initialized on server."] };
+        return { newVideosAdded: 0, syncedChannels: 0, errors: ["Admin SDK not initialized."] };
     }
 
     await ensureTargetCategory();
 
-    const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
+    const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ 
+        onlyAutoSync: true,
+        nameStart: range?.start,
+        nameEnd: range?.end
+    });
     
     if (channelsToSync.length === 0) {
       return { newVideosAdded: 0, syncedChannels: 0 };
@@ -59,8 +52,7 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
     const videosToSave: any[] = [];
     let successfulSyncs = 0;
 
-    // CRITICAL OPTIMIZATION:
-    // Process in large batches (25) to maximize throughput and finish within the 30s cron window.
+    // Process in waves of 25 to maximize throughput
     const batchSize = 25;
     for (let i = 0; i < channelsToSync.length; i += batchSize) {
         const chunk = channelsToSync.slice(i, i + batchSize);
@@ -75,15 +67,10 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
                     maxResults: 1 
                 });
 
-                if (fetchedVideos.length === 0) {
-                    return { success: true };
-                }
+                if (fetchedVideos.length === 0) return { success: true };
 
-                const latestVideo = fetchedVideos[0];
-
-                if (existingIdsSet.has(latestVideo.videoId)) {
-                    return { success: true };
-                }
+                const latest = fetchedVideos[0];
+                if (existingIdsSet.has(latest.videoId)) return { success: true };
 
                 const videoRegions = [...(channel.region || ['Global'])];
                 videoRegions.forEach(r => {
@@ -93,22 +80,22 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
                     }
                 });
 
-                const videoData = {
-                    youtubeVideoId: latestVideo.videoId,
-                    title: latestVideo.title,
-                    description: latestVideo.description,
-                    thumbnailUrl: latestVideo.thumbnailUrl,
-                    channelId: channel.id,
-                    contentCategory: TARGET_CATEGORY,
-                    views: Math.floor(Math.random() * 1000),
-                    watchTime: Math.floor(Math.random() * 100),
-                    regions: videoRegions,
+                return { 
+                    success: true, 
+                    video: {
+                        youtubeVideoId: latest.videoId,
+                        title: latest.title,
+                        description: latest.description,
+                        thumbnailUrl: latest.thumbnailUrl,
+                        channelId: channel.id,
+                        contentCategory: TARGET_CATEGORY,
+                        views: Math.floor(Math.random() * 1000),
+                        watchTime: Math.floor(Math.random() * 100),
+                        regions: videoRegions,
+                    }
                 };
-                
-                return { success: true, video: videoData };
 
             } catch (error: any) {
-                console.error(`Failed to auto-sync channel "${channel.name}":`, error.message);
                 return { success: false, error: `Channel "${channel.name}": ${error.message}` };
             }
         }));
@@ -136,5 +123,4 @@ export const fetchNewYouTubeVideosFlow = ai.defineFlow(
       syncedChannels: successfulSyncs,
       errors: errorMessages.length > 0 ? errorMessages : undefined,
     };
-  }
-);
+}

@@ -6,10 +6,13 @@ import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 /**
  * Fetches channels that have a `youtubeChannelUrl` for syncing using the Admin SDK.
  * Optimizes performance by pre-filtering and providing unique IDs.
+ * Supports alphabetical range filtering to prevent cron timeouts.
  */
 export async function getChannelsForSync(options?: { 
   channelId?: string, 
-  onlyAutoSync?: boolean 
+  onlyAutoSync?: boolean,
+  nameStart?: string,
+  nameEnd?: string
 }): Promise<{ channelsToSync: Channel[], existingYoutubeIds: string[] }> {
   if (!isFirebaseAdminInitialized) {
     console.error("Firebase Admin SDK is not initialized.");
@@ -37,11 +40,21 @@ export async function getChannelsForSync(options?: {
     channelsToSync = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Channel))
         .filter(c => !!c.youtubeChannelUrl);
+
+    // Alphabetical filtering if ranges are provided
+    if (options?.nameStart || options?.nameEnd) {
+        channelsToSync = channelsToSync.filter(channel => {
+            const firstChar = (channel.name || '').charAt(0).toUpperCase();
+            let matches = true;
+            if (options.nameStart && firstChar < options.nameStart.toUpperCase()) matches = false;
+            if (options.nameEnd && firstChar > options.nameEnd.toUpperCase()) matches = false;
+            return matches;
+        });
+    }
   }
 
   // CRITICAL OPTIMIZATION: 
   // Only fetch the last 1000 video IDs to prevent timeouts as the collection grows.
-  // Checking against the last 1000 videos is enough to prevent duplicates during hourly/daily syncs.
   const videosSnapshot = await firestore.collection('videos')
     .orderBy('createdAt', 'desc')
     .limit(1000)
