@@ -136,8 +136,17 @@ export default function Home() {
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(10)), [firestore]);
+  const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(15)), [firestore]);
   const { data: recentShorts, isLoading: shortsLoading } = useCollection<Short>(shortsQuery);
+  const [randomizedShorts, setRandomizedShorts] = useState<Short[]>([]);
+
+  useEffect(() => {
+    if (recentShorts && recentShorts.length > 0) {
+      // Shuffling on the client side after hydration to avoid randomization mismatch
+      const shuffled = [...recentShorts].sort(() => Math.random() - 0.5);
+      setRandomizedShorts(shuffled.slice(0, 10));
+    }
+  }, [recentShorts]);
   
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -535,50 +544,6 @@ export default function Home() {
 
                 {!isTheaterMode && (
                   <div className="px-4 md:px-0 pt-4">
-                      {/* Shorts Shelf */}
-                      {recentShorts && recentShorts.length > 0 && (
-                        <div className="mb-12 mt-4 px-2 md:px-0">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <Clapperboard className="h-5 w-5 text-primary" />
-                                    Trending Shorts
-                                </h3>
-                                <Link href="/shorts">
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">View All</Button>
-                                </Link>
-                            </div>
-                            <Carousel opts={{ align: "start", loop: false }} className="w-full">
-                                <CarouselContent className="-ml-2 md:-ml-4">
-                                    {recentShorts.map((short) => (
-                                        <CarouselItem key={short.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
-                                            <Link href={`/shorts/${short.id}`} className="group relative block aspect-[9/16] overflow-hidden rounded-xl bg-muted border border-white/5">
-                                                <Image 
-                                                    src={short.thumbnailUrl} 
-                                                    alt={short.title} 
-                                                    fill 
-                                                    className="object-cover transition-transform duration-500 group-hover:scale-110" 
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <PlayCircle className="h-12 w-12 text-white/80" fill="currentColor" />
-                                                </div>
-                                                <div className="absolute bottom-0 left-0 right-0 p-3">
-                                                    <p className="text-xs font-semibold text-white line-clamp-2 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-                                                        {short.title}
-                                                    </p>
-                                                </div>
-                                            </Link>
-                                        </CarouselItem>
-                                    ))}
-                                </CarouselContent>
-                                <div className="hidden md:block">
-                                    <CarouselPrevious className="-left-4 bg-background/80 backdrop-blur-sm" />
-                                    <CarouselNext className="-right-4 bg-background/80 backdrop-blur-sm" />
-                                </div>
-                            </Carousel>
-                        </div>
-                      )}
-
                       <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
 
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -642,6 +607,50 @@ export default function Home() {
                           <Badge variant="outline">#technology</Badge>
                           <Badge variant="outline">#sports</Badge>
                       </div>
+
+                      {/* Shorts Shelf (Moved below video info) */}
+                      {randomizedShorts && randomizedShorts.length > 0 && (
+                        <div className="mb-12 mt-12 px-2 md:px-0">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <Clapperboard className="h-5 w-5 text-primary" />
+                                    Trending Shorts
+                                </h3>
+                                <Link href="/shorts">
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">View All</Button>
+                                </Link>
+                            </div>
+                            <Carousel opts={{ align: "start", loop: false }} className="w-full">
+                                <CarouselContent className="-ml-2 md:-ml-4">
+                                    {randomizedShorts.map((short) => (
+                                        <CarouselItem key={short.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                                            <Link href={`/shorts/${short.id}`} className="group relative block aspect-[9/16] overflow-hidden rounded-xl bg-muted border border-white/5">
+                                                <Image 
+                                                    src={short.thumbnailUrl} 
+                                                    alt={short.title} 
+                                                    fill 
+                                                    className="object-cover transition-transform duration-500 group-hover:scale-110" 
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <PlayCircle className="h-12 w-12 text-white/80" fill="currentColor" />
+                                                </div>
+                                                <div className="absolute bottom-0 left-0 right-0 p-3">
+                                                    <p className="text-xs font-semibold text-white line-clamp-2 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                                                        {short.title}
+                                                    </p>
+                                                </div>
+                                            </Link>
+                                        </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+                                <div className="hidden md:block">
+                                    <CarouselPrevious className="-left-4 bg-background/80 backdrop-blur-sm" />
+                                    <CarouselNext className="-right-4 bg-background/80 backdrop-blur-sm" />
+                                </div>
+                            </Carousel>
+                        </div>
+                      )}
                   </div>
                 )}
               </>
@@ -703,9 +712,24 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <footer className="py-4 text-center text-sm text-muted-foreground">
-        Meet the #1 App to Stream News. Watch Free!
+      
+      <footer className="py-12 border-t border-border/40 text-center text-sm text-muted-foreground bg-card/20">
+        <div className="container mx-auto px-4">
+          <p className="mb-4 font-semibold text-foreground">Meet the #1 App to Stream News. Watch Free!</p>
+          <div className="max-w-3xl mx-auto space-y-2 opacity-70">
+            <p>
+              Disclaimer: All video content, logos, and trademarks displayed on this platform belong to their respective owners and original channels on YouTube. 
+            </p>
+            <p>
+              Pocketnews TV is a curation platform providing centralized access to public news broadcasts for informational purposes.
+            </p>
+          </div>
+          <div className="mt-8 pt-8 border-t border-border/10">
+            <p>© {new Date().getFullYear()} Pocketnews TV. All rights reserved.</p>
+          </div>
+        </div>
       </footer>
+
        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
