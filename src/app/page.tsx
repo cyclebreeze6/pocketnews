@@ -9,10 +9,10 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X, UserCheck, Maximize2, Minimize2 } from 'lucide-react';
+import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X, UserCheck, Maximize2, Minimize2, Clapperboard } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel, UserProfile, Category } from '../lib/types';
+import type { Video, Channel, UserProfile, Category, Short } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -39,6 +39,7 @@ import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useRegion } from '../context/region-context';
 import { COUNTRY_TO_CONTINENT } from '../lib/region-map';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -134,6 +135,9 @@ export default function Home() {
   
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+
+  const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(10)), [firestore]);
+  const { data: recentShorts, isLoading: shortsLoading } = useCollection<Short>(shortsQuery);
   
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -531,6 +535,50 @@ export default function Home() {
 
                 {!isTheaterMode && (
                   <div className="px-4 md:px-0 pt-4">
+                      {/* Shorts Shelf */}
+                      {recentShorts && recentShorts.length > 0 && (
+                        <div className="mb-12 mt-4 px-2 md:px-0">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <Clapperboard className="h-5 w-5 text-primary" />
+                                    Trending Shorts
+                                </h3>
+                                <Link href="/shorts">
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">View All</Button>
+                                </Link>
+                            </div>
+                            <Carousel opts={{ align: "start", loop: false }} className="w-full">
+                                <CarouselContent className="-ml-2 md:-ml-4">
+                                    {recentShorts.map((short) => (
+                                        <CarouselItem key={short.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                                            <Link href={`/shorts/${short.id}`} className="group relative block aspect-[9/16] overflow-hidden rounded-xl bg-muted border border-white/5">
+                                                <Image 
+                                                    src={short.thumbnailUrl} 
+                                                    alt={short.title} 
+                                                    fill 
+                                                    className="object-cover transition-transform duration-500 group-hover:scale-110" 
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <PlayCircle className="h-12 w-12 text-white/80" fill="currentColor" />
+                                                </div>
+                                                <div className="absolute bottom-0 left-0 right-0 p-3">
+                                                    <p className="text-xs font-semibold text-white line-clamp-2 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                                                        {short.title}
+                                                    </p>
+                                                </div>
+                                            </Link>
+                                        </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+                                <div className="hidden md:block">
+                                    <CarouselPrevious className="-left-4 bg-background/80 backdrop-blur-sm" />
+                                    <CarouselNext className="-right-4 bg-background/80 backdrop-blur-sm" />
+                                </div>
+                            </Carousel>
+                        </div>
+                      )}
+
                       <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
 
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">

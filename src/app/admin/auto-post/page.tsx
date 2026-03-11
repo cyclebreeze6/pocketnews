@@ -7,7 +7,7 @@ import { Input } from '../../../components/ui/input';
 import { useToast } from '../../../hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '../../../firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
-import type { Channel } from '../../../lib/types';
+import type { Channel, Short } from '../../../lib/types';
 import { Loader2, Plus, Zap, Trash2, CheckCircle2, RefreshCw, Clapperboard } from 'lucide-react';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
@@ -31,6 +31,10 @@ export default function AdminAutoPostPage() {
     [firestore]
   );
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(autoSyncQuery);
+
+  // Fetch total shorts count for visibility
+  const shortsQuery = useMemoFirebase(() => collection(firestore, 'shorts'), [firestore]);
+  const { data: shorts } = useCollection<Short>(shortsQuery);
 
   const handleAddChannel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,9 +129,15 @@ export default function AdminAutoPostPage() {
           <h1 className="text-3xl font-bold tracking-tight font-headline">AI Auto-Post</h1>
           <p className="text-muted-foreground">Manage channels that feed your news tickers and shorts feed.</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full border border-primary/20 text-sm font-medium">
-            <Zap className="h-4 w-4 animate-pulse" />
-            Active Sources: {channels?.filter(c => c.isAutoSyncEnabled).length || 0}
+        <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full border border-primary/20 text-sm font-medium">
+                <Zap className="h-4 w-4 animate-pulse" />
+                Sources: {channels?.filter(c => c.isAutoSyncEnabled).length || 0}
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-full border border-border text-sm font-medium">
+                <Clapperboard className="h-4 w-4" />
+                Shorts: {shorts?.length || 0}
+            </div>
         </div>
       </div>
 
