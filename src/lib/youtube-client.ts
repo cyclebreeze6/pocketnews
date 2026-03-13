@@ -4,9 +4,26 @@
 import { google, youtube_v3 } from 'googleapis';
 import { getApiKeys } from '../app/actions/api-key-actions';
 
-// Simple in-memory store for the current API key index.
+/**
+ * Simple in-memory store for the current API key index.
+ * Persists across calls within the same server instance.
+ */
 let currentKeyIndex = 0;
 
+/**
+ * Advances the pointer to the next API key in the pool.
+ */
+async function rotateApiKey() {
+    const apiKeys = await getApiKeys();
+    if (apiKeys.length > 0) {
+        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+        console.log(`[YouTube API] Key rotated. Now using index ${currentKeyIndex + 1} of ${apiKeys.length}`);
+    }
+}
+
+/**
+ * Returns a configured YouTube client using the current active key index.
+ */
 async function getYouTubeClientInstance() {
     const apiKeys = await getApiKeys();
     if (apiKeys.length === 0) {
@@ -16,27 +33,24 @@ async function getYouTubeClientInstance() {
     const index = currentKeyIndex % apiKeys.length;
     const apiKey = apiKeys[index];
     
-    console.log(`[YouTube API] Using key index ${index + 1} of ${apiKeys.length}`);
-    
     return google.youtube({
         version: 'v3',
         auth: apiKey,
     });
 }
 
-async function rotateApiKey() {
-    const apiKeys = await getApiKeys();
-    if (apiKeys.length > 0) {
-        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-        console.warn(`[YouTube API] Rotated to key index ${(currentKeyIndex % apiKeys.length) + 1}`);
-    }
-}
-
 /**
- * Executes a YouTube Data API call with exhaustive API key rotation.
- * It will attempt every key in the pool if it hits an authorization or quota error.
+ * Executes a YouTube Data API call with proactive and reactive API key rotation.
+ * Proactive: Rotates on every call to getYoutubeClient to distribute load.
+ * Reactive: Rotates again if a quota or auth error occurs.
  */
 export async function getYoutubeClient() {
+    // PROACTIVE ROTATION:
+    // We advance the index immediately when a client is requested.
+    // Since fetchChannelVideos is called per-channel in sync loops, 
+    // this ensures we use a different key for almost every channel.
+    await rotateApiKey();
+
     return {
         execute: async function execute<T>(apiCall: (client: youtube_v3.Youtube) => Promise<T>): Promise<T> {
             const apiKeys = await getApiKeys();
@@ -74,7 +88,7 @@ export async function getYoutubeClient() {
                     if ((isQuotaError || isKeyError) && apiKeys.length > 1) {
                         attempts++;
                         if (attempts < maxAttempts) {
-                            console.error(`[YouTube API] Key ${currentKeyIndex + 1} failed (${errorReason || 'Limit'}). Rotating...`);
+                            console.warn(`[YouTube API] Key ${currentKeyIndex + 1} hit a limit (${errorReason}). Reactively rotating...`);
                             await rotateApiKey();
                             continue;
                         }
