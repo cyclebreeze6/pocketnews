@@ -5,33 +5,30 @@ import { google, youtube_v3 } from 'googleapis';
 import { getApiKeys } from '../app/actions/api-key-actions';
 
 /**
- * Simple in-memory store for the current API key index.
- * Persists across calls within the same server instance.
+ * Returns a configured YouTube client using an API key determined by the current hour.
+ * This ensures one specific key is used per 1-hour block, distributing quota predictably across the day.
+ * 
+ * @param offset - Used during retries to try the next key if the primary hour key is exhausted.
  */
-let currentKeyIndex = 0;
-
-/**
- * Advances the pointer to the next API key in the pool.
- */
-async function rotateApiKey() {
-    const apiKeys = await getApiKeys();
-    if (apiKeys.length > 0) {
-        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-        console.log(`[YouTube API] Key rotated. Now using index ${currentKeyIndex + 1} of ${apiKeys.length}`);
-    }
-}
-
-/**
- * Returns a configured YouTube client using the current active key index.
- */
-async function getYouTubeClientInstance() {
+async function getYouTubeClientInstance(offset: number = 0) {
     const apiKeys = await getApiKeys();
     if (apiKeys.length === 0) {
         return null;
     }
-    // Ensure index is within bounds
-    const index = currentKeyIndex % apiKeys.length;
+
+    // Deterministically pick a key based on the current UTC hour (0-23)
+    const currentHour = new Date().getUTCHours();
+    
+    // Calculate index: (hour + offset) mod totalKeys
+    const index = (currentHour + offset) % apiKeys.length;
     const apiKey = apiKeys[index];
+    
+    // Logging for visibility in server logs
+    if (offset === 0) {
+        console.log(`[YouTube API] Deterministic Selection: Using key #${index + 1} for UTC hour ${currentHour}.`);
+    } else {
+        console.log(`[YouTube API] Fallback: Hour key failed. Using fallback key #${index + 1}.`);
+    }
     
     return google.youtube({
         version: 'v3',
@@ -40,23 +37,15 @@ async function getYouTubeClientInstance() {
 }
 
 /**
- * Executes a YouTube Data API call with proactive and reactive API key rotation.
- * Proactive: Rotates on every call to getYoutubeClient to distribute load.
- * Reactive: Rotates again if a quota or auth error occurs.
+ * Executes a YouTube Data API call with time-based rotation and error recovery.
  */
 export async function getYoutubeClient() {
-    // PROACTIVE ROTATION:
-    // We advance the index immediately when a client is requested.
-    // Since fetchChannelVideos is called per-channel in sync loops, 
-    // this ensures we use a different key for almost every channel.
-    await rotateApiKey();
-
     return {
         execute: async function execute<T>(apiCall: (client: youtube_v3.Youtube) => Promise<T>): Promise<T> {
             const apiKeys = await getApiKeys();
             
             let attempts = 0;
-            const maxAttempts = apiKeys.length > 0 ? apiKeys.length : 1;
+            const maxAttempts = Math.min(apiKeys.length, 3); // Attempt up to 3 keys if the primary one fails
 
             if (apiKeys.length === 0) {
                 throw new Error('YouTube API is restricted: No active API keys configured.');
@@ -64,7 +53,7 @@ export async function getYoutubeClient() {
 
             while (attempts < maxAttempts) {
                 try {
-                    const youtube = await getYouTubeClientInstance();
+                    const youtube = await getYouTubeClientInstance(attempts);
                     if (!youtube) {
                         throw new Error('No valid YouTube client instance could be created.');
                     }
@@ -73,7 +62,7 @@ export async function getYoutubeClient() {
                     const errorMessage = error.message?.toLowerCase() || '';
                     const errorReason = error.errors?.[0]?.reason || '';
                     
-                    // Detect common reasons to rotate: Quota full, Invalid Key, or Rate Limited
+                    // Detect common reasons to try a different key: Quota full or Auth issues
                     const isQuotaError = 
                         error.code === 403 || 
                         errorMessage.includes('quota') || 
@@ -88,19 +77,18 @@ export async function getYoutubeClient() {
                     if ((isQuotaError || isKeyError) && apiKeys.length > 1) {
                         attempts++;
                         if (attempts < maxAttempts) {
-                            console.warn(`[YouTube API] Key ${currentKeyIndex + 1} hit a limit (${errorReason}). Reactively rotating...`);
-                            await rotateApiKey();
+                            console.warn(`[YouTube API] Key attempt ${attempts} failed (${errorReason}). Trying next sequential key...`);
                             continue;
                         }
                     }
                     
-                    // If we've exhausted all keys or it's a non-retryable error
-                    console.error(`[YouTube API] Critical failure:`, errorMessage);
+                    // If we've hit non-retryable error or exhausted fallback limit
+                    console.error(`[YouTube API] Execution failed:`, errorMessage);
                     throw error;
                 }
             }
             
-            throw new Error('All YouTube API keys have failed or exhausted their quotas.');
+            throw new Error('The primary hour key and fallback keys have all failed or exhausted their quotas.');
         }
     };
 }
