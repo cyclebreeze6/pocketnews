@@ -10,12 +10,16 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  const isAuthorized = cronSecret && (
+    authHeader === `Bearer ${cronSecret}` || 
+    authHeader === cronSecret
+  );
+
+  if (!isAuthorized) {
     return new Response('Unauthorized', { status: 401 });
   }
 
   try {
-    // Process second half of alphabet
     const result = await syncYouTubeChannels({ start: 'M', end: 'Z' });
     
     return NextResponse.json({ 

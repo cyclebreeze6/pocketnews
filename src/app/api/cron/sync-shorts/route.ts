@@ -8,13 +8,17 @@ export const maxDuration = 540;
 
 /**
  * Automated cron job to sync Shorts from active channels.
- * Deduplicates against recent shorts and commits in high-performance batches.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  const isAuthorized = cronSecret && (
+    authHeader === `Bearer ${cronSecret}` || 
+    authHeader === cronSecret
+  );
+
+  if (!isAuthorized) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -26,7 +30,6 @@ export async function GET(request: NextRequest) {
     const { channelsToSync } = await getChannelsForSync({ onlyAutoSync: true });
     const db = adminSDK.firestore();
     
-    // Check existing shorts (limit to last 500 for high-speed deduplication)
     const existingShortsSnap = await db.collection('shorts')
         .orderBy('createdAt', 'desc')
         .limit(500)
@@ -34,16 +37,12 @@ export async function GET(request: NextRequest) {
     const existingIds = new Set(existingShortsSnap.docs.map(doc => doc.data().youtubeVideoId));
     
     let addedCount = 0;
-    
-    // Process a random subset of channels per run to stay well within timeout limits
-    // while ensuring all channels eventually get refreshed.
     const sampleSize = 20;
     const sample = channelsToSync.sort(() => 0.5 - Math.random()).slice(0, sampleSize);
 
     for (const channel of sample) {
         if (!channel.youtubeChannelUrl) continue;
         try {
-            // Fetch 2 most recent shorts per channel to keep feed fresh
             const shorts = await fetchChannelShorts({ channelUrl: channel.youtubeChannelUrl, maxResults: 2 });
             const newShorts = shorts.filter(s => !existingIds.has(s.youtubeVideoId));
             
@@ -69,10 +68,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ 
         success: true, 
-        message: `Shorts sync completed. Added ${addedCount} new shorts from sample of ${sample.length} channels.` 
+        message: `Shorts sync completed. Added ${addedCount} new shorts.` 
     });
   } catch (error: any) {
-    console.error('Shorts Cron Critical Failure:', error);
+    console.error('Shorts Cron Failure:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

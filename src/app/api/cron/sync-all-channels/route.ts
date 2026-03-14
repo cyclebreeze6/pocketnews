@@ -1,22 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncYouTubeChannels } from '../../../actions/sync-channels-flow';
-import { isFirebaseAdminInitialized } from '../../../../lib/firebase-admin';
 
 export const maxDuration = 540;
 
 /**
- * CRON Group A: Syncs channels starting with A-L.
+ * CRON Group A: Syncs channels starting with A-L (and numbers/symbols).
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  const isAuthorized = cronSecret && (
+    authHeader === `Bearer ${cronSecret}` || 
+    authHeader === cronSecret
+  );
+
+  if (!isAuthorized) {
     return new Response('Unauthorized', { status: 401 });
   }
 
   try {
-    // Process only first half of alphabet to ensure < 30s completion
     const result = await syncYouTubeChannels({ start: 'A', end: 'L' });
     
     return NextResponse.json({ 

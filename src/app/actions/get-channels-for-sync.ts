@@ -41,20 +41,27 @@ export async function getChannelsForSync(options?: {
         .map(doc => ({ id: doc.id, ...doc.data() } as Channel))
         .filter(c => !!c.youtubeChannelUrl);
 
-    // Alphabetical filtering if ranges are provided
+    // Optimized Alphabetical filtering logic
     if (options?.nameStart || options?.nameEnd) {
         channelsToSync = channelsToSync.filter(channel => {
             const firstChar = (channel.name || '').charAt(0).toUpperCase();
-            let matches = true;
-            if (options.nameStart && firstChar < options.nameStart.toUpperCase()) matches = false;
-            if (options.nameEnd && firstChar > options.nameEnd.toUpperCase()) matches = false;
-            return matches;
+            
+            // Group A logic (A-L): Includes everything from start of index up to 'L'
+            if (options.nameStart === 'A' && options.nameEnd === 'L') {
+                return firstChar <= 'L' || (firstChar < 'A');
+            }
+            
+            // Group B logic (M-Z): Includes everything starting from 'M' to the end
+            if (options.nameStart === 'M' && options.nameEnd === 'Z') {
+                return firstChar >= 'M';
+            }
+
+            return true;
         });
     }
   }
 
-  // CRITICAL OPTIMIZATION: 
-  // Only fetch the last 1000 video IDs to prevent timeouts as the collection grows.
+  // Only fetch the last 1000 video IDs to prevent timeouts
   const videosSnapshot = await firestore.collection('videos')
     .orderBy('createdAt', 'desc')
     .limit(1000)

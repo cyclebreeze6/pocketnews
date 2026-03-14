@@ -6,14 +6,18 @@ export const maxDuration = 540; // 9 minutes to match apphosting.yaml
 
 /**
  * This route is called by a cron job to automatically sync breaking news.
- * It requires a Bearer token in the Authorization header that matches the CRON_SECRET environment variable.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  // Validate the bearer token
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // Flexible validation: Accept 'Bearer <token>' or just '<token>'
+  const isAuthorized = cronSecret && (
+    authHeader === `Bearer ${cronSecret}` || 
+    authHeader === cronSecret
+  );
+
+  if (!isAuthorized) {
     console.error('Unauthorized breaking news cron trigger attempt: Invalid or missing token.');
     return new Response('Unauthorized', { status: 401 });
   }
@@ -25,7 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       adminActive: isFirebaseAdminInitialized,
-      message: `Breaking News sync completed. Added ${result.newVideosAdded} new breaking news items.`,
+      message: `Breaking News sync completed. Added ${result.newVideosAdded} new items.`,
       ...result 
     });
   } catch (error: any) {

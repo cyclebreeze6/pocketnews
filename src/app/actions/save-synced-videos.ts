@@ -17,8 +17,7 @@ type NewVideoData = {
 };
 
 /**
- * Saves an array of new video data to Firestore using a batch write with the Admin SDK.
- * @param videos - An array of video data objects to save.
+ * Saves an array of new video data to Firestore using a batch write.
  */
 export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   if (!videos || videos.length === 0) {
@@ -26,7 +25,7 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   }
 
   if (!isFirebaseAdminInitialized) {
-    console.error("Firebase Admin SDK is not initialized. Cannot save videos from server-side flow.");
+    console.error("Firebase Admin SDK is not initialized.");
     throw new Error("Cannot save videos: Admin SDK not configured.");
   }
 
@@ -36,7 +35,7 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   const videosCollection = firestore.collection('videos');
 
   videos.forEach(video => {
-    const docRef = videosCollection.doc(); // Auto-generate ID with admin SDK
+    const docRef = videosCollection.doc();
     const videoData = {
       ...video,
       id: docRef.id,
@@ -49,9 +48,10 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
 
   await batch.commit();
 
-  // After saving, trigger notifications for each new video.
-  // This runs in the background and does not block the main function's response.
-  for (const { videoId, channelId } of newVideoNotifications) {
+  // Optimized notification firing: 
+  // Limit to most recent 5 videos per sync run to avoid server/FCM overhead
+  const topNotifications = newVideoNotifications.slice(0, 5);
+  for (const { videoId, channelId } of topNotifications) {
     sendNewVideoNotification({ videoId, channelId })
       .catch(err => console.error(`Failed to send notification for video ${videoId}:`, err));
   }
