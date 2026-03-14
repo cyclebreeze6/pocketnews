@@ -457,7 +457,7 @@ export default function Home() {
                   <div
                     ref={playerContainerRef}
                     className={cn(
-                      'z-40 w-full bg-background h-full',
+                      'z-40 w-full bg-background h-full group',
                       isPlayerSticky && isMobile && !isTheaterMode
                         ? 'fixed top-0 left-0 right-0'
                         : 'relative'
@@ -482,7 +482,7 @@ export default function Home() {
                     {isTheaterMode && (
                       <>
                         {/* Title Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <div className="max-w-4xl space-y-4">
                             <h2 className="text-3xl md:text-4xl font-bold text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.8)]">
                               {currentVideo.title}
@@ -503,7 +503,7 @@ export default function Home() {
                         </div>
 
                         {/* Playlist Overlay (Right Side) */}
-                        <div className="absolute top-0 right-0 bottom-0 w-80 bg-black/60 backdrop-blur-xl border-l border-white/10 hidden xl:flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-0 right-0 bottom-0 w-80 bg-black/60 backdrop-blur-xl border-l border-white/10 hidden xl:flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <div className="p-6 border-b border-white/10">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2">
                               <Maximize2 className="h-4 w-4" />
@@ -608,7 +608,7 @@ export default function Home() {
                           <Badge variant="outline">#sports</Badge>
                       </div>
 
-                      {/* Shorts Shelf (Moved below video info) */}
+                      {/* Shorts Shelf (Moved below video info & Randomized) */}
                       {randomizedShorts && randomizedShorts.length > 0 && (
                         <div className="mb-12 mt-12 px-2 md:px-0">
                             <div className="flex items-center justify-between mb-4">
@@ -713,6 +713,7 @@ export default function Home() {
         </div>
       </main>
       
+      {/* Disclaimer Footer */}
       <footer className="py-12 border-t border-border/40 text-center text-sm text-muted-foreground bg-card/20">
         <div className="container mx-auto px-4">
           <p className="mb-4 font-semibold text-foreground">Meet the #1 App to Stream News. Watch Free!</p>
@@ -733,15 +734,15 @@ export default function Home() {
        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
-          <DialogHeader>
+        <DialogHeader>
             <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
             <DialogDescription>
-             Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
+            Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
             </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+        </DialogHeader>
+        <DialogFooter>
             <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
-          </DialogFooter>
+        </DialogFooter>
         </DialogContent>
       </Dialog>
 

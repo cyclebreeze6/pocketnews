@@ -71,7 +71,7 @@ export function VideoPlayer({
       />
       
       {/* Navigation Controls Overlay */}
-      <div className="absolute top-1/2 left-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className="absolute top-1/2 left-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
         <Button 
           onClick={onPrevious} 
           disabled={!hasPrevious} 
@@ -82,7 +82,7 @@ export function VideoPlayer({
           <ArrowLeft className="h-8 w-8" />
         </Button>
       </div>
-      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
         <Button 
           onClick={onNext} 
           disabled={!hasNext} 
@@ -96,7 +96,7 @@ export function VideoPlayer({
 
       {/* Theater Mode Toggle Button */}
       {onToggleTheater && (
-        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex gap-2">
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex gap-2">
           <Button 
             onClick={onToggleTheater} 
             size="icon" 

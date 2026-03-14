@@ -1,4 +1,3 @@
-
 'use server';
 
 import { google, youtube_v3 } from 'googleapis';
@@ -25,9 +24,9 @@ async function getYouTubeClientInstance(offset: number = 0) {
     
     // Logging for visibility in server logs
     if (offset === 0) {
-        console.log(`[YouTube API] Deterministic Selection: Using key #${index + 1} for UTC hour ${currentHour}.`);
+        console.log(`[YouTube API] Hourly Deterministic: Using key #${index + 1} for UTC hour ${currentHour}.`);
     } else {
-        console.log(`[YouTube API] Fallback: Hour key failed. Using fallback key #${index + 1}.`);
+        console.log(`[YouTube API] Quota Fallback: Hour key failed. Using fallback key #${index + 1}.`);
     }
     
     return google.youtube({
@@ -77,7 +76,7 @@ export async function getYoutubeClient() {
                     if ((isQuotaError || isKeyError) && apiKeys.length > 1) {
                         attempts++;
                         if (attempts < maxAttempts) {
-                            console.warn(`[YouTube API] Key attempt ${attempts} failed (${errorReason}). Trying next sequential key...`);
+                            console.warn(`[YouTube API] Key attempt ${attempts} failed (${errorReason}). Trying next hourly sequential key...`);
                             continue;
                         }
                     }
@@ -88,7 +87,7 @@ export async function getYoutubeClient() {
                 }
             }
             
-            throw new Error('The primary hour key and fallback keys have all failed or exhausted their quotas.');
+            throw new Error('The primary hour key and all fallback keys have exhausted their quotas.');
         }
     };
 }
