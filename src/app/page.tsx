@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking } from '../firebase';
+import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '../firebase';
 import SiteHeader from '../components/site-header';
 import { VideoPlayer } from '../components/video-player';
 import { Badge } from '../components/ui/badge';
@@ -9,11 +9,11 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Check, Copy, UserPlus, Globe, Loader2, X, UserCheck, Maximize2, Minimize2, Clapperboard } from 'lucide-react';
+import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Clapperboard } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel, UserProfile, Category, Short } from '../lib/types';
-import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData, getDoc } from 'firebase/firestore';
+import type { Video, Channel, Short } from '../lib/types';
+import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -129,6 +129,7 @@ export default function Home() {
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
@@ -136,9 +137,17 @@ export default function Home() {
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(15)), [firestore]);
+  const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(30)), [firestore]);
   const { data: recentShorts, isLoading: shortsLoading } = useCollection<Short>(shortsQuery);
   const [randomizedShorts, setRandomizedShorts] = useState<Short[]>([]);
+
+  // Screen size check for Theater Mode restriction (Laptop/TV sizes)
+  useEffect(() => {
+    const checkScreen = () => setIsLargeScreen(window.innerWidth >= 1024);
+    checkScreen();
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
 
   useEffect(() => {
     if (recentShorts && recentShorts.length > 0) {
@@ -404,7 +413,6 @@ export default function Home() {
     }
   };
 
-  // Keyboard shortcut for Esc to exit Theater Mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isTheaterMode) {
@@ -415,7 +423,6 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTheaterMode]);
 
-  // Lock body scroll in theater mode
   useEffect(() => {
     if (isTheaterMode) {
       document.body.style.overflow = 'hidden';
@@ -473,7 +480,7 @@ export default function Home() {
                         hasNext={hasNext}
                         hasPrevious={hasPrevious}
                         isTheaterMode={isTheaterMode}
-                        onToggleTheater={isMobile ? undefined : () => setIsTheaterMode(!isTheaterMode)}
+                        onToggleTheater={isLargeScreen ? () => setIsTheaterMode(!isTheaterMode) : undefined}
                         key={currentVideo.id}
                       />
                     </div>
@@ -608,7 +615,7 @@ export default function Home() {
                           <Badge variant="outline">#sports</Badge>
                       </div>
 
-                      {/* Shorts Shelf (Moved below video info & Randomized) */}
+                      {/* Randomized Shorts Shelf below Title/Actions */}
                       {randomizedShorts && randomizedShorts.length > 0 && (
                         <div className="mb-12 mt-12 px-2 md:px-0">
                             <div className="flex items-center justify-between mb-4">

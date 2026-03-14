@@ -94,7 +94,7 @@ export function VideoPlayer({
         </Button>
       </div>
 
-      {/* Theater Mode Toggle Button */}
+      {/* Theater Mode Toggle Button - restricted to Laptop/TV sizes via conditional rendering from parent */}
       {onToggleTheater && (
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex gap-2">
           <Button 
