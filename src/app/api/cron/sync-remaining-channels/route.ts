@@ -1,48 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { syncYouTubeChannels } from '../../../actions/sync-channels-flow';
+import { syncChannelsStateful } from '../../../../ai/flows/sync-channels-flow';
 
 export const maxDuration = 540;
 
 /**
- * CRON Group B: Syncs channels starting with M-Z.
- * Supports Authorization Header or ?secret= query parameter for cronjob.de compatibility.
+ * Group B Alias: Now points to the unified stateful sync engine.
+ * This ensures that even if called separately, the system advances correctly.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const querySecret = searchParams.get('secret');
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
+  
+  const isInternalGoogleTrigger = request.headers.get('x-appengine-cron') === 'true';
 
-  const isAuthorized = cronSecret && (
+  const isAuthorized = isInternalGoogleTrigger || (cronSecret && (
     authHeader === `Bearer ${cronSecret}` || 
     authHeader === cronSecret ||
     querySecret === cronSecret
-  );
+  ));
 
   if (!isAuthorized) {
-    console.error('[Cron] Unauthorized attempt to trigger Group B sync.');
     return new Response('Unauthorized', { status: 401 });
   }
 
-  console.log('[Cron] Starting Group B sync (M-Z)...');
-
   try {
-    const result = await syncYouTubeChannels({ start: 'M', end: 'Z' });
-    
-    console.log(`[Cron] Group B completed. Channels: ${result.syncedChannels}, New Videos: ${result.newVideosAdded}`);
-
+    // Process next batch in the cursor loop
+    const result = await syncChannelsStateful(50);
     return NextResponse.json({ 
       success: true, 
-      group: 'M-Z',
-      timestamp: new Date().toISOString(),
-      message: `Sync M-Z completed. Added ${result.newVideosAdded} videos from ${result.syncedChannels} channels.`,
-      stats: {
-        newVideos: result.newVideosAdded,
-        channelsSynced: result.syncedChannels
-      }
+      group: 'Unified-Stateful',
+      message: `Batch completed. Added ${result.newVideosAdded} items.` 
     });
   } catch (error: any) {
-    console.error('[Cron] Group B failed:', error.message);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

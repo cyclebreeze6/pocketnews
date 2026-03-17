@@ -6,14 +6,14 @@ import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 /**
  * Fetches channels that have a `youtubeChannelUrl` for syncing using the Admin SDK.
  * Optimizes performance by pre-filtering and providing unique IDs.
- * Supports alphabetical range filtering to prevent cron timeouts.
+ * Supports stateful cursor-based sync to prevent duplicates and timeouts.
  */
 export async function getChannelsForSync(options?: { 
   channelId?: string, 
   onlyAutoSync?: boolean,
-  nameStart?: string,
-  nameEnd?: string
-}): Promise<{ channelsToSync: Channel[], existingYoutubeIds: string[] }> {
+  limit?: number,
+  lastChannelId?: string
+}): Promise<{ channelsToSync: Channel[], existingYoutubeIds: string[], nextCursor?: string }> {
   if (!isFirebaseAdminInitialized) {
     console.error("[Sync] Firebase Admin SDK is not initialized.");
     return { channelsToSync: [], existingYoutubeIds: [] };
@@ -21,6 +21,7 @@ export async function getChannelsForSync(options?: {
 
   const firestore = adminSDK.firestore();
   let channelsToSync: Channel[] = [];
+  let nextCursor: string | undefined;
   
   if (options?.channelId) {
     const channelDoc = await firestore.collection('channels').doc(options.channelId).get();
@@ -29,45 +30,38 @@ export async function getChannelsForSync(options?: {
       if (data.youtubeChannelUrl) channelsToSync.push({ id: channelDoc.id, ...data });
     }
   } else {
-    // Fetch all channels with a YouTube URL first, then filter locally to ensure consistency
-    // querying by boolean 'true' can sometimes skip docs where the field is missing
-    const snapshot = await firestore.collection('channels').get();
+    // Stateful Query: Fetch channels ordered by ID starting after the last one processed
+    let channelsQuery = firestore.collection('channels')
+        .where('youtubeChannelUrl', '>=', '') // Ensure has URL
+        .orderBy('id', 'asc');
+
+    if (options?.lastChannelId) {
+        channelsQuery = channelsQuery.startAfter(options.lastChannelId);
+    }
+
+    if (options?.limit) {
+        channelsQuery = channelsQuery.limit(options.limit);
+    }
+
+    const snapshot = await channelsQuery.get();
     
     channelsToSync = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Channel))
         .filter(c => {
-            const hasUrl = !!c.youtubeChannelUrl;
-            if (!hasUrl) return false;
-            
-            // If onlyAutoSync is requested, check the flag (allow missing to be false)
             if (options?.onlyAutoSync && c.isAutoSyncEnabled !== true) return false;
-            
             return true;
         });
 
-    console.log(`[Sync] Found ${channelsToSync.length} total channels meeting URL criteria.`);
-
-    // Optimized Alphabetical filtering logic
-    if (options?.nameStart || options?.nameEnd) {
-        channelsToSync = channelsToSync.filter(channel => {
-            const name = channel.name || 'Unknown';
-            const firstChar = name.charAt(0).toUpperCase();
-            
-            // Group A logic (A-L): Includes everything from start of index up to 'L'
-            // This covers numbers and special characters as well (which are < 'A')
-            if (options.nameStart === 'A' && options.nameEnd === 'L') {
-                return firstChar <= 'L';
-            }
-            
-            // Group B logic (M-Z): Includes everything starting from 'M' to the end
-            if (options.nameStart === 'M' && options.nameEnd === 'Z') {
-                return firstChar >= 'M';
-            }
-
-            return true;
-        });
-        console.log(`[Sync] Filtered to ${channelsToSync.length} channels for range ${options.nameStart}-${options.nameEnd}.`);
+    if (snapshot.docs.length > 0) {
+        nextCursor = snapshot.docs[snapshot.docs.length - 1].id;
     }
+
+    // If we reached the end but have more channels in total, next run starts from beginning
+    if (options?.limit && snapshot.docs.length < options.limit) {
+        nextCursor = undefined; // Signal to reset cursor in sync state
+    }
+
+    console.log(`[Sync] Found ${channelsToSync.length} channels for this stateful batch.`);
   }
 
   // Only fetch the last 1000 video IDs to prevent timeouts
@@ -79,5 +73,5 @@ export async function getChannelsForSync(options?: {
     
   const existingYoutubeIds = videosSnapshot.docs.map(doc => doc.data().youtubeVideoId);
 
-  return { channelsToSync, existingYoutubeIds };
+  return { channelsToSync, existingYoutubeIds, nextCursor };
 }
