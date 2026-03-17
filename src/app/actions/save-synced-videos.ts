@@ -1,7 +1,7 @@
 'use server';
 
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
-import { sendNewVideoNotification } from '../../ai/flows/send-notification-flow';
+import { sendNewVideoNotificationFlow } from '../../ai/flows/send-notification-flow';
 import { FieldValue } from 'firebase-admin/firestore';
 
 type NewVideoData = {
@@ -25,7 +25,7 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   }
 
   if (!isFirebaseAdminInitialized) {
-    console.error("Firebase Admin SDK is not initialized.");
+    console.error("[Sync] Firebase Admin SDK is not initialized.");
     throw new Error("Cannot save videos: Admin SDK not configured.");
   }
 
@@ -47,12 +47,17 @@ export async function saveSyncedVideos(videos: NewVideoData[]): Promise<void> {
   });
 
   await batch.commit();
+  console.log(`[Sync] Committed ${videos.length} videos to Firestore.`);
 
   // Optimized notification firing: 
   // Limit to most recent 5 videos per sync run to avoid server/FCM overhead
+  // Use Promise.allSettled to ensure we don't hang the sync process
   const topNotifications = newVideoNotifications.slice(0, 5);
-  for (const { videoId, channelId } of topNotifications) {
-    sendNewVideoNotification({ videoId, channelId })
-      .catch(err => console.error(`Failed to send notification for video ${videoId}:`, err));
+  if (topNotifications.length > 0) {
+    console.log(`[Sync] Triggering ${topNotifications.length} push notifications...`);
+    await Promise.allSettled(topNotifications.map(({ videoId, channelId }) => 
+      sendNewVideoNotificationFlow({ videoId, channelId })
+        .catch(err => console.error(`[Sync] Notification failed for ${videoId}:`, err.message))
+    ));
   }
 }

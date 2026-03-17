@@ -31,11 +31,13 @@ export async function runAutoSync() {
         return { newVideosAdded: 0, syncedChannels: 0, errors: ["Admin SDK not initialized."] };
     }
     
+    console.log("[Sync] Starting Breaking News auto-sync...");
     await ensureBreakingNewsCategory();
 
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
     
     if (channelsToSync.length === 0) {
+      console.log("[Sync] No active auto-sync channels found.");
       return { newVideosAdded: 0, syncedChannels: 0 };
     }
 
@@ -45,10 +47,11 @@ export async function runAutoSync() {
     let successfulSyncs = 0;
 
     // CRITICAL OPTIMIZATION:
-    // Process in large batches (25) to maximize throughput and finish within the 30s cron window.
+    // Process in batches to maximize throughput
     const batchSize = 25;
     for (let i = 0; i < channelsToSync.length; i += batchSize) {
         const chunk = channelsToSync.slice(i, i + batchSize);
+        console.log(`[Sync] Processing batch ${Math.floor(i/batchSize) + 1} (${chunk.length} channels)...`);
         
         const results = await Promise.all(chunk.map(async (channel) => {
             if (!channel.youtubeChannelUrl) return null;
@@ -85,7 +88,7 @@ export async function runAutoSync() {
                 return { success: true, video: videoData };
 
             } catch (error: any) {
-                console.error(`Failed to sync breaking news for channel "${channel.name}":`, error.message);
+                console.error(`[Sync] Failed for channel "${channel.name}":`, error.message);
                 return { success: false, error: `Channel "${channel.name}": ${error.message}` };
             }
         }));
@@ -105,7 +108,10 @@ export async function runAutoSync() {
     }
 
     if (videosToSave.length > 0) {
+        console.log(`[Sync] Saving ${videosToSave.length} new videos...`);
         await saveSyncedVideos(videosToSave);
+    } else {
+        console.log("[Sync] No new videos found to save.");
     }
 
     return {

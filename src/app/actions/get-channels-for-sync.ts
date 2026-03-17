@@ -15,7 +15,7 @@ export async function getChannelsForSync(options?: {
   nameEnd?: string
 }): Promise<{ channelsToSync: Channel[], existingYoutubeIds: string[] }> {
   if (!isFirebaseAdminInitialized) {
-    console.error("Firebase Admin SDK is not initialized.");
+    console.error("[Sync] Firebase Admin SDK is not initialized.");
     return { channelsToSync: [], existingYoutubeIds: [] };
   }
 
@@ -29,26 +29,34 @@ export async function getChannelsForSync(options?: {
       if (data.youtubeChannelUrl) channelsToSync.push({ id: channelDoc.id, ...data });
     }
   } else {
-    let query: any = firestore.collection('channels');
-    if (options?.onlyAutoSync) {
-      query = query.where('isAutoSyncEnabled', '==', true);
-    } else {
-      query = query.where('youtubeChannelUrl', '!=', null);
-    }
+    // Fetch all channels with a YouTube URL first, then filter locally to ensure consistency
+    // querying by boolean 'true' can sometimes skip docs where the field is missing
+    const snapshot = await firestore.collection('channels').get();
     
-    const snapshot = await query.get();
     channelsToSync = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Channel))
-        .filter(c => !!c.youtubeChannelUrl);
+        .filter(c => {
+            const hasUrl = !!c.youtubeChannelUrl;
+            if (!hasUrl) return false;
+            
+            // If onlyAutoSync is requested, check the flag (allow missing to be false)
+            if (options?.onlyAutoSync && c.isAutoSyncEnabled !== true) return false;
+            
+            return true;
+        });
+
+    console.log(`[Sync] Found ${channelsToSync.length} total channels meeting URL criteria.`);
 
     // Optimized Alphabetical filtering logic
     if (options?.nameStart || options?.nameEnd) {
         channelsToSync = channelsToSync.filter(channel => {
-            const firstChar = (channel.name || '').charAt(0).toUpperCase();
+            const name = channel.name || 'Unknown';
+            const firstChar = name.charAt(0).toUpperCase();
             
             // Group A logic (A-L): Includes everything from start of index up to 'L'
+            // This covers numbers and special characters as well (which are < 'A')
             if (options.nameStart === 'A' && options.nameEnd === 'L') {
-                return firstChar <= 'L' || (firstChar < 'A');
+                return firstChar <= 'L';
             }
             
             // Group B logic (M-Z): Includes everything starting from 'M' to the end
@@ -58,6 +66,7 @@ export async function getChannelsForSync(options?: {
 
             return true;
         });
+        console.log(`[Sync] Filtered to ${channelsToSync.length} channels for range ${options.nameStart}-${options.nameEnd}.`);
     }
   }
 

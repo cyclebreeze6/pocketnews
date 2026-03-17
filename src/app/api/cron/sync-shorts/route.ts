@@ -26,10 +26,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, message: 'Admin SDK not ready' });
   }
 
+  console.log("[Sync] Starting Shorts auto-sync cron...");
+
   try {
     const { channelsToSync } = await getChannelsForSync({ onlyAutoSync: true });
+    if (channelsToSync.length === 0) {
+        return NextResponse.json({ success: true, message: 'No channels enabled for auto-sync.' });
+    }
+
     const db = adminSDK.firestore();
     
+    // Fetch recent short IDs to prevent duplicates (limit to 500 for speed)
     const existingShortsSnap = await db.collection('shorts')
         .orderBy('createdAt', 'desc')
         .limit(500)
@@ -37,13 +44,17 @@ export async function GET(request: NextRequest) {
     const existingIds = new Set(existingShortsSnap.docs.map(doc => doc.data().youtubeVideoId));
     
     let addedCount = 0;
-    const sampleSize = 20;
-    const sample = channelsToSync.sort(() => 0.5 - Math.random()).slice(0, sampleSize);
+    // Process a random selection of channels each time to stay fresh without hitting limits
+    const sampleSize = 15;
+    const shuffled = [...channelsToSync].sort(() => Math.random() - 0.5);
+    const sample = shuffled.slice(0, sampleSize);
+
+    console.log(`[Sync] Scanning ${sample.length} random channels for new shorts...`);
 
     for (const channel of sample) {
         if (!channel.youtubeChannelUrl) continue;
         try {
-            const shorts = await fetchChannelShorts({ channelUrl: channel.youtubeChannelUrl, maxResults: 2 });
+            const shorts = await fetchChannelShorts({ channelUrl: channel.youtubeChannelUrl, maxResults: 3 });
             const newShorts = shorts.filter(s => !existingIds.has(s.youtubeVideoId));
             
             if (newShorts.length > 0) {
@@ -62,16 +73,18 @@ export async function GET(request: NextRequest) {
                 await batch.commit();
             }
         } catch (e: any) {
-            console.warn(`Shorts cron failed for ${channel.name}: ${e.message}`);
+            console.warn(`[Sync] Shorts fetch failed for ${channel.name}: ${e.message}`);
         }
     }
+
+    console.log(`[Sync] Shorts cron completed. Added ${addedCount} new items.`);
 
     return NextResponse.json({ 
         success: true, 
         message: `Shorts sync completed. Added ${addedCount} new shorts.` 
     });
   } catch (error: any) {
-    console.error('Shorts Cron Failure:', error);
+    console.error('[Sync] Shorts Cron Failure:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
