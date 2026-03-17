@@ -5,6 +5,7 @@ export const maxDuration = 540;
 
 /**
  * CRON Group A: Syncs channels starting with A-L (and numbers/symbols).
+ * This splits the workload to ensure completion within external 30s timeouts.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -16,20 +17,25 @@ export async function GET(request: NextRequest) {
   );
 
   if (!isAuthorized) {
+    console.error('[Cron] Unauthorized attempt to trigger Group A sync.');
     return new Response('Unauthorized', { status: 401 });
   }
+
+  console.log('[Cron] Starting Group A sync (A-L)...');
 
   try {
     const result = await syncYouTubeChannels({ start: 'A', end: 'L' });
     
+    console.log(`[Cron] Group A completed. Channels: ${result.syncedChannels}, New Videos: ${result.newVideosAdded}`);
+
     return NextResponse.json({ 
       success: true, 
       group: 'A-L',
-      message: `Sync A-L completed. Added ${result.newVideosAdded} videos.`,
+      message: `Sync A-L completed. Added ${result.newVideosAdded} videos from ${result.syncedChannels} channels.`,
       ...result 
     });
   } catch (error: any) {
-    console.error('Cron A-L failed:', error);
+    console.error('[Cron] Group A failed:', error.message);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
