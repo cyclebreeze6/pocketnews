@@ -5,15 +5,18 @@ export const maxDuration = 540;
 
 /**
  * CRON Group B: Syncs channels starting with M-Z.
- * This splits the workload to ensure completion within external 30s timeouts.
+ * Supports Authorization Header or ?secret= query parameter for cronjob.de compatibility.
  */
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const querySecret = searchParams.get('secret');
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
   const isAuthorized = cronSecret && (
     authHeader === `Bearer ${cronSecret}` || 
-    authHeader === cronSecret
+    authHeader === cronSecret ||
+    querySecret === cronSecret
   );
 
   if (!isAuthorized) {
@@ -31,8 +34,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       group: 'M-Z',
+      timestamp: new Date().toISOString(),
       message: `Sync M-Z completed. Added ${result.newVideosAdded} videos from ${result.syncedChannels} channels.`,
-      ...result 
+      stats: {
+        newVideos: result.newVideosAdded,
+        channelsSynced: result.syncedChannels
+      }
     });
   } catch (error: any) {
     console.error('[Cron] Group B failed:', error.message);

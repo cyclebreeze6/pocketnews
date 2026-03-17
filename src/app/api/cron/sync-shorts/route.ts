@@ -5,15 +5,18 @@ export const maxDuration = 540;
 
 /**
  * Automated cron job to sync Shorts from active channels.
- * Uses the shared server action for consistency and reliability.
+ * Supports Authorization Header or ?secret= query parameter for cronjob.de compatibility.
  */
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const querySecret = searchParams.get('secret');
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
   const isAuthorized = cronSecret && (
     authHeader === `Bearer ${cronSecret}` || 
-    authHeader === cronSecret
+    authHeader === cronSecret ||
+    querySecret === cronSecret
   );
 
   if (!isAuthorized) {
@@ -30,8 +33,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ 
         success: true, 
+        timestamp: new Date().toISOString(),
         message: `Shorts sync completed. Added ${result.count} new shorts from ${result.synced} channels.`,
-        ...result
+        newShortsCount: result.count,
+        syncedChannels: result.synced
     });
   } catch (error: any) {
     console.error('[Cron] Shorts sync failed:', error.message);
