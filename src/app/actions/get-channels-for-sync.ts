@@ -32,7 +32,7 @@ export async function getChannelsForSync(options?: {
   } else {
     // FETCH LOGIC:
     // We fetch a larger slice than requested to account for channels that might be filtered out in-code.
-    // For ~70 channels, fetching 100 is instant and reliable.
+    // This allows us to advance the cursor even if we hit a 'dead' patch of non-auto-sync channels.
     const fetchLimit = options?.limit ? Math.max(options.limit * 2, 50) : 100;
 
     let channelsQuery = firestore.collection('channels')
@@ -46,7 +46,7 @@ export async function getChannelsForSync(options?: {
     const snapshot = await channelsQuery.get();
     const allFetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Channel));
     
-    // Filter in-memory to avoid complex index requirements
+    // Filter in-memory to avoid complex index requirements or inequality constraints on different fields
     channelsToSync = allFetched.filter(c => {
         const hasUrl = !!c.youtubeChannelUrl;
         const autoSyncMatch = options?.onlyAutoSync ? c.isAutoSyncEnabled === true : true;
@@ -56,22 +56,23 @@ export async function getChannelsForSync(options?: {
     // Enforce the requested limit if provided
     if (options?.limit && channelsToSync.length > options.limit) {
         channelsToSync = channelsToSync.slice(0, options.limit);
-        // Next run starts after the LAST item we actually processed
+        // Next run starts after the LAST item we actually processed/filtered in this specific sub-set
         nextCursor = channelsToSync[channelsToSync.length - 1].id;
     } else if (snapshot.docs.length > 0) {
-        // Otherwise, move cursor to the end of this physical batch
+        // Otherwise, move cursor to the end of this physical batch so we don't scan them again
         nextCursor = snapshot.docs[snapshot.docs.length - 1].id;
     }
 
-    // Reset Signal: If we fetched fewer than the limit, we've exhausted the library
+    // Reset Signal: If we fetched fewer than the limit, we've physically reached the end of the collection
     if (snapshot.docs.length < fetchLimit) {
         nextCursor = undefined; 
     }
 
-    console.log(`[Sync] Queried ${snapshot.docs.length} docs. Found ${channelsToSync.length} actionable sources.`);
+    console.log(`[Sync] Searched ${snapshot.docs.length} docs. Actionable sources found: ${channelsToSync.length}. Next cursor state: ${nextCursor || 'END'}`);
   }
 
   // Fetch recent video IDs to prevent duplicates (last 1000 items is sufficient)
+  // Single field order-by index is automatic in Firestore
   const videosSnapshot = await firestore.collection('videos')
     .orderBy('createdAt', 'desc')
     .limit(1000)

@@ -24,30 +24,31 @@ export async function GET(request: NextRequest) {
   ));
 
   if (!isAuthorized) {
-    console.error('[Cron] Unauthorized attempt to trigger Internal Sync.');
+    console.error('[Cron] Unauthorized attempt to trigger Internal Sync Engine.');
     return new Response('Unauthorized', { status: 401 });
   }
 
-  console.log('[Cron] Starting Stateful Internal Sync Batch...');
+  console.log('[Cron] Triggering Internal Sync Engine Batch...');
 
   try {
-    // Process a larger batch (50 channels) since we have a 9-minute internal timeout
+    // Process a batch of 50. Since we have a 9-minute timeout on GCP internal routes,
+    // this is perfectly safe and highly efficient.
     const result = await syncChannelsStateful(50);
     
-    console.log(`[Cron] Sync completed. Channels: ${result.syncedChannels}, New Videos: ${result.newVideosAdded}`);
+    console.log(`[Cron] Batch complete. Synced: ${result.syncedChannels}, New: ${result.newVideosAdded}. Message: ${result.message || 'Success'}`);
 
     return NextResponse.json({ 
       success: true, 
-      type: 'stateful-internal',
+      type: 'internal-stateful-loop',
       timestamp: new Date().toISOString(),
-      message: `Sync completed. Added ${result.newVideosAdded} videos from ${result.syncedChannels} channels.`,
+      message: result.message || 'Batch processed.',
       stats: {
         newVideos: result.newVideosAdded,
         channelsSynced: result.syncedChannels
       }
     });
   } catch (error: any) {
-    console.error('[Cron] Internal Sync failed:', error.message);
+    console.error('[Cron] Internal Sync Engine failed critical error:', error.message);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
