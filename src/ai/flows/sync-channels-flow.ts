@@ -8,6 +8,7 @@ import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 import { COUNTRY_TO_CONTINENT } from '../../lib/region-map';
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { advanceApiKeyRotation } from '../../lib/youtube-client';
 
 const TARGET_CATEGORY = 'Breaking News';
 const STATE_DOC_PATH = 'metadata/sync_state';
@@ -38,6 +39,10 @@ export async function syncChannelsStateful(batchSize: number = 30) {
     }
 
     console.log(`[Sync Engine] Starting stateful run (Target Batch: ${batchSize})...`);
+    
+    // Rotate to the next API key for this internal batch
+    await advanceApiKeyRotation();
+    
     await ensureTargetCategory();
     const firestore = adminSDK.firestore();
     

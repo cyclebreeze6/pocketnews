@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -17,6 +16,8 @@ import {
   Menu,
   Globe,
   Zap,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -60,6 +61,9 @@ import { ScrollArea } from './ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { COUNTRY_TO_CONTINENT, CONTINENTS } from '../lib/region-map';
+import { runAutoSyncBreakingNews } from '../app/actions/auto-sync-breaking-news';
+import { useToast } from '../hooks/use-toast';
+import { cn } from '../lib/utils';
 
 const toDate = (timestamp: Timestamp | Date | string): Date => {
     if (timestamp instanceof Timestamp) {
@@ -77,8 +81,10 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const { firestore } = useFirebase();
+  const { toast } = useToast();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const router = useRouter(); 
   const pathname = usePathname();
   const { selectedRegion, setSelectedRegion } = useRegion();
@@ -135,6 +141,21 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
   const handleLogout = () => {
     auth.signOut();
     router.push('/');
+  };
+
+  const handleQuickAutoPost = async () => {
+    setIsSyncing(true);
+    try {
+        const result = await runAutoSyncBreakingNews();
+        toast({ 
+            title: "Auto-Post Successful", 
+            description: `Imported ${result.newVideosAdded} videos using a fresh API key for this run.` 
+        });
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Auto-Post Failed", description: e.message });
+    } finally {
+        setIsSyncing(false);
+    }
   };
 
   // Group regions by continent for the selection UI
@@ -197,12 +218,24 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
               </Button>
 
               {userProfile?.isAdmin && (
-                <Link href="/admin/auto-post" className='hidden sm:inline-flex'>
-                  <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10">
-                      <Zap className="h-5 w-5 fill-primary/20 animate-pulse" />
-                      <span className="sr-only">Auto-Post</span>
-                  </Button>
-                </Link>
+                <div className="flex items-center gap-1">
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleQuickAutoPost}
+                        disabled={isSyncing}
+                        className="hidden lg:inline-flex text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 font-bold border border-cyan-400/20"
+                    >
+                        {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                        {isSyncing ? 'Posting...' : 'Auto-Import'}
+                    </Button>
+                    <Link href="/admin/auto-post" className='hidden sm:inline-flex'>
+                        <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10" title="Go to Auto-Post Settings">
+                            <Zap className="h-5 w-5 fill-primary/20 animate-pulse" />
+                            <span className="sr-only">Auto-Post Dashboard</span>
+                        </Button>
+                    </Link>
+                </div>
               )}
 
                <Link href="/shorts" className='hidden sm:inline-flex'>

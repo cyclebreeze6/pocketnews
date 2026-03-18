@@ -6,6 +6,7 @@ import { fetchChannelVideos } from './youtube-channel-videos-flow';
 import { saveSyncedVideos } from '../../app/actions/save-synced-videos';
 import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { advanceApiKeyRotation } from '../../lib/youtube-client';
 
 const BREAKING_NEWS_CATEGORY = 'Breaking News';
 
@@ -32,6 +33,10 @@ export async function runAutoSync() {
     }
     
     console.log("[Sync] Starting Breaking News auto-sync...");
+    
+    // Rotate to the next API key for this run
+    await advanceApiKeyRotation();
+    
     await ensureBreakingNewsCategory();
 
     const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ onlyAutoSync: true });
