@@ -1,6 +1,6 @@
 /**
  * @fileOverview Optimized flow to sync YouTube channels in batches to prevent cron timeouts.
- * Updated to support internal cursor-based state management.
+ * Updated to support internal cursor-based state management and resilient processing.
  */
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideos } from './youtube-channel-videos-flow';
@@ -37,12 +37,19 @@ export async function syncChannelsStateful(batchSize: number = 30) {
         return { newVideosAdded: 0, syncedChannels: 0, errors: ["Admin SDK not initialized."] };
     }
 
+    console.log(`[Sync Engine] Starting stateful run (Target Batch: ${batchSize})...`);
     await ensureTargetCategory();
     const firestore = adminSDK.firestore();
     
     // 1. Get previous cursor
     const stateDoc = await firestore.doc(STATE_DOC_PATH).get();
     const lastChannelId = stateDoc.exists ? stateDoc.data()?.lastChannelId : undefined;
+
+    if (lastChannelId) {
+        console.log(`[Sync Engine] Resuming from cursor: ${lastChannelId}`);
+    } else {
+        console.log(`[Sync Engine] Starting fresh loop from beginning.`);
+    }
 
     // 2. Fetch next batch of channels
     const { channelsToSync, existingYoutubeIds, nextCursor } = await getChannelsForSync({ 
@@ -52,10 +59,11 @@ export async function syncChannelsStateful(batchSize: number = 30) {
     });
     
     if (channelsToSync.length === 0) {
-      // If we were at the end, reset cursor and try again from start
-      if (lastChannelId) {
+      // If we physically reached the end but found no auto-sync channels, reset and restart
+      if (nextCursor === undefined && lastChannelId) {
+          console.log("[Sync Engine] Loop complete. Resetting cursor to start.");
           await firestore.doc(STATE_DOC_PATH).set({ lastChannelId: null, lastSyncAt: FieldValue.serverTimestamp() }, { merge: true });
-          return syncChannelsStateful(batchSize);
+          return { newVideosAdded: 0, syncedChannels: 0, message: "Loop reset." };
       }
       return { newVideosAdded: 0, syncedChannels: 0 };
     }
@@ -69,6 +77,7 @@ export async function syncChannelsStateful(batchSize: number = 30) {
     const concurrentBatchSize = 10;
     for (let i = 0; i < channelsToSync.length; i += concurrentBatchSize) {
         const chunk = channelsToSync.slice(i, i + concurrentBatchSize);
+        console.log(`[Sync Engine] Processing wave ${Math.floor(i/concurrentBatchSize) + 1} of ${Math.ceil(channelsToSync.length/concurrentBatchSize)}...`);
         
         const results = await Promise.all(chunk.map(async (channel) => {
             if (!channel.youtubeChannelUrl) return null;
@@ -85,6 +94,7 @@ export async function syncChannelsStateful(batchSize: number = 30) {
                 const latest = fetchedVideos[0];
                 if (existingIdsSet.has(latest.videoId)) return { success: true };
 
+                // Build regional tags
                 const videoRegions = [...(channel.region || ['Global'])];
                 videoRegions.forEach(r => {
                     const continent = COUNTRY_TO_CONTINENT[r];
@@ -109,6 +119,7 @@ export async function syncChannelsStateful(batchSize: number = 30) {
                 };
 
             } catch (error: any) {
+                console.error(`[Sync Engine] Channel "${channel.name}" failed:`, error.message);
                 return { success: false, error: `Channel "${channel.name}": ${error.message}` };
             }
         }));
@@ -129,7 +140,10 @@ export async function syncChannelsStateful(batchSize: number = 30) {
 
     // 4. Commit results
     if (videosToSave.length > 0) {
+        console.log(`[Sync Engine] Found ${videosToSave.length} new items. Saving to database...`);
         await saveSyncedVideos(videosToSave);
+    } else {
+        console.log("[Sync Engine] No new content found in this batch.");
     }
 
     // 5. Update cursor state for next run
@@ -137,8 +151,11 @@ export async function syncChannelsStateful(batchSize: number = 30) {
         lastChannelId: nextCursor || null, 
         lastSyncAt: FieldValue.serverTimestamp(),
         lastBatchSize: channelsToSync.length,
-        lastVideosFound: videosToSave.length
+        lastVideosFound: videosToSave.length,
+        isLoopFinished: nextCursor === undefined
     }, { merge: true });
+
+    console.log(`[Sync Engine] Batch complete. Next cursor: ${nextCursor || 'END (RESET)'}`);
 
     return {
       newVideosAdded: videosToSave.length,
@@ -151,7 +168,5 @@ export async function syncChannelsStateful(batchSize: number = 30) {
  * Legacy support for range-based sync
  */
 export async function syncChannelsInRange(range?: { start: string, end: string }) {
-    // For internal efficiency, we now favor the stateful cursor
-    // but we can fallback to the alphabetical split if specifically requested via URL
     return syncChannelsStateful(50);
 }

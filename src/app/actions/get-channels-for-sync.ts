@@ -5,8 +5,8 @@ import { adminSDK, isFirebaseAdminInitialized } from '../../lib/firebase-admin';
 
 /**
  * Fetches channels that have a `youtubeChannelUrl` for syncing using the Admin SDK.
- * Optimizes performance by pre-filtering and providing unique IDs.
- * Supports stateful cursor-based sync to prevent duplicates and timeouts.
+ * Optimized to prevent Firestore query errors (range vs order by conflicts).
+ * Uses in-memory filtering for robustness with libraries under 1000 items.
  */
 export async function getChannelsForSync(options?: { 
   channelId?: string, 
@@ -30,41 +30,48 @@ export async function getChannelsForSync(options?: {
       if (data.youtubeChannelUrl) channelsToSync.push({ id: channelDoc.id, ...data });
     }
   } else {
-    // Stateful Query: Fetch channels ordered by ID starting after the last one processed
+    // FETCH LOGIC:
+    // We fetch a larger slice than requested to account for channels that might be filtered out in-code.
+    // For ~70 channels, fetching 100 is instant and reliable.
+    const fetchLimit = options?.limit ? Math.max(options.limit * 2, 50) : 100;
+
     let channelsQuery = firestore.collection('channels')
-        .where('youtubeChannelUrl', '>=', '') // Ensure has URL
-        .orderBy('id', 'asc');
+        .orderBy(adminSDK.firestore.FieldPath.documentId(), 'asc')
+        .limit(fetchLimit);
 
     if (options?.lastChannelId) {
         channelsQuery = channelsQuery.startAfter(options.lastChannelId);
     }
 
-    if (options?.limit) {
-        channelsQuery = channelsQuery.limit(options.limit);
-    }
-
     const snapshot = await channelsQuery.get();
+    const allFetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Channel));
     
-    channelsToSync = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Channel))
-        .filter(c => {
-            if (options?.onlyAutoSync && c.isAutoSyncEnabled !== true) return false;
-            return true;
-        });
+    // Filter in-memory to avoid complex index requirements
+    channelsToSync = allFetched.filter(c => {
+        const hasUrl = !!c.youtubeChannelUrl;
+        const autoSyncMatch = options?.onlyAutoSync ? c.isAutoSyncEnabled === true : true;
+        return hasUrl && autoSyncMatch;
+    });
 
-    if (snapshot.docs.length > 0) {
+    // Enforce the requested limit if provided
+    if (options?.limit && channelsToSync.length > options.limit) {
+        channelsToSync = channelsToSync.slice(0, options.limit);
+        // Next run starts after the LAST item we actually processed
+        nextCursor = channelsToSync[channelsToSync.length - 1].id;
+    } else if (snapshot.docs.length > 0) {
+        // Otherwise, move cursor to the end of this physical batch
         nextCursor = snapshot.docs[snapshot.docs.length - 1].id;
     }
 
-    // If we reached the end but have more channels in total, next run starts from beginning
-    if (options?.limit && snapshot.docs.length < options.limit) {
-        nextCursor = undefined; // Signal to reset cursor in sync state
+    // Reset Signal: If we fetched fewer than the limit, we've exhausted the library
+    if (snapshot.docs.length < fetchLimit) {
+        nextCursor = undefined; 
     }
 
-    console.log(`[Sync] Found ${channelsToSync.length} channels for this stateful batch.`);
+    console.log(`[Sync] Queried ${snapshot.docs.length} docs. Found ${channelsToSync.length} actionable sources.`);
   }
 
-  // Only fetch the last 1000 video IDs to prevent timeouts
+  // Fetch recent video IDs to prevent duplicates (last 1000 items is sufficient)
   const videosSnapshot = await firestore.collection('videos')
     .orderBy('createdAt', 'desc')
     .limit(1000)
