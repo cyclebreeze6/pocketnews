@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '../../../../components/ui/alert';
-import { Monitor, RefreshCw, Zap, CheckCircle2, Clock, PlayCircle, Loader2, Database } from 'lucide-react';
+import { Monitor, RefreshCw, Zap, CheckCircle2, Clock, PlayCircle, Loader2, Database, AlertCircle, RotateCcw } from 'lucide-react';
 import { useCollection, useFirebase, useMemoFirebase, useDoc } from '../../../../firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import type { Channel } from '../../../../lib/types';
 import { Badge } from '../../../../components/ui/badge';
 import Link from 'next/link';
 import { Button } from '../../../../components/ui/button';
-import { syncYouTubeChannels } from '../../../actions/sync-channels-flow';
+import { syncYouTubeChannels, triggerSyncReset } from '../../../actions/sync-channels-flow';
 import { useToast } from '../../../../hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -18,6 +18,7 @@ export default function AdminSyncStatusPage() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [isTriggering, setIsTriggering] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   
   const activeSyncQuery = useMemoFirebase(() => 
     query(collection(firestore, 'channels'), where('isAutoSyncEnabled', '==', true)), 
@@ -48,21 +49,53 @@ export default function AdminSyncStatusPage() {
     }
   };
 
+  const handleResetCursor = async () => {
+    if (!confirm('This will force the sync engine to start over from the beginning of your library. Continue?')) return;
+    
+    setIsResetting(true);
+    try {
+        const result = await triggerSyncReset();
+        if (result.success) {
+            toast({ title: 'Cursor Reset', description: 'The next sync run will start from the beginning.' });
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Reset Failed', description: error.message });
+    } finally {
+        setIsResetting(false);
+    }
+  };
+
   const lastSyncDate = syncState?.lastSyncAt ? (syncState.lastSyncAt as any).toDate() : null;
+  const statusColor = syncState?.status === 'success' ? 'text-green-500' : (syncState?.status === 'partial_success' ? 'text-yellow-500' : 'text-primary');
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Internal Sync Engine</h1>
-        <Button 
-          variant="default" 
-          onClick={handleManualTrigger} 
-          disabled={isTriggering}
-          className="bg-primary hover:bg-primary/90"
-        >
-          {isTriggering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
-          Force Run Batch
-        </Button>
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight font-headline">Internal Sync Engine</h1>
+            <p className="text-muted-foreground">Manage the 24/7 background automation loop.</p>
+        </div>
+        <div className="flex gap-2">
+            <Button 
+                variant="outline" 
+                onClick={handleResetCursor} 
+                disabled={isResetting || !syncState?.lastChannelId}
+            >
+                {isResetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                Reset Loop
+            </Button>
+            <Button 
+                variant="default" 
+                onClick={handleManualTrigger} 
+                disabled={isTriggering}
+                className="bg-primary hover:bg-primary/90"
+            >
+                {isTriggering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                Force Run Batch
+            </Button>
+        </div>
       </div>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -80,8 +113,8 @@ export default function AdminSyncStatusPage() {
             <Alert variant="default" className="border-primary/50 bg-primary/5">
               <CheckCircle2 className="h-4 w-4 text-primary" />
               <AlertTitle>Active & Stateful</AlertTitle>
-              <AlertDescription>
-                The system is tracking progress via Firestore cursors.
+              <AlertDescription className="text-xs">
+                {syncState?.lastMessage || 'Engine is idle and waiting for the next trigger.'}
               </AlertDescription>
             </Alert>
             <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -106,12 +139,12 @@ export default function AdminSyncStatusPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-3 border rounded-lg bg-muted/30">
-                <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Last Channel ID</p>
-                <p className="text-sm font-mono truncate">{syncState?.lastChannelId || 'Starting from loop begin...'}</p>
+                <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Cursor Position</p>
+                <p className="text-sm font-mono truncate">{syncState?.lastChannelId || 'Loop Beginning'}</p>
             </div>
             <div className="flex items-center justify-between px-1">
-                <span className="text-sm text-muted-foreground">Last batch size:</span>
-                <span className="text-sm font-bold">{syncState?.lastBatchSize || 0}</span>
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <span className={`text-sm font-bold uppercase ${statusColor}`}>{syncState?.status || 'Unknown'}</span>
             </div>
           </CardContent>
         </Card>
@@ -120,34 +153,53 @@ export default function AdminSyncStatusPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-primary" />
-              Library Coverage
+              Batch Stats
             </CardTitle>
             <CardDescription>
-              Overview of monitored news sources.
+              Performance of the last automated run.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 border rounded-lg text-center">
-                <p className="text-2xl font-bold text-primary">{activeChannels?.length || 0}</p>
-                <p className="text-xs text-muted-foreground">Active Sources</p>
+                <p className="text-2xl font-bold text-primary">{syncState?.lastBatchSize || 0}</p>
+                <p className="text-xs text-muted-foreground">Channels</p>
               </div>
               <div className="p-4 border rounded-lg text-center">
-                <p className="text-2xl font-bold text-primary">24/7</p>
-                <p className="text-xs text-muted-foreground">Sync Loop</p>
+                <p className="text-2xl font-bold text-primary">{syncState?.lastVideosFound || 0}</p>
+                <p className="text-xs text-muted-foreground">New Videos</p>
               </div>
             </div>
-            <Link href="/admin/auto-post">
+            <Link href="/admin/auto-post" className="w-full">
               <Button className="w-full" variant="outline">Manage Sources</Button>
             </Link>
           </CardContent>
         </Card>
       </div>
 
+      {syncState?.lastErrors && syncState.lastErrors.length > 0 && (
+        <Card className="border-destructive/20">
+            <CardHeader className="bg-destructive/5">
+                <CardTitle className="flex items-center gap-2 text-destructive text-lg">
+                    <AlertCircle className="h-5 w-5" />
+                    Recent Loop Warnings
+                </CardTitle>
+                <CardDescription>Channels that skipped synchronization due to errors.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+                <ul className="space-y-2">
+                    {syncState.lastErrors.map((err: string, i: number) => (
+                        <li key={i} className="text-sm p-2 bg-muted rounded border-l-2 border-destructive">{err}</li>
+                    ))}
+                </ul>
+            </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Continuous Loop Queue</CardTitle>
-          <CardDescription>All channels currently in the automated rotation.</CardDescription>
+          <CardDescription>Your current position relative to the full automated rotation.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -160,7 +212,7 @@ export default function AdminSyncStatusPage() {
                 <div key={channel.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <Badge variant="outline" className={channel.id === syncState?.lastChannelId ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : "bg-primary/10 text-primary border-primary/20"}>
-                        {channel.id === syncState?.lastChannelId ? 'Cursor Position' : 'In Queue'}
+                        {channel.id === syncState?.lastChannelId ? 'Next Batch Start' : 'In Queue'}
                     </Badge>
                     <span className="font-medium text-sm">{channel.name}</span>
                   </div>

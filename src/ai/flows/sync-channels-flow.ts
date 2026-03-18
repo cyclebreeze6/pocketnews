@@ -43,7 +43,8 @@ export async function syncChannelsStateful(batchSize: number = 30) {
     
     // 1. Get previous cursor
     const stateDoc = await firestore.doc(STATE_DOC_PATH).get();
-    const lastChannelId = stateDoc.exists ? stateDoc.data()?.lastChannelId : undefined;
+    const stateData = stateDoc.exists ? stateDoc.data() : {};
+    const lastChannelId = stateData?.lastChannelId;
 
     if (lastChannelId) {
         console.log(`[Sync Engine] Resuming from cursor: ${lastChannelId}`);
@@ -58,15 +59,16 @@ export async function syncChannelsStateful(batchSize: number = 30) {
         lastChannelId
     });
     
-    // CRITICAL FIX: If we found no channels TO SYNC, but nextCursor is valid, 
-    // it means we found documents but none matched filters. We MUST advance the cursor anyway.
+    // Logic to handle empty slices or loop completion
     if (channelsToSync.length === 0) {
       if (nextCursor === undefined && lastChannelId) {
           console.log("[Sync Engine] Loop complete. Resetting cursor to start.");
           await firestore.doc(STATE_DOC_PATH).set({ 
               lastChannelId: null, 
               lastSyncAt: FieldValue.serverTimestamp(),
-              isLoopFinished: true
+              isLoopFinished: true,
+              status: 'idle',
+              lastMessage: 'Loop completed naturally.'
           }, { merge: true });
           return { newVideosAdded: 0, syncedChannels: 0, message: "Loop reset." };
       }
@@ -76,12 +78,13 @@ export async function syncChannelsStateful(batchSize: number = 30) {
           await firestore.doc(STATE_DOC_PATH).set({ 
               lastChannelId: nextCursor, 
               lastSyncAt: FieldValue.serverTimestamp(),
-              lastBatchSize: 0
+              lastBatchSize: 0,
+              status: 'skipping'
           }, { merge: true });
           return { newVideosAdded: 0, syncedChannels: 0, message: "Skipped empty slice." };
       }
 
-      return { newVideosAdded: 0, syncedChannels: 0 };
+      return { newVideosAdded: 0, syncedChannels: 0, message: "No channels found to sync." };
     }
 
     const existingIdsSet = new Set(existingYoutubeIds);
@@ -158,8 +161,6 @@ export async function syncChannelsStateful(batchSize: number = 30) {
     if (videosToSave.length > 0) {
         console.log(`[Sync Engine] Found ${videosToSave.length} new items. Saving to database...`);
         await saveSyncedVideos(videosToSave);
-    } else {
-        console.log("[Sync Engine] No new content found in this batch.");
     }
 
     // 5. Update cursor state for next run
@@ -168,7 +169,10 @@ export async function syncChannelsStateful(batchSize: number = 30) {
         lastSyncAt: FieldValue.serverTimestamp(),
         lastBatchSize: channelsToSync.length,
         lastVideosFound: videosToSave.length,
-        isLoopFinished: nextCursor === undefined
+        isLoopFinished: nextCursor === undefined,
+        status: errorMessages.length > 0 ? 'partial_success' : 'success',
+        lastErrors: errorMessages.slice(0, 5), // Keep a small log of recent errors
+        lastMessage: `Synced ${successfulSyncs} channels. Found ${videosToSave.length} new videos.`
     }, { merge: true });
 
     console.log(`[Sync Engine] Batch complete. Next cursor: ${nextCursor || 'END (RESET)'}`);
@@ -177,7 +181,22 @@ export async function syncChannelsStateful(batchSize: number = 30) {
       newVideosAdded: videosToSave.length,
       syncedChannels: successfulSyncs,
       errors: errorMessages.length > 0 ? errorMessages : undefined,
+      message: `Processed ${channelsToSync.length} channels.`
     };
+}
+
+/**
+ * Resets the sync engine state to force a fresh loop.
+ */
+export async function resetSyncCursor() {
+    if (!isFirebaseAdminInitialized) return;
+    const firestore = adminSDK.firestore();
+    await firestore.doc(STATE_DOC_PATH).set({
+        lastChannelId: null,
+        lastSyncAt: FieldValue.serverTimestamp(),
+        status: 'reset',
+        lastMessage: 'Manual reset performed.'
+    }, { merge: true });
 }
 
 /**
