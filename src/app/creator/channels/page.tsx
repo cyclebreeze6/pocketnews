@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '../../../components/ui/button';
@@ -22,7 +21,7 @@ import { useToast } from '../../../hooks/use-toast';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
-import { fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
+import { fetchChannelVideosAction as fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
 import type { YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';

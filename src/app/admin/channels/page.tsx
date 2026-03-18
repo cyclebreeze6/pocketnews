@@ -3,7 +3,7 @@
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, uploadFile, useStorage } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, RefreshCw, UploadCloud } from 'lucide-react';
@@ -21,7 +21,7 @@ import { useToast } from '../../../hooks/use-toast';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Textarea } from '../../../components/ui/textarea';
-import { fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
+import { fetchChannelVideosAction as fetchChannelVideos } from '../../actions/youtube-channel-videos-flow';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
 import type { YouTubeVideoDetails } from '../../ai/flows/youtube-channel-videos-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
