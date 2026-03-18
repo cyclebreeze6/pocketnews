@@ -1,10 +1,10 @@
 /**
- * @fileOverview A flow for searching for recent videos on YouTube by a query.
+ * @fileOverview A standard utility for searching for recent videos on YouTube by a query.
+ * Converted to standard async function to avoid Genkit metadata authentication errors.
  */
 
-import { ai } from '../genkit';
-import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
+import { z } from 'zod';
 
 const YouTubeSearchInputSchema = z.object({
   query: z.string().describe('The search term to look for on YouTube.'),
@@ -23,14 +23,10 @@ export type YouTubeVideoDetails = z.infer<typeof YouTubeVideoDetailsSchema>;
 const YouTubeVideoListSchema = z.array(YouTubeVideoDetailsSchema);
 export type YouTubeVideoList = z.infer<typeof YouTubeVideoListSchema>;
 
-
-export const searchYouTubeVideosFlow = ai.defineFlow(
-  {
-    name: 'searchYouTubeVideosFlow',
-    inputSchema: YouTubeSearchInputSchema,
-    outputSchema: YouTubeVideoListSchema,
-  },
-  async ({ query }): Promise<YouTubeVideoList> => {
+/**
+ * Standard async function to search YouTube.
+ */
+export async function searchYouTubeVideosFlow({ query }: YouTubeSearchInput): Promise<YouTubeVideoList> {
     const youtube = await (await getYoutubeClient()).execute;
     
     const response = await youtube(client => client.search.list({
@@ -54,5 +50,4 @@ export const searchYouTubeVideosFlow = ai.defineFlow(
     }));
 
     return videos.filter(video => video.videoId);
-  }
-);
+}

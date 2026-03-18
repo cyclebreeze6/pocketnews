@@ -1,12 +1,11 @@
-
 /**
- * @fileOverview A flow for fetching basic info from a YouTube channel using the YouTube Data API.
+ * @fileOverview A standard utility for fetching basic info from a YouTube channel using the YouTube Data API.
+ * Converted to standard async function to avoid Genkit metadata authentication errors.
  */
 
-import { ai } from '../genkit';
-import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
 import { COUNTRY_TO_CONTINENT } from '../../lib/region-map';
+import { z } from 'zod';
 
 const YouTubeChannelInfoInputSchema = z.object({
   channelUrl: z.string().url().describe('The URL of the YouTube channel.'),
@@ -72,13 +71,10 @@ async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, chan
     throw new Error('Could not resolve a valid YouTube Channel ID from the provided URL.');
 }
 
-export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
-  {
-    name: 'fetchYouTubeChannelInfoFlow',
-    inputSchema: YouTubeChannelInfoInputSchema,
-    outputSchema: YouTubeChannelInfoSchema,
-  },
-  async ({ channelUrl }) => {
+/**
+ * Standard async function to fetch channel info.
+ */
+export async function fetchYouTubeChannelInfoFlow({ channelUrl }: YouTubeChannelInfoInput): Promise<YouTubeChannelInfo> {
     const client = await getYoutubeClient();
     const channelId = await getChannelIdFromUrl(client.execute, channelUrl);
 
@@ -120,5 +116,4 @@ export const fetchYouTubeChannelInfoFlow = ai.defineFlow(
       language: channel.brandingSettings?.channel?.defaultLanguage,
       region: regions.length > 0 ? regions : undefined,
     };
-  }
-);
+}

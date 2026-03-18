@@ -1,10 +1,10 @@
 /**
- * @fileOverview A flow for fetching YouTube video information using the YouTube Data API.
+ * @fileOverview A standard utility for fetching YouTube video information using the YouTube Data API.
+ * Converted to standard async function to avoid Genkit metadata authentication errors.
  */
 
-import { ai } from '../genkit';
-import { z } from 'genkit';
 import { getYoutubeClient } from '../../lib/youtube-client';
+import { z } from 'zod';
 
 export const YouTubeVideoInfoInputSchema = z.object({
   videoUrl: z.string().url().describe('The URL of the YouTube video.'),
@@ -38,13 +38,10 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
-  {
-    name: 'fetchYouTubeVideoInfoFlow',
-    inputSchema: YouTubeVideoInfoInputSchema,
-    outputSchema: YouTubeVideoInfoSchema,
-  },
-  async ({ videoUrl }): Promise<YouTubeVideoInfo> => {
+/**
+ * Standard async function to fetch video info.
+ */
+export async function fetchYouTubeVideoInfoFlow({ videoUrl }: YouTubeVideoInfoInput): Promise<YouTubeVideoInfo> {
     const videoId = extractVideoId(videoUrl);
     if (!videoId) {
       throw new Error('Invalid YouTube video URL.');
@@ -70,5 +67,4 @@ export const fetchYouTubeVideoInfoFlow = ai.defineFlow(
         authorName: video.snippet?.channelTitle || 'Unknown Channel',
         thumbnailUrl: video.snippet?.thumbnails?.high?.url || '',
     };
-  }
-);
+}

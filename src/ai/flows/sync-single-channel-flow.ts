@@ -1,7 +1,7 @@
 /**
- * @fileOverview Flow to sync a single YouTube channel using the YouTube Data API.
+ * @fileOverview Standard utility to sync a single YouTube channel using the YouTube Data API.
+ * Converted to standard async function to avoid Genkit metadata authentication errors.
  */
-import { ai } from '../genkit';
 import { z } from 'zod';
 import { getChannelsForSync } from '../../app/actions/get-channels-for-sync';
 import { fetchChannelVideos } from './youtube-channel-videos-flow';
@@ -13,14 +13,10 @@ export const SyncResultSchema = z.object({
 });
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 
-
-export const syncSingleYouTubeChannelFlow = ai.defineFlow(
-  {
-    name: 'syncSingleYouTubeChannelFlow',
-    inputSchema: z.string(), // Channel ID
-    outputSchema: SyncResultSchema,
-  },
-  async (channelId: string): Promise<SyncResult> => {
+/**
+ * Standard async function to sync a channel.
+ */
+export async function syncSingleYouTubeChannelFlow(channelId: string): Promise<SyncResult> {
     try {
         const { channelsToSync, existingYoutubeIds } = await getChannelsForSync({ channelId });
         
@@ -65,5 +61,4 @@ export const syncSingleYouTubeChannelFlow = ai.defineFlow(
         console.error(`Failed to sync channel ${channelId}:`, error.message);
         return { newVideosAdded: 0, errors: [error.message] };
     }
-  }
-);
+}
