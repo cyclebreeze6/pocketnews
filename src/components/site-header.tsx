@@ -109,6 +109,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
   const [hasMounted, setHasMounted] = useState(false);
 
   const isDashboardPage = pathname.startsWith('/admin') || pathname.startsWith('/creator');
+  const isAdmin = user && userProfile?.isAdmin === true;
 
   useEffect(() => {
     setHasMounted(true);
@@ -217,7 +218,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                   <Globe className="h-5 w-5" />
               </Button>
 
-              {userProfile?.isAdmin && (
+              {isAdmin && (
                 <div className="flex items-center gap-1">
                     <Button 
                         variant="ghost" 
@@ -348,7 +349,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                                     <span>Creator Hub</span>
                                 </DropdownMenuItem>
                             )}
-                            {userProfile?.isAdmin && (
+                            {isAdmin && (
                                 <DropdownMenuItem onSelect={() => router.push('/admin')}>
                                     <Shield className="mr-2 h-4 w-4" />
                                     <span>Admin Panel</span>
