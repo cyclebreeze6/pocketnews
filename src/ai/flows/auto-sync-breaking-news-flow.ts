@@ -65,32 +65,28 @@ export async function runAutoSync() {
                 const fetchedVideos = await fetchChannelVideos({ 
                     channelUrl: channel.youtubeChannelUrl, 
                     channelId: channel.youtubeChannelId,
-                    maxResults: 1 
+                    maxResults: 25 
                 });
 
                 if (fetchedVideos.length === 0) {
                     return { success: true };
                 }
 
-                const latestVideo = fetchedVideos[0];
-
-                if (existingIdsSet.has(latestVideo.videoId)) {
-                    return { success: true };
-                }
-
-                const videoData = {
-                    youtubeVideoId: latestVideo.videoId,
-                    title: latestVideo.title,
-                    description: latestVideo.description,
-                    thumbnailUrl: latestVideo.thumbnailUrl,
-                    channelId: channel.id,
-                    contentCategory: BREAKING_NEWS_CATEGORY,
-                    views: Math.floor(Math.random() * 10000),
-                    watchTime: Math.floor(Math.random() * 100),
-                    regions: channel.region || ['Global'],
-                };
+                const newVideos = fetchedVideos
+                    .filter(v => !existingIdsSet.has(v.videoId))
+                    .map(v => ({
+                        youtubeVideoId: v.videoId,
+                        title: v.title,
+                        description: v.description,
+                        thumbnailUrl: v.thumbnailUrl,
+                        channelId: channel.id,
+                        contentCategory: BREAKING_NEWS_CATEGORY,
+                        views: Math.floor(Math.random() * 10000),
+                        watchTime: Math.floor(Math.random() * 100),
+                        regions: channel.region || ['Global'],
+                    }));
                 
-                return { success: true, video: videoData };
+                return { success: true, videos: newVideos };
 
             } catch (error: any) {
                 console.error(`[Sync] Failed for channel "${channel.name}":`, error.message);
@@ -102,9 +98,11 @@ export async function runAutoSync() {
             if (!result) continue;
             if (result.success) {
                 successfulSyncs++;
-                if (result.video) {
-                    videosToSave.push(result.video);
-                    existingIdsSet.add(result.video.youtubeVideoId);
+                if (result.videos && result.videos.length > 0) {
+                    result.videos.forEach((v: any) => {
+                        videosToSave.push(v);
+                        existingIdsSet.add(v.youtubeVideoId);
+                    });
                 }
             } else if (result.error) {
                 errorMessages.push(result.error);

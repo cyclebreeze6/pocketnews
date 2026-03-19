@@ -4,7 +4,7 @@ import admin from 'firebase-admin';
 // This is the service account JSON, which should be stored securely as an environment variable.
 // In a local environment, this might come from a .env.local file.
 // In a deployed environment (like Firebase App Hosting), this should be set as a secret.
-const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 // Initialize Firebase Admin SDK safely
 try {

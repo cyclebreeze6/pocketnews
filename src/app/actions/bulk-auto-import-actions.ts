@@ -36,23 +36,25 @@ export async function syncAllChannelsAction(): Promise<{ count: number, synced: 
             const videos = await fetchChannelVideos({ 
                 channelUrl: channel.youtubeChannelUrl, 
                 channelId: channel.youtubeChannelId,
-                maxResults: 1 
+                maxResults: 25 
             });
 
             if (videos.length > 0) {
-                const latest = videos[0];
-                if (!existingIdsSet.has(latest.videoId)) {
-                    videosToSave.push({
-                        youtubeVideoId: latest.videoId,
-                        title: latest.title,
-                        description: latest.description,
-                        thumbnailUrl: latest.thumbnailUrl,
-                        channelId: channel.id,
-                        contentCategory: 'Breaking News',
-                        views: Math.floor(Math.random() * 5000),
-                        watchTime: Math.floor(Math.random() * 50),
-                        regions: channel.region || ['Global'],
-                    });
+                for (const v of videos) {
+                    if (!existingIdsSet.has(v.videoId)) {
+                        videosToSave.push({
+                            youtubeVideoId: v.videoId,
+                            title: v.title,
+                            description: v.description,
+                            thumbnailUrl: v.thumbnailUrl,
+                            channelId: channel.id,
+                            contentCategory: 'Breaking News',
+                            views: Math.floor(Math.random() * 5000),
+                            watchTime: Math.floor(Math.random() * 50),
+                            regions: channel.region || ['Global'],
+                        });
+                        existingIdsSet.add(v.videoId);
+                    }
                 }
             }
             syncedCount++;
