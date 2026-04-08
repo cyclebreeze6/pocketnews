@@ -21,6 +21,7 @@ export interface Channel {
   language?: string;
   region?: string[];
   isAutoSyncEnabled?: boolean; // New field for managing auto-post
+  creatorId?: string;
 }
 
 export interface Video {
@@ -36,6 +37,7 @@ export interface Video {
   thumbnailUrl: string;
   contentCategory: string;
   regions?: string[];
+  creatorId?: string;
   // compatibility with existing data
   youtubeId?: string;
   createdAt: Timestamp | Date | string;
@@ -59,6 +61,7 @@ export interface Category {
 }
 
 export interface UserProfile extends User {
+  totalPaidOutNaira?: number;
 }
 
 export interface WatchHistory {
@@ -83,4 +86,23 @@ export interface FollowedChannel {
   id: string; // This will be the channelId
   channelId: string;
   followedAt: Timestamp;
+}
+
+export interface CreatorApplication {
+  id: string;
+  userId: string;
+  email: string;
+  contentTypes: string[];
+  ninNumber: string;
+  termsAccepted: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Timestamp | Date | string;
+}
+
+export interface PayoutRequest {
+  id: string;
+  creatorId: string;
+  amountNaira: number;
+  status: 'pending' | 'paid' | 'rejected';
+  createdAt: Timestamp | Date | string;
 }

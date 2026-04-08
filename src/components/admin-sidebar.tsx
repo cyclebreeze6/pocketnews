@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Settings, FolderKanban, Tv, Bell, Zap } from 'lucide-react';
+import { Home, Users, Settings, FolderKanban, Tv, Bell, Zap, Smartphone, ClipboardList } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
   Sidebar,
@@ -17,8 +17,10 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/auto-post', label: 'Auto-Post', icon: Zap },
   { href: '/admin/channels', label: 'Channels', icon: Tv },
+  { href: '/admin/shorts-channels', label: 'Shorts Channels', icon: Smartphone },
   { href: '/admin/categories', label: 'Categories', icon: FolderKanban },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/creators/applications', label: 'Creator Apps', icon: ClipboardList },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
