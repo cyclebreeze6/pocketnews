@@ -4,8 +4,9 @@ import { Button } from '../../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
 import { useDoc, useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, uploadFile, useStorage, useUser } from '../../../../firebase';
 import type { Video, Channel, Category } from '../../../../lib/types';
-import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, query, where } from 'firebase/firestore';
 import { Loader2, PlusCircle, ArrowLeft, UploadCloud, Link as LinkIcon, Youtube, Twitch, FileVideo, Facebook } from 'lucide-react';
+import Link from 'next/link';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { useState, useEffect } from 'react';
@@ -26,6 +27,7 @@ import {
   DialogDescription,
 } from '../../../../components/ui/dialog';
 import { Checkbox } from '../../../../components/ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from '../../../../components/ui/alert';
 import { sendNewVideoNotification } from '../../../actions/send-notification';
 
 type VideoSourceType = 'upload' | 'youtube' | 'direct' | 'facebook' | 'twitch';
@@ -45,8 +47,11 @@ export default function VideoEditPage() {
   const videoRef = useMemoFirebase(() => isNewVideo ? null : doc(firestore, 'videos', videoId), [firestore, videoId, isNewVideo]);
   const { data: existingVideo, isLoading: videoLoading } = useDoc<Video>(videoRef);
   
-  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
-  const { data: channels } = useCollection<Channel>(channelsQuery);
+  const channelsQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'channels'), where('creatorId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
   
   const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
   const { data: categories } = useCollection<Category>(categoriesQuery);
@@ -366,8 +371,30 @@ export default function VideoEditPage() {
     await saveVideoChanges();
   };
   
-  if (videoLoading) {
+  if (videoLoading || (isNewVideo && channelsLoading)) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
+  if (isNewVideo && !channelsLoading && (!channels || channels.length === 0)) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center mb-4">
+          <button onClick={() => window.history.back()} className="mr-2 p-2 rounded-md hover:bg-muted">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h1 className="text-3xl font-bold tracking-tight font-headline">Studio Upload</h1>
+        </div>
+        <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+          <AlertTitle className="text-amber-800 dark:text-amber-300 font-semibold">You need a channel first</AlertTitle>
+          <AlertDescription className="text-amber-700 dark:text-amber-400">
+            Create at least one creator channel before uploading videos.{' '}
+            <Link href="/creator/channels/new" className="underline font-medium hover:opacity-80">
+              Create your channel →
+            </Link>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   return (

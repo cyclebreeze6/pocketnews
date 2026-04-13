@@ -3,10 +3,10 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import Link from 'next/link';
-import { PlusSquare, Search, RefreshCw, HandCoins, TrendingUp, AlertCircle, Loader2, Clapperboard } from 'lucide-react';
+import { PlusSquare, HandCoins, TrendingUp, AlertCircle, Loader2, Clapperboard } from 'lucide-react';
 import { useUser, useFirebase, useCollection, useDoc, addDocumentNonBlocking, useMemoFirebase } from '../../firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
-import type { Video, UserProfile, PayoutRequest } from '../../lib/types';
+import type { Video, UserProfile, PayoutRequest, Channel } from '../../lib/types';
 import { useState, useMemo } from 'react';
 import { useToast } from '../../hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
@@ -29,6 +29,13 @@ export default function CreatorDashboardPage() {
   }, [user, firestore]);
 
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const channelsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'channels'), where('creatorId', '==', user.uid));
+  }, [user, firestore]);
+
+  const { data: creatorChannels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
   const [isRequestingPayout, setIsRequestingPayout] = useState(false);
 
@@ -147,48 +154,45 @@ export default function CreatorDashboardPage() {
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 pt-6 border-t">
+      {!channelsLoading && (!creatorChannels || creatorChannels.length === 0) && (
+        <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+          <AlertCircle className="h-5 w-5 text-amber-600" />
+          <AlertTitle className="text-amber-800 dark:text-amber-300 font-semibold">Create a channel first</AlertTitle>
+          <AlertDescription className="text-amber-700 dark:text-amber-400">
+            You need at least one creator channel before you can upload videos.{' '}
+            <Link href="/creator/channels/new" className="underline font-medium hover:opacity-80">
+              Create your channel →
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2 pt-6 border-t">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><PlusSquare className="h-5 w-5" /> Add Video</CardTitle>
-            <CardDescription>Upload a video directly or import via link.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><PlusSquare className="h-5 w-5" /> Upload Video</CardTitle>
+            <CardDescription>Upload a new video to your Creator Studio.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/creator/videos/new">
-              <Button>Upload Video</Button>
-            </Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5" /> Curate by Search</CardTitle>
-            <CardDescription>Search YouTube for topics and import relevant videos.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <Link href="/creator/curate">
-              <Button>Search YouTube</Button>
-            </Link>
-          </CardContent>
-        </Card>
-         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" /> Curate by Channel</CardTitle>
-            <CardDescription>Fetch and publish videos from your linked channels.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/creator/sync">
-              <Button>Sync Channels</Button>
+            <Link
+              href="/creator/videos/new"
+              className="text-sm text-primary font-mono underline break-all hover:opacity-75 transition-opacity"
+            >
+              https://pocketnewslive.tv/creator/videos/new
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Add Short</CardTitle>
-            <CardDescription>Create and publish short-form videos.</CardDescription>
+            <CardDescription>Create and publish short-form videos to Shorts.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/creator/shorts/new">
-              <Button>Upload Short</Button>
+            <Link
+              href="/creator/shorts/new"
+              className="text-sm text-primary font-mono underline break-all hover:opacity-75 transition-opacity"
+            >
+              https://pocketnewslive.tv/creator/shorts/new
             </Link>
           </CardContent>
         </Card>
