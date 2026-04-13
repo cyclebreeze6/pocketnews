@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Tv, Video, Clapperboard, Search } from 'lucide-react';
+import { LayoutDashboard, Tv, Video, Clapperboard } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
   Sidebar,
@@ -17,7 +17,6 @@ const navItems = [
   { href: '/creator/videos', label: 'Videos', icon: Video },
   { href: '/creator/shorts', label: 'Shorts', icon: Clapperboard },
   { href: '/creator/channels', label: 'Channels', icon: Tv },
-  { href: '/creator/curate', label: 'Curate (Search)', icon: Search },
 ];
 
 const CreatorSidebar = () => {
