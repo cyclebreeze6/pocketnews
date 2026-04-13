@@ -3,8 +3,8 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import Link from 'next/link';
-import { PlusSquare, Search, RefreshCw, HandCoins, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
-import { useUser, useFirebase, useCollection, useDoc, addDocumentNonBlocking } from '../../firebase';
+import { PlusSquare, Search, RefreshCw, HandCoins, TrendingUp, AlertCircle, Loader2, Clapperboard } from 'lucide-react';
+import { useUser, useFirebase, useCollection, useDoc, addDocumentNonBlocking, useMemoFirebase } from '../../firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import type { Video, UserProfile, PayoutRequest } from '../../lib/types';
 import { useState, useMemo } from 'react';
@@ -16,14 +16,14 @@ export default function CreatorDashboardPage() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  const videosQuery = useMemo(() => {
+  const videosQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(firestore, 'videos'), where('creatorId', '==', user.uid));
   }, [user, firestore]);
 
   const { data: videos, isLoading: videosLoading } = useCollection<Video>(videosQuery);
 
-  const userProfileRef = useMemo(() => {
+  const userProfileRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
@@ -147,7 +147,7 @@ export default function CreatorDashboardPage() {
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 pt-6 border-t">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 pt-6 border-t">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><PlusSquare className="h-5 w-5" /> Add Video</CardTitle>
@@ -178,6 +178,17 @@ export default function CreatorDashboardPage() {
           <CardContent>
             <Link href="/creator/sync">
               <Button>Sync Channels</Button>
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Add Short</CardTitle>
+            <CardDescription>Create and publish short-form videos.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/creator/shorts/new">
+              <Button>Upload Short</Button>
             </Link>
           </CardContent>
         </Card>

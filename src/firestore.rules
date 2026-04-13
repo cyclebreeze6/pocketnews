@@ -3,6 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isRegisteredUser() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider != "anonymous";
+    }
+
     // Helper function to check for admin or creator role
     function isCreatorOrAdmin() {
       return request.auth != null && (
@@ -53,8 +57,16 @@ service cloud.firestore {
 
     // Reports can be created by authenticated (non-anonymous) users, but only read/managed by admins.
     match /reports/{reportId} {
-      allow create: if request.auth != null && request.auth.token.firebase.sign_in_provider != "anonymous";
+      allow create: if isRegisteredUser();
       allow read, update, delete: if isAdmin();
+    }
+
+    match /creator_applications/{applicationId} {
+      allow create: if isRegisteredUser()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow get, list: if isAdmin() || (isRegisteredUser() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
     
     // The roles_admin collection is managed internally but should only be touched by admins.

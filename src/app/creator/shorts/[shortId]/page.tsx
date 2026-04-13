@@ -3,7 +3,7 @@
 
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
-import { useDoc, useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '../../../../firebase';
+import { useDoc, useCollection, useFirebase, useMemoFirebase, updateDocumentNonBlocking, useUser } from '../../../../firebase';
 import type { Short, Channel } from '../../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Loader2, ArrowLeft } from 'lucide-react';
@@ -16,6 +16,15 @@ import { fetchYouTubeVideoInfo } from '../../../actions/youtube-info-flow';
 import type { YouTubeVideoInfo } from '../../../../ai/flows/youtube-info-flow';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../components/ui/dialog';
+import { Checkbox } from '../../../../components/ui/checkbox';
 
 export default function ShortEditPage() {
   const { firestore } = useFirebase();
@@ -38,6 +47,8 @@ export default function ShortEditPage() {
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [shortDetails, setShortDetails] = useState<Partial<Short> | null>(null);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [hasAcceptedPublishTerms, setHasAcceptedPublishTerms] = useState(false);
 
   useEffect(() => {
     const urlFromQuery = searchParams.get('youtubeUrl');
@@ -98,7 +109,7 @@ export default function ShortEditPage() {
     }
   };
 
-  const handleSaveChanges = async () => {
+  const saveShortChanges = async () => {
     if (!user) return;
     if (!shortDetails?.title || !shortDetails?.channelId || (!shortDetails.youtubeVideoId && !shortDetails.videoUrl)) {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please ensure a title, video source, and channel are set.' });
@@ -125,6 +136,24 @@ export default function ShortEditPage() {
     setIsSaving(false);
     
     router.push('/creator/shorts');
+  };
+
+  const handlePublishClick = () => {
+    if (!shortDetails) {
+      toast({ variant: 'destructive', title: 'Add details before publishing.' });
+      return;
+    }
+    setHasAcceptedPublishTerms(false);
+    setIsPublishDialogOpen(true);
+  };
+
+  const handleConfirmPublish = async () => {
+    if (!hasAcceptedPublishTerms) {
+      toast({ variant: 'destructive', title: 'You must accept the terms before publishing.' });
+      return;
+    }
+    setIsPublishDialogOpen(false);
+    await saveShortChanges();
   };
   
   if (shortLoading) {
@@ -199,11 +228,42 @@ export default function ShortEditPage() {
                 )}
             </CardContent>
             <div className="p-6 pt-0">
-                 <Button onClick={handleSaveChanges} disabled={isSaving || !shortDetails}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
+                 <Button onClick={handlePublishClick} disabled={isSaving || !shortDetails}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isNewShort ? 'Publish Short' : 'Save Changes')}
                 </Button>
             </div>
         </Card>
+
+        <Dialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Before You Publish</DialogTitle>
+              <DialogDescription>
+                Confirm you have rights to this short and agree to creator terms before publishing.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>1. You own or are licensed to publish this short.</p>
+              <p>2. Content must comply with platform safety and copyright standards.</p>
+              <p>3. You accept creator monetization and moderation policies.</p>
+              <div className="flex items-start gap-3 rounded-md border p-3">
+                <Checkbox
+                  id="short-terms"
+                  checked={hasAcceptedPublishTerms}
+                  onCheckedChange={(checked) => setHasAcceptedPublishTerms(Boolean(checked))}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="short-terms" className="leading-relaxed cursor-pointer">
+                  I agree to the creator upload and publishing terms.
+                </Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsPublishDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleConfirmPublish} disabled={!hasAcceptedPublishTerms || isSaving}>Publish</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

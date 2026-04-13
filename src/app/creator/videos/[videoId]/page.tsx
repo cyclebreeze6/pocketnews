@@ -2,10 +2,10 @@
 
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
-import { useDoc, useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking, uploadFile, useStorage, useUser } from '../../../../firebase';
+import { useDoc, useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, uploadFile, useStorage, useUser } from '../../../../firebase';
 import type { Video, Channel, Category } from '../../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { Loader2, PlusCircle, ArrowLeft, UploadCloud, Link as LinkIcon } from 'lucide-react';
+import { Loader2, PlusCircle, ArrowLeft, UploadCloud, Link as LinkIcon, Youtube, Twitch, FileVideo, Facebook } from 'lucide-react';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { useState, useEffect } from 'react';
@@ -25,7 +25,10 @@ import {
   DialogFooter,
   DialogDescription,
 } from '../../../../components/ui/dialog';
+import { Checkbox } from '../../../../components/ui/checkbox';
 import { sendNewVideoNotification } from '../../../actions/send-notification';
+
+type VideoSourceType = 'upload' | 'youtube' | 'direct' | 'facebook' | 'twitch';
 
 export default function VideoEditPage() {
   const { user } = useUser();
@@ -56,6 +59,9 @@ export default function VideoEditPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [videoDetails, setVideoDetails] = useState<Partial<Video> | null>(null);
+  const [videoSourceType, setVideoSourceType] = useState<VideoSourceType>('upload');
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [hasAcceptedPublishTerms, setHasAcceptedPublishTerms] = useState(false);
   
   // Dialog States
   const [isChannelDialogOpen, setIsChannelDialogOpen] = useState(false);
@@ -79,20 +85,26 @@ export default function VideoEditPage() {
       setVideoDetails({ ...existingVideo });
       if(existingVideo.youtubeVideoId) {
         setVideoInputUrl(`https://www.youtube.com/watch?v=${existingVideo.youtubeVideoId}`);
+        setVideoSourceType('youtube');
       } else if (existingVideo.videoUrl) {
         setVideoInputUrl(existingVideo.videoUrl);
+        setVideoSourceType('direct');
       }
     }
   }, [existingVideo]);
 
-  const handleFetchDetails = async (urlToFetch?: string) => {
+  const handleFetchDetails = async (urlToFetch?: string, source: VideoSourceType = videoSourceType) => {
     const finalUrl = urlToFetch || videoInputUrl;
     if (!finalUrl) {
       toast({ variant: 'destructive', title: 'Please enter a video URL.' });
       return;
     }
 
-    if (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be')) {
+    if (source === 'youtube') {
+      if (!finalUrl.includes('youtube.com') && !finalUrl.includes('youtu.be')) {
+        toast({ variant: 'destructive', title: 'Enter a valid YouTube URL.' });
+        return;
+      }
       setIsFetching(true);
       try {
         const videoInfo = await fetchYouTubeVideoInfo({ videoUrl: finalUrl });
@@ -144,6 +156,15 @@ export default function VideoEditPage() {
         setIsFetching(false);
       }
     } else {
+        const lowerUrl = finalUrl.toLowerCase();
+        if (source === 'direct') {
+          const hasSupportedExt = lowerUrl.includes('.m3u8') || lowerUrl.includes('.m4u8') || lowerUrl.includes('.mp4') || lowerUrl.includes('.m4v');
+          if (!hasSupportedExt) {
+            toast({ variant: 'destructive', title: 'Unsupported URL', description: 'Use a valid .m3u8, .m4u8, .mp4, or .m4v URL.' });
+            return;
+          }
+        }
+
         setVideoDetails(prev => ({
             ...prev,
             videoUrl: finalUrl,
@@ -152,16 +173,16 @@ export default function VideoEditPage() {
             description: prev?.description || '',
             thumbnailUrl: prev?.thumbnailUrl || 'https://picsum.photos/seed/placeholder/1280/720',
         }));
-        toast({ title: 'Direct Video URL set', description: 'Enter details manually or provide a thumbnail.' });
+        toast({ title: 'Video URL set', description: 'Source URL added. Review details and publish when ready.' });
     }
   };
 
   const handleUploadVideo = async () => {
     if (!videoFile || !storage || !user) return;
     
-    // Size check (200MB)
-    if (videoFile.size > 200 * 1024 * 1024) {
-      toast({ variant: 'destructive', title: 'File too large', description: 'Maximum file size is 200MB' });
+    // Size check (500MB)
+    if (videoFile.size > 500 * 1024 * 1024) {
+      toast({ variant: 'destructive', title: 'File too large', description: 'Maximum file size is 500MB' });
       return;
     }
 
@@ -178,6 +199,7 @@ export default function VideoEditPage() {
         description: prev?.description || '',
         thumbnailUrl: prev?.thumbnailUrl || 'https://picsum.photos/seed/placeholder/1280/720',
       }));
+      setVideoSourceType('upload');
 
       toast({ title: 'Video Uploaded', description: 'Video uploaded successfully. Fill in the remaining details.' });
     } catch (error: any) {
@@ -277,7 +299,7 @@ export default function VideoEditPage() {
     setIsCategoryDialogOpen(false);
   }
 
-  const handleSaveChanges = async () => {
+  const saveVideoChanges = async () => {
     if (!videoDetails?.title || !videoDetails?.channelId || !videoDetails?.contentCategory) {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please ensure a title, channel, and category are set.' });
       return;
@@ -325,6 +347,24 @@ export default function VideoEditPage() {
       router.push('/creator');
     }
   };
+
+  const handlePublishClick = () => {
+    if (!videoDetails) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Add a video source and details first.' });
+      return;
+    }
+    setHasAcceptedPublishTerms(false);
+    setIsPublishDialogOpen(true);
+  };
+
+  const handleConfirmPublish = async () => {
+    if (!hasAcceptedPublishTerms) {
+      toast({ variant: 'destructive', title: 'You must accept the terms before publishing.' });
+      return;
+    }
+    setIsPublishDialogOpen(false);
+    await saveVideoChanges();
+  };
   
   if (videoLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -342,10 +382,13 @@ export default function VideoEditPage() {
         </div>
       
         {isNewVideo && !videoDetails?.videoUrl && !videoDetails?.youtubeVideoId && (
-            <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
+          <Tabs value={videoSourceType} onValueChange={(value) => setVideoSourceType(value as VideoSourceType)} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
                     <TabsTrigger value="upload" className="flex items-center gap-2"><UploadCloud className="h-4 w-4" /> Upload File</TabsTrigger>
-                    <TabsTrigger value="link" className="flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Import Link</TabsTrigger>
+              <TabsTrigger value="youtube" className="flex items-center gap-2"><Youtube className="h-4 w-4" /> YouTube</TabsTrigger>
+              <TabsTrigger value="direct" className="flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL/HLS</TabsTrigger>
+              <TabsTrigger value="facebook" className="flex items-center gap-2"><Facebook className="h-4 w-4" /> Facebook</TabsTrigger>
+              <TabsTrigger value="twitch" className="flex items-center gap-2"><Twitch className="h-4 w-4" /> Twitch</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="upload">
@@ -357,7 +400,7 @@ export default function VideoEditPage() {
                             <div>
                                 <p className="font-semibold text-lg text-primary">Drag and drop video files to upload</p>
                                 <p className="text-sm">Your videos will be private until you publish them.</p>
-                                <p className="text-xs mt-2 border border-muted p-1 inline-block rounded">Max file size: 200MB</p>
+                              <p className="text-xs mt-2 border border-muted p-1 inline-block rounded">Max file size: 500MB</p>
                             </div>
                             <div className="relative">
                                 <Input 
@@ -381,30 +424,84 @@ export default function VideoEditPage() {
                     </Card>
                 </TabsContent>
 
-                <TabsContent value="link">
+                <TabsContent value="youtube">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Import Video</CardTitle>
-                            <CardDescription>Fetch details directly from a supported URL.</CardDescription>
+                      <CardTitle className="flex items-center gap-2"><Youtube className="h-5 w-5 text-red-500" /> YouTube Auto Fetch</CardTitle>
+                      <CardDescription>Paste a YouTube video URL and auto-populate title, description, thumbnail, and channel mapping.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="grid gap-2">
-                                <Label htmlFor="video-url">Video URL (YouTube, .m3u8, etc.)</Label>
+                        <Label htmlFor="video-url-youtube">YouTube URL</Label>
                                 <div className="flex gap-2">
                                     <Input
-                                        id="video-url"
+                            id="video-url-youtube"
                                         value={videoInputUrl}
                                         onChange={(e) => setVideoInputUrl(e.target.value)}
                                         placeholder="https://www.youtube.com/watch?v=..."
                                         disabled={isFetching}
                                     />
-                                    <Button onClick={() => handleFetchDetails()} disabled={isFetching || !videoInputUrl}>
+                          <Button onClick={() => handleFetchDetails(undefined, 'youtube')} disabled={isFetching || !videoInputUrl}>
                                         {isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Fetch'}
                                     </Button>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                <TabsContent value="direct">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><FileVideo className="h-5 w-5" /> Direct Video URL</CardTitle>
+                      <CardDescription>Supported formats: .m3u8 (HLS), .m4u8, .mp4, .m4v</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Input
+                        value={videoInputUrl}
+                        onChange={(e) => setVideoInputUrl(e.target.value)}
+                        placeholder="https://cdn.example.com/video.m3u8"
+                        disabled={isFetching}
+                      />
+                      <Button onClick={() => handleFetchDetails(undefined, 'direct')} disabled={!videoInputUrl || isFetching}>Use URL</Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="facebook">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><Facebook className="h-5 w-5 text-blue-600" /> Facebook Video URL</CardTitle>
+                      <CardDescription>Paste a Facebook video link to use it as your source URL.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Input
+                        value={videoInputUrl}
+                        onChange={(e) => setVideoInputUrl(e.target.value)}
+                        placeholder="https://www.facebook.com/.../videos/..."
+                        disabled={isFetching}
+                      />
+                      <Button onClick={() => handleFetchDetails(undefined, 'facebook')} disabled={!videoInputUrl || isFetching}>Use Facebook URL</Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="twitch">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><Twitch className="h-5 w-5" /> Twitch Video URL</CardTitle>
+                      <CardDescription>Paste a Twitch video URL to use it as your source URL.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Input
+                        value={videoInputUrl}
+                        onChange={(e) => setVideoInputUrl(e.target.value)}
+                        placeholder="https://www.twitch.tv/videos/..."
+                        disabled={isFetching}
+                      />
+                      <Button onClick={() => handleFetchDetails(undefined, 'twitch')} disabled={!videoInputUrl || isFetching}>Use Twitch URL</Button>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
             </Tabs>
         )}
@@ -494,12 +591,43 @@ export default function VideoEditPage() {
                 </div>
             </CardContent>
             <div className="p-6 pt-0 border-t flex items-center justify-end mt-4">
-                 <Button onClick={handleSaveChanges} disabled={isSaving || !videoDetails}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
+               <Button onClick={handlePublishClick} disabled={isSaving || !videoDetails}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isNewVideo ? 'Publish Video' : 'Save Changes')}
                 </Button>
             </div>
         </Card>
         )}
+
+          <Dialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Before You Publish</DialogTitle>
+                <DialogDescription>
+                  Confirm you have rights to this content and agree to the creator publishing terms.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>1. You own rights to upload this video or have valid distribution permission.</p>
+                <p>2. You agree to monetization and community policies on this platform.</p>
+                <p>3. You confirm this content does not violate copyright, safety, or misinformation rules.</p>
+                <div className="flex items-start gap-3 rounded-md border p-3">
+                  <Checkbox
+                    id="publish-terms"
+                    checked={hasAcceptedPublishTerms}
+                    onCheckedChange={(checked) => setHasAcceptedPublishTerms(Boolean(checked))}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor="publish-terms" className="leading-relaxed cursor-pointer">
+                    I have read and agree to the creator upload and publishing terms.
+                  </Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPublishDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleConfirmPublish} disabled={!hasAcceptedPublishTerms || isSaving}>Publish</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         
         {/* Dialogs for Channel & Category rendering... */}
         <Dialog open={isChannelDialogOpen} onOpenChange={setIsChannelDialogOpen}>

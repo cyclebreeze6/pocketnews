@@ -343,6 +343,12 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                             </div>
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                            {!user.isAnonymous && !userProfile?.isCreator && !userProfile?.isAdmin && (
+                              <DropdownMenuItem onSelect={() => router.push('/apply-creator')}>
+                                <PlusSquare className="mr-2 h-4 w-4" />
+                                <span>Apply to be a Creator</span>
+                              </DropdownMenuItem>
+                            )}
                             {(userProfile?.isAdmin || userProfile?.isCreator) && (
                                 <DropdownMenuItem onSelect={() => router.push('/creator')}>
                                     <PlusSquare className="mr-2 h-4 w-4" />
