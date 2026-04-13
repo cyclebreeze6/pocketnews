@@ -12,7 +12,7 @@ import { Label } from '../../../../components/ui/label';
 import { Textarea } from '../../../../components/ui/textarea';
 import { useFirebase, useStorage, uploadFile, useUser } from '../../../../firebase';
 import { useToast } from '../../../../hooks/use-toast';
-import { fetchYouTubeChannelInfo } from '../../../../actions/youtube-channel-info-flow';
+import { fetchYouTubeChannelInfo } from '../../../actions/youtube-channel-info-flow';
 
 export default function CreatorCreateChannelPage() {
   const { firestore } = useFirebase();
