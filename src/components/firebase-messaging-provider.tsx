@@ -13,12 +13,12 @@ import { useToast } from '../hooks/use-toast';
  */
 export function FirebaseMessagingProvider() {
   const { firebaseApp, user } = useFirebase();
-  const { permissionStatus, requestPermission } = usePushNotifications();
+  const { permissionStatus, requestPermission, isPushSupported } = usePushNotifications();
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && firebaseApp) {
+    if (typeof window !== 'undefined' && firebaseApp && isPushSupported) {
       const messaging = getMessaging(firebaseApp);
       const unsubscribe = onMessage(messaging, (payload) => {
         console.log('Foreground message received.', payload);
@@ -32,12 +32,12 @@ export function FirebaseMessagingProvider() {
 
       return () => unsubscribe();
     }
-  }, [firebaseApp, toast]);
+  }, [firebaseApp, isPushSupported, toast]);
 
 
   useEffect(() => {
     // Show the notification permission dialog
-    if (user && !user.isAnonymous && permissionStatus === 'default') {
+    if (isPushSupported && user && !user.isAnonymous && permissionStatus === 'default') {
       const timer = setTimeout(() => {
         setIsNotificationDialogOpen(true);
       }, 5000); // Delay this one a bit more
@@ -45,7 +45,7 @@ export function FirebaseMessagingProvider() {
     } else {
       setIsNotificationDialogOpen(false);
     }
-  }, [user, permissionStatus]);
+  }, [isPushSupported, user, permissionStatus]);
 
   const handleAllowNotifications = () => {
     requestPermission();

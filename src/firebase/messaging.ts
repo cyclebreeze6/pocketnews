@@ -5,15 +5,25 @@ import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 import { getApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirebase } from './provider';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 type PermissionStatus = 'default' | 'granted' | 'denied';
+
+const vapidKey = process.env.NEXT_PUBLIC_VAPID_KEY?.trim() ?? '';
+
+function hasPushNotificationConfig() {
+  return vapidKey.length > 0;
+}
 
 /**
  * Requests permission to send push notifications and saves the token if granted.
  * @param {string} userId - The current user's ID.
  */
 export async function setupPushNotifications(userId: string): Promise<void> {
+  if (!hasPushNotificationConfig()) {
+    return;
+  }
+
   const supported = await isSupported();
   if (!supported) {
     console.log('Firebase Messaging is not supported in this browser.');
@@ -24,16 +34,11 @@ export async function setupPushNotifications(userId: string): Promise<void> {
     const messaging = getMessaging(getApp());
     const firestore = getFirestore();
 
-    if (!process.env.NEXT_PUBLIC_VAPID_KEY) {
-      console.error('VAPID key is not set. Cannot get FCM token.');
-      return;
-    }
-
     // Wait for the service worker to be ready
     const registration = await navigator.serviceWorker.ready;
 
     const currentToken = await getToken(messaging, { 
-        vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY,
+        vapidKey,
         serviceWorkerRegistration: registration,
     });
     
@@ -61,16 +66,53 @@ export async function setupPushNotifications(userId: string): Promise<void> {
 export function usePushNotifications() {
   const { user } = useFirebase();
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('default');
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const initializedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // This effect runs only on the client.
-    if ('Notification' in window) {
-      setPermissionStatus(Notification.permission);
+    let isMounted = true;
+
+    async function detectPushSupport() {
+      if (typeof window === 'undefined' || !('Notification' in window) || !hasPushNotificationConfig()) {
+        if (isMounted) {
+          setIsPushSupported(false);
+        }
+        return;
+      }
+
+      const supported = await isSupported();
+
+      if (!isMounted) {
+        return;
+      }
+
+      setIsPushSupported(supported);
+
+      if (supported) {
+        setPermissionStatus(Notification.permission);
+      }
     }
+
+    void detectPushSupport();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const ensurePushSetup = useCallback(async (userId: string) => {
+    if (initializedUserIdRef.current === userId) {
+      return;
+    }
+
+    initializedUserIdRef.current = userId;
+    await setupPushNotifications(userId);
   }, []);
 
   const requestPermission = useCallback(async () => {
-    if (!user || user.isAnonymous) return;
+    if (!user || user.isAnonymous || !isPushSupported) {
+      return;
+    }
 
     try {
       const permission = await Notification.requestPermission();
@@ -78,19 +120,30 @@ export function usePushNotifications() {
 
       if (permission === 'granted') {
         // If permission is granted, proceed to get and save the token.
-        await setupPushNotifications(user.uid);
+        await ensurePushSetup(user.uid);
+      } else {
+        initializedUserIdRef.current = null;
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
     }
-  }, [user]);
+  }, [ensurePushSetup, isPushSupported, user]);
 
   useEffect(() => {
-    // If permission is already granted, ensure token is set up on login.
-    if (user && !user.isAnonymous && permissionStatus === 'granted') {
-      setupPushNotifications(user.uid);
+    if (!user || user.isAnonymous || permissionStatus !== 'granted' || !isPushSupported) {
+      if (!user || user.isAnonymous || permissionStatus !== 'granted') {
+        initializedUserIdRef.current = null;
+      }
+      return;
     }
-  }, [user, permissionStatus]);
 
-  return { permissionStatus, requestPermission };
+    // If permission is already granted, ensure token is set up on login.
+    void ensurePushSetup(user.uid);
+  }, [ensurePushSetup, isPushSupported, permissionStatus, user]);
+
+  return {
+    permissionStatus,
+    requestPermission,
+    isPushSupported,
+  };
 }

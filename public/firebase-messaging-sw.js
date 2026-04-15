@@ -8,7 +8,7 @@ firebase.initializeApp({
     apiKey: "AIzaSyBF491cj4zNfYzX2QfvnLjvmWq3nRKHhpk",
     authDomain: "studio-7985035708-93893.firebaseapp.com",
     projectId: "studio-7985035708-93893",
-    storageBucket: "studio-7985035708-93893.appspot.com",
+  storageBucket: "studio-7985035708-93893.firebasestorage.app",
     messagingSenderId: "56161195034",
     appId: "1:56161195034:web:c05d8c96a170d17afbada3"
 });
