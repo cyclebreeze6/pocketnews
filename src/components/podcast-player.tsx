@@ -14,6 +14,7 @@ interface PodcastPlayerProps {
 
 export function PodcastPlayer({ podcast, playing = true, playerKey }: PodcastPlayerProps) {
   const isAudio = podcast.contentType === 'audio';
+  const categoryLabel = podcast.contentCategory || 'My Headlines';
 
   let playerUrl: string | undefined;
   if (podcast.contentType === 'youtube' && podcast.youtubeVideoId) {
@@ -70,6 +71,9 @@ export function PodcastPlayer({ podcast, playing = true, playerKey }: PodcastPla
               <Mic className="h-3.5 w-3.5" />
               PODCAST
             </div>
+            <div className="inline-flex items-center rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white/90 backdrop-blur-sm">
+              {categoryLabel}
+            </div>
             <p className="text-white font-bold text-lg line-clamp-2 max-w-sm">
               {podcast.title}
             </p>
@@ -100,6 +104,11 @@ export function PodcastPlayer({ podcast, playing = true, playerKey }: PodcastPla
   // Video / YouTube / Facebook Live
   return (
     <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+      <div className="absolute top-3 left-3 z-10 pointer-events-none">
+        <span className="inline-flex items-center rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white/90 backdrop-blur-sm">
+          {categoryLabel}
+        </span>
+      </div>
       <ReactPlayer
         key={playerKey}
         url={playerUrl}

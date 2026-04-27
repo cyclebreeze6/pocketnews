@@ -36,6 +36,7 @@ const TypeBadge = ({ type }: { type: Podcast['contentType'] }) => {
 };
 
 export function PodcastCard({ podcast, isPlaying, onClick }: PodcastCardProps) {
+  const categoryLabel = podcast.contentCategory || 'My Headlines';
   let timeAgo = '';
   try {
     timeAgo = formatDistanceToNow(toDate(podcast.createdAt));
@@ -72,6 +73,13 @@ export function PodcastCard({ podcast, isPlaying, onClick }: PodcastCardProps) {
         {/* Type badge */}
         <div className="absolute top-2 left-2">
           <TypeBadge type={podcast.contentType} />
+        </div>
+
+        {/* Category badge */}
+        <div className="absolute top-2 left-[88px] max-w-[50%]">
+          <span className="inline-flex items-center rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white/90 backdrop-blur-sm truncate">
+            {categoryLabel}
+          </span>
         </div>
 
         {/* Now playing badge */}

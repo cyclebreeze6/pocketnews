@@ -20,7 +20,17 @@ import { useIsMobile } from '../hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 
-export function CategoryNav() {
+interface CategoryNavProps {
+  mode?: 'news' | 'podcast';
+  selectedCategory?: string;
+  onSelectCategory?: (category: string) => void;
+}
+
+export function CategoryNav({
+  mode = 'news',
+  selectedCategory,
+  onSelectCategory,
+}: CategoryNavProps) {
   const pathname = usePathname();
   const { firestore } = useFirebase();
   const isMobile = useIsMobile();
@@ -37,7 +47,9 @@ export function CategoryNav() {
     );
   }
 
-  const isHomeActive = pathname === '/';
+  const isHomeActive = mode === 'podcast'
+    ? (selectedCategory || 'My Headlines') === 'My Headlines'
+    : pathname === '/';
   
   const MAX_VISIBLE_DESKTOP = 6;
   
@@ -46,6 +58,22 @@ export function CategoryNav() {
 
 
   const CategoryLink = ({ href, children, isActive, className, onClick }: { href: string, children: React.ReactNode, isActive: boolean, className?: string, onClick?: () => void }) => (
+    mode === 'podcast' ? (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'relative inline-block px-3 py-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap',
+          isActive ? 'text-primary' : 'text-muted-foreground',
+          className,
+        )}
+      >
+        {children}
+        {isActive && (
+          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+        )}
+      </button>
+    ) : (
     <Link
       href={href}
       onClick={onClick}
@@ -60,6 +88,7 @@ export function CategoryNav() {
         <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
       )}
     </Link>
+    )
   );
 
   if (isMobile) {
@@ -68,12 +97,27 @@ export function CategoryNav() {
             <div className="container h-12 px-2">
                  <ScrollArea className="w-full whitespace-nowrap">
                     <div className="flex w-max space-x-2">
-                         <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
+                         <CategoryLink
+                           href="/"
+                           isActive={isHomeActive}
+                           onClick={mode === 'podcast' ? () => onSelectCategory?.('My Headlines') : undefined}
+                         >
+                           My Headlines
+                         </CategoryLink>
                         {categories.map((category) => {
                             const href = `/category/${encodeURIComponent(category.name)}`;
-                            const isActive = pathname === href;
+                            const isActive = mode === 'podcast'
+                              ? selectedCategory === category.name
+                              : pathname === href;
                             return (
-                                <CategoryLink key={category.id} href={href} isActive={isActive}>{category.name}</CategoryLink>
+                                <CategoryLink
+                                  key={category.id}
+                                  href={href}
+                                  isActive={isActive}
+                                  onClick={mode === 'podcast' ? () => onSelectCategory?.(category.name) : undefined}
+                                >
+                                  {category.name}
+                                </CategoryLink>
                             );
                         })}
                     </div>
@@ -89,14 +133,28 @@ export function CategoryNav() {
       <div className="container px-4 sm:px-6 md:px-8">
         <ul className="flex items-center justify-center h-12 space-x-4 sm:space-x-6">
             <li>
-                <CategoryLink href="/" isActive={isHomeActive}>My Headlines</CategoryLink>
+                <CategoryLink
+                  href="/"
+                  isActive={isHomeActive}
+                  onClick={mode === 'podcast' ? () => onSelectCategory?.('My Headlines') : undefined}
+                >
+                  My Headlines
+                </CategoryLink>
             </li>
           {visibleCategoriesDesktop.map((category) => {
             const href = `/category/${encodeURIComponent(category.name)}`;
-            const isActive = pathname === href;
+            const isActive = mode === 'podcast'
+              ? selectedCategory === category.name
+              : pathname === href;
             return (
               <li key={category.id}>
-                <CategoryLink href={href} isActive={isActive}>{category.name}</CategoryLink>
+                <CategoryLink
+                  href={href}
+                  isActive={isActive}
+                  onClick={mode === 'podcast' ? () => onSelectCategory?.(category.name) : undefined}
+                >
+                  {category.name}
+                </CategoryLink>
               </li>
             );
           })}
@@ -112,12 +170,24 @@ export function CategoryNav() {
                   <DropdownMenuContent align="end">
                     {hiddenCategoriesDesktop.map(category => {
                          const href = `/category/${encodeURIComponent(category.name)}`;
-                         const isActive = pathname === href;
+                         const isActive = mode === 'podcast'
+                           ? selectedCategory === category.name
+                           : pathname === href;
                         return (
                             <DropdownMenuItem key={category.id} asChild>
-                                <Link href={href} className={cn(isActive && 'text-primary')}>
+                                {mode === 'podcast' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => onSelectCategory?.(category.name)}
+                                    className={cn('w-full text-left', isActive && 'text-primary')}
+                                  >
                                     {category.name}
-                                </Link>
+                                  </button>
+                                ) : (
+                                  <Link href={href} className={cn(isActive && 'text-primary')}>
+                                      {category.name}
+                                  </Link>
+                                )}
                             </DropdownMenuItem>
                         )
                     })}

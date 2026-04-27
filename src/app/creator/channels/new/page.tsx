@@ -84,8 +84,8 @@ export default function CreatorCreateChannelPage() {
         name: channelName.trim(),
         description: channelDescription.trim(),
         logoUrl: finalLogoUrl,
-        youtubeChannelUrl: youtubeChannelUrl.trim(),
-        youtubeChannelId: youtubeChannelId || undefined,
+        youtubeChannelUrl: youtubeChannelUrl.trim() || undefined,
+        youtubeChannelId: youtubeChannelUrl.trim() ? (youtubeChannelId || undefined) : undefined,
         region: channelRegions,
         creatorId: user.uid,
         createdAt: serverTimestamp(),
@@ -112,11 +112,11 @@ export default function CreatorCreateChannelPage() {
       <Card>
         <CardHeader>
           <CardTitle>Channel Setup</CardTitle>
-          <CardDescription>Paste your channel URL to auto-fill details, then review and create.</CardDescription>
+          <CardDescription>YouTube channel URL is optional. Add it only if you want auto-sync and quick info fetch.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="channel-url">YouTube Channel URL</Label>
+            <Label htmlFor="channel-url">YouTube Channel URL (optional)</Label>
             <div className="flex gap-2">
               <Input
                 id="channel-url"
@@ -128,6 +128,7 @@ export default function CreatorCreateChannelPage() {
                 {isFetchingInfo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Auto Fetch'}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">You can create a channel without a YouTube URL.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">

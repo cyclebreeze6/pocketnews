@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useCollection, useFirebase, useMemoFirebase } from '../firebase';
 import type { Podcast, Channel } from '../lib/types';
@@ -15,6 +15,7 @@ import Link from 'next/link';
 
 interface PodcastSectionProps {
   isActive: boolean;
+  categoryFilter?: string;
 }
 
 const toDate = (ts: Timestamp | Date | string): Date => {
@@ -39,7 +40,7 @@ function PodcastSkeleton() {
   );
 }
 
-export function PodcastSection({ isActive }: PodcastSectionProps) {
+export function PodcastSection({ isActive, categoryFilter = 'My Headlines' }: PodcastSectionProps) {
   const { firestore } = useFirebase();
 
   const podcastsQuery = useMemoFirebase(
@@ -54,24 +55,36 @@ export function PodcastSection({ isActive }: PodcastSectionProps) {
   // Increment this key whenever we want to force-restart the player
   const [playerKey, setPlayerKey] = useState(0);
 
+  const filteredPodcasts = useMemo(() => {
+    if (!podcasts) return [];
+    if (!categoryFilter || categoryFilter === 'My Headlines') return podcasts;
+    return podcasts.filter((podcast) => podcast.contentCategory === categoryFilter);
+  }, [podcasts, categoryFilter]);
+
   // Auto-select and play the first podcast whenever the tab becomes active
   useEffect(() => {
-    if (isActive && podcasts && podcasts.length > 0) {
-      if (!currentPodcast) {
-        setCurrentPodcast(podcasts[0]);
+    if (isActive && filteredPodcasts.length > 0) {
+      if (!currentPodcast || !filteredPodcasts.some((podcast) => podcast.id === currentPodcast.id)) {
+        setCurrentPodcast(filteredPodcasts[0]);
       }
       // Restart the player each time the tab is activated
       setPlayerKey((k) => k + 1);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive]);
+  }, [isActive, filteredPodcasts, currentPodcast]);
 
   // Once we have podcasts loaded, pre-select the first one
   useEffect(() => {
-    if (podcasts && podcasts.length > 0 && !currentPodcast) {
-      setCurrentPodcast(podcasts[0]);
+    if (filteredPodcasts.length === 0) {
+      setCurrentPodcast(null);
+      return;
     }
-  }, [podcasts, currentPodcast]);
+
+    const hasCurrent = currentPodcast && filteredPodcasts.some((podcast) => podcast.id === currentPodcast.id);
+    if (!hasCurrent) {
+      setCurrentPodcast(filteredPodcasts[0]);
+    }
+  }, [filteredPodcasts, currentPodcast]);
 
   const handleSelectPodcast = useCallback((podcast: Podcast) => {
     setCurrentPodcast(podcast);
@@ -85,7 +98,7 @@ export function PodcastSection({ isActive }: PodcastSectionProps) {
 
   if (isLoading) return <PodcastSkeleton />;
 
-  if (!podcasts || podcasts.length === 0) {
+  if (!filteredPodcasts || filteredPodcasts.length === 0) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
         <div className="flex flex-col items-center gap-4">
@@ -94,7 +107,9 @@ export function PodcastSection({ isActive }: PodcastSectionProps) {
           </div>
           <h2 className="text-2xl font-bold">No Podcasts Yet</h2>
           <p className="text-muted-foreground max-w-sm">
-            Podcast episodes will appear here once creators start uploading.
+            {categoryFilter === 'My Headlines'
+              ? 'Podcast episodes will appear here once creators start uploading.'
+              : `No podcast episodes found in ${categoryFilter}.`}
           </p>
         </div>
       </div>
@@ -167,7 +182,7 @@ export function PodcastSection({ isActive }: PodcastSectionProps) {
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Up Next
                   </p>
-                  {podcasts.slice(0, 5).map((p) => {
+                  {filteredPodcasts.slice(0, 5).map((p) => {
                     const isSelected = p.id === currentPodcast.id;
                     return (
                       <button
@@ -213,7 +228,7 @@ export function PodcastSection({ isActive }: PodcastSectionProps) {
           className="w-full"
         >
           <CarouselContent className="-ml-3">
-            {podcasts.map((podcast) => (
+            {filteredPodcasts.map((podcast) => (
               <CarouselItem
                 key={podcast.id}
                 className="pl-3 basis-4/5 sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5"

@@ -12,7 +12,7 @@ import {
   useUser,
   uploadFile,
 } from '../../../../firebase';
-import type { Channel, Podcast, PodcastContentType } from '../../../../lib/types';
+import type { Category, Channel, Podcast, PodcastContentType } from '../../../../lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Label } from '../../../../components/ui/label';
 import { Input } from '../../../../components/ui/input';
@@ -138,10 +138,13 @@ export default function CreatorPodcastEditPage() {
     return query(collection(firestore, 'channels'), where('creatorId', '==', user.uid));
   }, [firestore, user]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
+  const categoriesQuery = useMemoFirebase(() => collection(firestore, 'categories'), [firestore]);
+  const { data: categories } = useCollection<Category>(categoriesQuery);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [contentType, setContentType] = useState<PodcastContentType>('audio');
+  const [contentCategory, setContentCategory] = useState('My Headlines');
   const [channelId, setChannelId] = useState('none');
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -163,6 +166,7 @@ export default function CreatorPodcastEditPage() {
     setTitle(existingPodcast.title || '');
     setDescription(existingPodcast.description || '');
     setContentType(existingPodcast.contentType || 'audio');
+    setContentCategory(existingPodcast.contentCategory || 'My Headlines');
     setChannelId(existingPodcast.channelId || 'none');
 
     setAudioUrl(existingPodcast.audioUrl || '');
@@ -257,6 +261,7 @@ export default function CreatorPodcastEditPage() {
         title: title.trim(),
         description: description.trim(),
         contentType,
+        contentCategory,
         thumbnailUrl: finalThumbnailUrl,
         creatorId: existingPodcast?.creatorId || user.uid,
         channelId: channelId === 'none' ? '' : channelId,
@@ -384,6 +389,24 @@ export default function CreatorPodcastEditPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">Selected: {selectedChannelName}</p>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label>Podcast Category</Label>
+              <Select value={contentCategory} onValueChange={setContentCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select podcast category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="My Headlines">My Headlines</SelectItem>
+                  {categories?.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Podcast categories use the same list as News categories.</p>
             </div>
           </div>
 

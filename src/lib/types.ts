@@ -113,6 +113,7 @@ export interface Podcast {
   id: string;
   title: string;
   description?: string;
+  contentCategory?: string;
   audioUrl?: string;
   videoUrl?: string;
   thumbnailUrl: string;

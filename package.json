@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "cron": "node cron-daemon.mjs"
+    "cron": "node cron-daemon.mjs",
+    "backfill:podcast-categories": "node scripts/backfill-podcast-categories.mjs --project=studio-7985035708-93893"
   },
   "engines": {
     "node": "22"

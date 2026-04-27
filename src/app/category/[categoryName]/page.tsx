@@ -9,7 +9,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../../../components/ui/button';
-import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck } from 'lucide-react';
+import { Share, Star, PlayCircle, Check, Copy, UserPlus, UserCheck, Newspaper, Mic } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardContent } from '../../../components/ui/card';
 import type { Video, Channel, UserProfile } from '../../../lib/types';
@@ -34,6 +34,8 @@ import {
 import { useRegion } from '../../../context/region-context';
 import { AuthDialog } from '../../../components/auth-dialog';
 import { COUNTRY_TO_CONTINENT } from '../../../lib/region-map';
+import { CategoryNav } from '../../../components/category-nav';
+import { cn } from '../../../lib/utils';
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -53,6 +55,16 @@ const WhatsAppIcon = (props: any) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
+);
+
+const AnimatedLiveDot = () => (
+  <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 ml-1">
+    <span className="relative flex h-2 w-2">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+    </span>
+    LIVE
+  </span>
 );
 
 export default function CategoryPage() {
@@ -206,6 +218,29 @@ export default function CategoryPage() {
      return (
         <div className="flex min-h-screen w-full flex-col">
             <SiteHeader />
+            <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/60">
+              <div className="container mx-auto px-4">
+                <div className="flex items-end">
+                  <Link
+                    href="/"
+                    className={cn('relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all text-primary')}
+                  >
+                    <Newspaper className="h-4 w-4" />
+                    News
+                    <AnimatedLiveDot />
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                  </Link>
+                  <Link
+                    href="/?tab=podcast"
+                    className={cn('relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all text-muted-foreground hover:text-foreground')}
+                  >
+                    <Mic className="h-4 w-4" />
+                    Podcast
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <CategoryNav mode="news" />
             <main className="flex-1 py-12 md:py-16 text-center">
                 <h2 className="text-2xl font-bold tracking-tight mb-4">
                     No videos in {categoryName}
@@ -227,6 +262,29 @@ export default function CategoryPage() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/60">
+        <div className="container mx-auto px-4">
+          <div className="flex items-end">
+            <Link
+              href="/"
+              className={cn('relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all text-primary')}
+            >
+              <Newspaper className="h-4 w-4" />
+              News
+              <AnimatedLiveDot />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+            </Link>
+            <Link
+              href="/?tab=podcast"
+              className={cn('relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all text-muted-foreground hover:text-foreground')}
+            >
+              <Mic className="h-4 w-4" />
+              Podcast
+            </Link>
+          </div>
+        </div>
+      </div>
+      <CategoryNav mode="news" />
       <main className="flex-1 md:py-8">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           <div className="lg:col-span-2">
