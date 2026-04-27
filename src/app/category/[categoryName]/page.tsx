@@ -217,7 +217,7 @@ export default function CategoryPage() {
   if (!videos || videos.length === 0) {
      return (
         <div className="flex min-h-screen w-full flex-col">
-            <SiteHeader />
+          <SiteHeader hideCategoryNav={true} />
             <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/60">
               <div className="container mx-auto px-4">
                 <div className="flex items-end">
@@ -261,7 +261,7 @@ export default function CategoryPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
+      <SiteHeader hideCategoryNav={true} />
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/60">
         <div className="container mx-auto px-4">
           <div className="flex items-end">
