@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import Link from 'next/link';
-import { PlusSquare, HandCoins, TrendingUp, AlertCircle, Loader2, Clapperboard } from 'lucide-react';
+import { PlusSquare, HandCoins, TrendingUp, AlertCircle, Loader2, Clapperboard, Mic } from 'lucide-react';
 import { useUser, useFirebase, useCollection, useDoc, addDocumentNonBlocking, useMemoFirebase } from '../../firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import type { Video, UserProfile, PayoutRequest, Channel } from '../../lib/types';
@@ -167,7 +167,7 @@ export default function CreatorDashboardPage() {
         </Alert>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 pt-6 border-t">
+      <div className="grid gap-6 md:grid-cols-3 pt-6 border-t">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><PlusSquare className="h-5 w-5" /> Upload Video</CardTitle>
@@ -193,6 +193,20 @@ export default function CreatorDashboardPage() {
               className="text-sm text-primary font-mono underline break-all hover:opacity-75 transition-opacity"
             >
               https://pocketnewslive.tv/creator/shorts/new
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Mic className="h-5 w-5" /> Add Podcast</CardTitle>
+            <CardDescription>Upload audio, video, or add a live link for Podcasts.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href="/creator/podcasts/new"
+              className="text-sm text-primary font-mono underline break-all hover:opacity-75 transition-opacity"
+            >
+              https://pocketnewslive.tv/creator/podcasts/new
             </Link>
           </CardContent>
         </Card>

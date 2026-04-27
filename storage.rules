@@ -22,6 +22,31 @@ service firebase.storage {
         && request.resource.contentType.matches('video/.*');
     }
 
+    // Podcast uploads: public read for viewers, creator/admin write for authors.
+    match /creator_uploads/podcasts/audio/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isCreatorOrAdmin()
+        && request.auth.uid == userId
+        && request.resource.size <= 500 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+    }
+
+    match /creator_uploads/podcasts/video/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isCreatorOrAdmin()
+        && request.auth.uid == userId
+        && request.resource.size <= 500 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+
+    match /creator_uploads/podcasts/thumbnails/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isCreatorOrAdmin()
+        && request.auth.uid == userId
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     match /creator_uploads/thumbnails/{userId}/{fileName} {
       allow read: if true;
       allow write: if isRegisteredUser()

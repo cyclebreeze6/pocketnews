@@ -13,6 +13,7 @@ import {
   PlusSquare,
   Package,
   Clapperboard,
+  Mic,
   Menu,
   Globe,
   Zap,
@@ -243,6 +244,12 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                 <Button variant="ghost">
                     <Clapperboard className="h-5 w-5 mr-2" />
                     Shorts
+                </Button>
+              </Link>
+              <Link href="/podcast/channels" className='hidden sm:inline-flex'>
+                <Button variant="ghost">
+                    <Mic className="h-5 w-5 mr-2" />
+                    Podcast Channels
                 </Button>
               </Link>
               <Link href="/channels" className='hidden sm:inline-flex'>

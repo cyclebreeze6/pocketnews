@@ -59,6 +59,22 @@ service cloud.firestore {
       allow get, list: if true;
       allow write: if isCreatorOrAdmin();
     }
+
+    // Podcasts are public to read, but writes are separated to creator ownership.
+    // - Any user can read podcast documents.
+    // - Only creators/admins can create.
+    // - Creator can update/delete only their own podcast.
+    // - Admin can update/delete any podcast.
+    match /podcasts/{podcastId} {
+      allow get, list: if true;
+      allow create: if isCreatorOrAdmin()
+        && request.auth != null
+        && request.resource.data.creatorId == request.auth.uid;
+      allow update, delete: if isAdmin() || (
+        request.auth != null
+        && resource.data.creatorId == request.auth.uid
+      );
+    }
     
     match /categories/{categoryId} {
       allow get, list: if true;

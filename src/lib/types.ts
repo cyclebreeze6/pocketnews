@@ -106,3 +106,22 @@ export interface PayoutRequest {
   status: 'pending' | 'paid' | 'rejected';
   createdAt: Timestamp | Date | string;
 }
+
+export type PodcastContentType = 'audio' | 'video' | 'facebook' | 'youtube';
+
+export interface Podcast {
+  id: string;
+  title: string;
+  description?: string;
+  audioUrl?: string;
+  videoUrl?: string;
+  thumbnailUrl: string;
+  facebookLiveUrl?: string;
+  youtubeVideoId?: string;
+  contentType: PodcastContentType;
+  channelId?: string;
+  creatorId: string;
+  createdAt: Timestamp | Date | string;
+  views?: number;
+  duration?: string;
+}

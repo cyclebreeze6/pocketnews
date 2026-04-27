@@ -3,16 +3,18 @@
 import Link from 'next/link';
 import { useCollection, useFirebase, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '../firebase';
 import SiteHeader from '../components/site-header';
+import { CategoryNav } from '../components/category-nav';
 import { VideoPlayer } from '../components/video-player';
+import { PodcastSection } from '../components/podcast-section';
 import { Badge } from '../components/ui/badge';
 import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Clapperboard } from 'lucide-react';
+import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Newspaper, Mic } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel, Short } from '../lib/types';
+import type { Video, Channel } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -39,7 +41,18 @@ import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useRegion } from '../context/region-context';
 import { COUNTRY_TO_CONTINENT } from '../lib/region-map';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
+
+type ActiveTab = 'news' | 'podcast';
+
+const AnimatedLiveDot = () => (
+  <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 ml-1">
+    <span className="relative flex h-2 w-2">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+    </span>
+    LIVE
+  </span>
+);
 
 
 function toDate(timestamp: Timestamp | Date | string): Date {
@@ -73,7 +86,7 @@ const WhatsAppIcon = (props: any) => (
 function HomepageSkeleton() {
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
+      <SiteHeader hideCategoryNav={true} />
        <main className="flex-1 md:py-8">
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0">
           <div className="lg:col-span-2">
@@ -125,6 +138,7 @@ export default function Home() {
   const isMobile = useIsMobile();
   const { selectedRegion } = useRegion();
 
+  const [activeTab, setActiveTab] = useState<ActiveTab>('news');
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -137,10 +151,6 @@ export default function Home() {
   const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
   const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  const shortsQuery = useMemoFirebase(() => query(collection(firestore, 'shorts'), orderBy('createdAt', 'desc'), limit(30)), [firestore]);
-  const { data: recentShorts, isLoading: shortsLoading } = useCollection<Short>(shortsQuery);
-  const [randomizedShorts, setRandomizedShorts] = useState<Short[]>([]);
-
   // Screen size check for Theater Mode restriction (Laptop/TV sizes)
   useEffect(() => {
     const checkScreen = () => setIsLargeScreen(window.innerWidth >= 1024);
@@ -149,14 +159,6 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  useEffect(() => {
-    if (recentShorts && recentShorts.length > 0) {
-      // Shuffling on the client side after hydration to avoid randomization mismatch
-      const shuffled = [...recentShorts].sort(() => Math.random() - 0.5);
-      setRandomizedShorts(shuffled.slice(0, 10));
-    }
-  }, [recentShorts]);
-  
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -442,281 +444,288 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <SiteHeader />
+      <SiteHeader hideCategoryNav={true} />
+
+      {/* ── Tab Navigation ──────────────────────────────────────── */}
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/60">
+        <div className="container mx-auto px-4">
+          <div className="flex items-end">
+            <button
+              onClick={() => setActiveTab('news')}
+              className={cn(
+                'relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all',
+                activeTab === 'news'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Newspaper className="h-4 w-4" />
+              News
+              {activeTab === 'news' && <AnimatedLiveDot />}
+              {activeTab === 'news' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('podcast')}
+              className={cn(
+                'relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all',
+                activeTab === 'podcast'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Mic className="h-4 w-4" />
+              Podcast
+              {activeTab === 'podcast' && <AnimatedLiveDot />}
+              {activeTab === 'podcast' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Category nav — only for News tab */}
+      {activeTab === 'news' && <CategoryNav />}
+
       <main ref={mainRef} className="flex-1">
-        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
-          <div className={cn("lg:col-span-2", isTheaterMode && "z-[100]")}>
-             {isFeedEmpty ? (
-                 <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center text-center p-8">
-                    <h2 className="text-2xl font-bold mb-2">No Videos Found</h2>
-                    <p className="text-muted-foreground">
-                        Try adjusting your region filter.
-                    </p>
-                </div>
-            ) : currentVideo && currentChannel ? (
-              <>
-                <div 
-                  className={cn(
-                    "relative md:rounded-lg overflow-hidden",
-                    isTheaterMode && "fixed inset-0 z-[100] bg-black md:rounded-none"
-                  )}
-                >
-                  <div
-                    ref={playerContainerRef}
+        {/* ── NEWS TAB ─────────────────────────────────────────── */}
+        <div className={activeTab === 'news' ? 'block' : 'hidden'}>
+          <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
+            <div className={cn("lg:col-span-2", isTheaterMode && "z-[100]")}>
+               {isFeedEmpty ? (
+                   <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center text-center p-8">
+                      <h2 className="text-2xl font-bold mb-2">No Videos Found</h2>
+                      <p className="text-muted-foreground">
+                          Try adjusting your region filter.
+                      </p>
+                  </div>
+              ) : currentVideo && currentChannel ? (
+                <>
+                  <div 
                     className={cn(
-                      'z-40 w-full bg-background h-full group',
-                      isPlayerSticky && isMobile && !isTheaterMode
-                        ? 'fixed top-0 left-0 right-0'
-                        : 'relative'
+                      "relative md:rounded-lg overflow-hidden",
+                      isTheaterMode && "fixed inset-0 z-[100] bg-black md:rounded-none"
                     )}
                   >
-                    <div className={cn("aspect-video", isTheaterMode && "h-full")}>
-                      <VideoPlayer
-                        youtubeId={currentVideo.youtubeVideoId}
-                        videoUrl={currentVideo.videoUrl}
-                        onEnd={handleVideoEnd}
-                        onNext={handleNextVideo}
-                        onPrevious={handlePreviousVideo}
-                        hasNext={hasNext}
-                        hasPrevious={hasPrevious}
-                        isTheaterMode={isTheaterMode}
-                        onToggleTheater={isLargeScreen ? () => setIsTheaterMode(!isTheaterMode) : undefined}
-                        key={currentVideo.id}
-                      />
-                    </div>
+                    <div
+                      ref={playerContainerRef}
+                      className={cn(
+                        'z-40 w-full bg-background h-full group',
+                        isPlayerSticky && isMobile && !isTheaterMode
+                          ? 'fixed top-0 left-0 right-0'
+                          : 'relative'
+                      )}
+                    >
+                      <div className={cn("aspect-video", isTheaterMode && "h-full")}>
+                        <VideoPlayer
+                          youtubeId={currentVideo.youtubeVideoId}
+                          videoUrl={currentVideo.videoUrl}
+                          onEnd={handleVideoEnd}
+                          onNext={handleNextVideo}
+                          onPrevious={handlePreviousVideo}
+                          hasNext={hasNext}
+                          hasPrevious={hasPrevious}
+                          isTheaterMode={isTheaterMode}
+                          onToggleTheater={isLargeScreen ? () => setIsTheaterMode(!isTheaterMode) : undefined}
+                          key={currentVideo.id}
+                        />
+                      </div>
 
-                    {/* Theater Mode Overlays */}
-                    {isTheaterMode && (
-                      <>
-                        {/* Title Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="max-w-4xl space-y-4">
-                            <h2 className="text-3xl md:text-4xl font-bold text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.8)]">
-                              {currentVideo.title}
-                            </h2>
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-10 w-10 border border-white/20">
-                                  <AvatarImage src={currentChannel.logoUrl} />
-                                  <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span className="font-semibold text-white">{currentChannel.name}</span>
-                              </div>
-                              <Badge variant="outline" className="text-white border-white/40 bg-white/10 backdrop-blur-md">
-                                {currentVideo.contentCategory}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Playlist Overlay (Right Side) */}
-                        <div className="absolute top-0 right-0 bottom-0 w-80 bg-black/60 backdrop-blur-xl border-l border-white/10 hidden xl:flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="p-6 border-b border-white/10">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                              <Maximize2 className="h-4 w-4" />
-                              Up Next
-                            </h3>
-                          </div>
-                          <ScrollArea className="flex-1">
-                            <div className="p-4 space-y-4">
-                              {allVideos.map((video) => {
-                                const isPlaying = video.id === currentVideo.id;
-                                return (
-                                  <div 
-                                    key={video.id} 
-                                    onClick={() => handleSetCurrentVideo(video)}
-                                    className={cn(
-                                      "group/item cursor-pointer p-2 rounded-lg transition-colors pointer-events-auto",
-                                      isPlaying ? "bg-primary/20 border border-primary/30" : "hover:bg-white/10"
-                                    )}
-                                  >
-                                    <div className="relative aspect-video rounded-md overflow-hidden mb-2">
-                                      <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" />
-                                      {isPlaying && <div className="absolute inset-0 bg-primary/40 flex items-center justify-center"><PlayCircle className="text-white h-8 w-8" /></div>}
-                                    </div>
-                                    <p className={cn("text-xs font-medium line-clamp-2", isPlaying ? "text-primary" : "text-white/80")}>
-                                      {video.title}
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </ScrollArea>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  {isPlayerSticky && isMobile && !isTheaterMode && <div className="aspect-video" />}
-                </div>
-
-                {!isTheaterMode && (
-                  <div className="px-4 md:px-0 pt-4">
-                      <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
-
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                          <div className="flex items-center gap-3">
-                              <Link href={`/channels/${currentChannel.id}`}>
-                                <Avatar>
-                                    <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
+                      {/* Theater Mode Overlays */}
+                      {isTheaterMode && (
+                        <>
+                          <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="max-w-4xl space-y-4">
+                              <h2 className="text-3xl md:text-4xl font-bold text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.8)]">
+                                {currentVideo.title}
+                              </h2>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-10 w-10 border border-white/20">
+                                    <AvatarImage src={currentChannel.logoUrl} />
                                     <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                              </Link>
-                              <div>
-                                  <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
-                                      {currentChannel.region && currentChannel.region.length > 0 && (
-                                          <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
-                                              {currentChannel.region[0]}
-                                          </span>
+                                  </Avatar>
+                                  <span className="font-semibold text-white">{currentChannel.name}</span>
+                                </div>
+                                <Badge variant="outline" className="text-white border-white/40 bg-white/10 backdrop-blur-md">
+                                  {currentVideo.contentCategory}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="absolute top-0 right-0 bottom-0 w-80 bg-black/60 backdrop-blur-xl border-l border-white/10 hidden xl:flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="p-6 border-b border-white/10">
+                              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <Maximize2 className="h-4 w-4" />
+                                Up Next
+                              </h3>
+                            </div>
+                            <ScrollArea className="flex-1">
+                              <div className="p-4 space-y-4">
+                                {allVideos.map((video) => {
+                                  const isPlaying = video.id === currentVideo.id;
+                                  return (
+                                    <div 
+                                      key={video.id} 
+                                      onClick={() => handleSetCurrentVideo(video)}
+                                      className={cn(
+                                        "group/item cursor-pointer p-2 rounded-lg transition-colors pointer-events-auto",
+                                        isPlaying ? "bg-primary/20 border border-primary/30" : "hover:bg-white/10"
                                       )}
-                                      <p className="font-semibold hover:underline">{currentChannel.name}</p>
-                                  </Link>
-                                  <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
+                                    >
+                                      <div className="relative aspect-video rounded-md overflow-hidden mb-2">
+                                        <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" />
+                                        {isPlaying && <div className="absolute inset-0 bg-primary/40 flex items-center justify-center"><PlayCircle className="text-white h-8 w-8" /></div>}
+                                      </div>
+                                      <p className={cn("text-xs font-medium line-clamp-2", isPlaying ? "text-primary" : "text-white/80")}>
+                                        {video.title}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {isPlayerSticky && isMobile && !isTheaterMode && <div className="aspect-video" />}
+                  </div>
+
+                  {!isTheaterMode && (
+                    <div className="px-4 md:px-0 pt-4">
+                        <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                            <div className="flex items-center gap-3">
+                                <Link href={`/channels/${currentChannel.id}`}>
+                                  <Avatar>
+                                      <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
+                                      <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                </Link>
+                                <div>
+                                    <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
+                                        {currentChannel.region && currentChannel.region.length > 0 && (
+                                            <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
+                                                {currentChannel.region[0]}
+                                            </span>
+                                        )}
+                                        <p className="font-semibold hover:underline">{currentChannel.name}</p>
+                                    </Link>
+                                    <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={handleFollowToggle}>
+                                    {isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                                    {isFollowing ? 'Following' : 'Follow'}
+                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-2">
+                                        <div className="flex gap-2">
+                                            <Button size="icon" variant="outline" onClick={() => handleShare('facebook')}>
+                                                <FacebookIcon className="h-5 w-5" />
+                                            </Button>
+                                             <Button size="icon" variant="outline" onClick={() => handleShare('whatsapp')}>
+                                                <WhatsAppIcon className="h-5 w-5" />
+                                            </Button>
+                                            <Button size="icon" variant="outline" onClick={() => handleShare('copy')}>
+                                                <Copy className="h-5 w-5" />
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                 <Button variant="secondary" onClick={() => {
+                                      if (user?.isAnonymous) {
+                                        setIsAuthDialogOpen(true);
+                                      } else {
+                                        setIsReportDialogOpen(true);
+                                      }
+                                    }}>
+                                    <Flag className="mr-2 h-4 w-4" /> Report
+                                </Button>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mt-4">
+                            <p className="text-sm font-medium">Related topics</p>
+                            <Badge variant="outline">#news</Badge>
+                            <Badge variant="outline">#technology</Badge>
+                            <Badge variant="outline">#sports</Badge>
+                        </div>
+                    </div>
+                  )}
+                </>
+              ) : <Skeleton className="aspect-video md:rounded-lg" /> }
+            </div>
+            
+            <div className="lg:col-span-1 px-4 md:px-0">
+               
+              <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
+              </div>
+              <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+                  <div className="space-y-4">
+                      {allVideos.map((video) => {
+                          const videoChannel = channels.find(c => c.id === video.channelId);
+                          const isPlaying = video.id === currentVideo?.id;
+                          return (
+                          <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
+                              <div className="relative w-32 h-20 flex-shrink-0">
+                                  <Image
+                                  src={video.thumbnailUrl}
+                                  alt={video.title}
+                                  fill
+                                  className="rounded-md object-cover"
+                                  />
+                                  <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
+                                    {Math.floor(video.views / 60000)}:{String(Math.floor((video.views % 60000)/1000)).padStart(2,'0')}
+                                  </div>
+                              </div>
+                              <div className="flex-grow">
+                                  {isPlaying && (
+                                      <Badge variant="default" className="mb-1 text-xs animate-pulse">
+                                          <PlayCircle className="mr-1 h-3 w-3" />
+                                          Now Playing
+                                      </Badge>
+                                  )}
+                                  <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
+                                  <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                               </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                              <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={handleFollowToggle}>
-                                  {isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                                  {isFollowing ? 'Following' : 'Follow'}
-                              </Button>
-                              <Popover>
-                                  <PopoverTrigger asChild>
-                                      <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-2">
-                                      <div className="flex gap-2">
-                                          <Button size="icon" variant="outline" onClick={() => handleShare('facebook')}>
-                                              <FacebookIcon className="h-5 w-5" />
-                                          </Button>
-                                           <Button size="icon" variant="outline" onClick={() => handleShare('whatsapp')}>
-                                              <WhatsAppIcon className="h-5 w-5" />
-                                          </Button>
-                                          <Button size="icon" variant="outline" onClick={() => handleShare('copy')}>
-                                              <Copy className="h-5 w-5" />
-                                          </Button>
-                                      </div>
-                                  </PopoverContent>
-                              </Popover>
-                               <Button variant="secondary" onClick={() => {
-                                    if (user?.isAnonymous) {
-                                      setIsAuthDialogOpen(true);
-                                    } else {
-                                      setIsReportDialogOpen(true);
-                                    }
-                                  }}>
-                                  <Flag className="mr-2 h-4 w-4" /> Report
-                              </Button>
+                          )
+                      })}
+                      {isFetchingMore ? (
+                          <div className="flex justify-center items-center py-4">
+                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                           </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mt-4">
-                          <p className="text-sm font-medium">Related topics</p>
-                          <Badge variant="outline">#news</Badge>
-                          <Badge variant="outline">#technology</Badge>
-                          <Badge variant="outline">#sports</Badge>
-                      </div>
-
-                      {/* Randomized Shorts Shelf below Title/Actions */}
-                      {randomizedShorts && randomizedShorts.length > 0 && (
-                        <div className="mb-12 mt-12 px-2 md:px-0">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <Clapperboard className="h-5 w-5 text-primary" />
-                                    Trending Shorts
-                                </h3>
-                                <Link href="/shorts">
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">View All</Button>
-                                </Link>
-                            </div>
-                            <Carousel opts={{ align: "start", loop: false }} className="w-full">
-                                <CarouselContent className="-ml-2 md:-ml-4">
-                                    {randomizedShorts.map((short) => (
-                                        <CarouselItem key={short.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
-                                            <Link href={`/shorts/${short.id}`} className="group relative block aspect-[9/16] overflow-hidden rounded-xl bg-muted border border-white/5">
-                                                <Image 
-                                                    src={short.thumbnailUrl} 
-                                                    alt={short.title} 
-                                                    fill 
-                                                    className="object-cover transition-transform duration-500 group-hover:scale-110" 
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <PlayCircle className="h-12 w-12 text-white/80" fill="currentColor" />
-                                                </div>
-                                                <div className="absolute bottom-0 left-0 right-0 p-3">
-                                                    <p className="text-xs font-semibold text-white line-clamp-2 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-                                                        {short.title}
-                                                    </p>
-                                                </div>
-                                            </Link>
-                                        </CarouselItem>
-                                    ))}
-                                </CarouselContent>
-                                <div className="hidden md:block">
-                                    <CarouselPrevious className="-left-4 bg-background/80 backdrop-blur-sm" />
-                                    <CarouselNext className="-right-4 bg-background/80 backdrop-blur-sm" />
-                                </div>
-                            </Carousel>
-                        </div>
+                      ) : (
+                          <div ref={observerRef} />
                       )}
                   </div>
-                )}
-              </>
-            ) : <Skeleton className="aspect-video md:rounded-lg" /> }
-          </div>
-          
-          <div className="lg:col-span-1 px-4 md:px-0">
-             
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
-            </div>
-            <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-                <div className="space-y-4">
-                    {allVideos.map((video) => {
-                        const videoChannel = channels.find(c => c.id === video.channelId);
-                        const isPlaying = video.id === currentVideo?.id;
-                        return (
-                        <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
-                            <div className="relative w-32 h-20 flex-shrink-0">
-                                <Image
-                                src={video.thumbnailUrl}
-                                alt={video.title}
-                                fill
-                                className="rounded-md object-cover"
-                                />
-                                <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
-                                  {Math.floor(video.views / 60000)}:{String(Math.floor((video.views % 60000)/1000)).padStart(2,'0')}
-                                </div>
-                            </div>
-                            <div className="flex-grow">
-                                {isPlaying && (
-                                    <Badge variant="default" className="mb-1 text-xs animate-pulse">
-                                        <PlayCircle className="mr-1 h-3 w-3" />
-                                        Now Playing
-                                    </Badge>
-                                )}
-                                <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
-                            </div>
-                        </div>
-                        )
-                    })}
-                    {isFetchingMore ? (
-                        <div className="flex justify-center items-center py-4">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                        </div>
-                    ) : (
-                        <div ref={observerRef} />
-                    )}
-                </div>
-            </ScrollArea>
+              </ScrollArea>
 
-             <Card className="mt-8 bg-card/50">
-                <CardContent className="p-4 flex items-center justify-between">
-                    <p className="text-sm max-w-[200px]">Enjoy ad-free news from 400+ local, national, and global channels</p>
-                    <Button variant="secondary" onClick={() => setIsPremiumDialogOpen(true)}>Go ad-free</Button>
-                </CardContent>
-            </Card>
+               <Card className="mt-8 bg-card/50">
+                  <CardContent className="p-4 flex items-center justify-between">
+                      <p className="text-sm max-w-[200px]">Enjoy ad-free news from 400+ local, national, and global channels</p>
+                      <Button variant="secondary" onClick={() => setIsPremiumDialogOpen(true)}>Go ad-free</Button>
+                  </CardContent>
+              </Card>
+            </div>
           </div>
+        </div>
+
+        {/* ── PODCAST TAB ──────────────────────────────────────── */}
+        <div className={activeTab === 'podcast' ? 'block' : 'hidden'}>
+          <PodcastSection isActive={activeTab === 'podcast'} />
         </div>
       </main>
       
@@ -738,7 +747,7 @@ export default function Home() {
         </div>
       </footer>
 
-       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
+      <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>
         <DialogContent>
         <DialogHeader>
