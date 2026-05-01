@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { SiteHeader } from '../../components/site-header';
+import SiteHeader from '../../components/site-header';
 
 export const metadata = {
   title: 'Terms & Conditions | Pocketnews TV',
