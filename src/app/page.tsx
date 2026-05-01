@@ -139,6 +139,7 @@ export default function Home() {
   const { selectedRegion } = useRegion();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('news');
+  const [newsVideoPlaying, setNewsVideoPlaying] = useState(true);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -451,7 +452,7 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="flex items-end">
             <button
-              onClick={() => setActiveTab('news')}
+              onClick={() => { setActiveTab('news'); setNewsVideoPlaying(true); }}
               className={cn(
                 'relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all',
                 activeTab === 'news'
@@ -468,7 +469,7 @@ export default function Home() {
             </button>
 
             <button
-              onClick={() => setActiveTab('podcast')}
+              onClick={() => { setActiveTab('podcast'); setNewsVideoPlaying(false); }}
               className={cn(
                 'relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all',
                 activeTab === 'podcast'
@@ -530,6 +531,7 @@ export default function Home() {
                           hasPrevious={hasPrevious}
                           isTheaterMode={isTheaterMode}
                           onToggleTheater={isLargeScreen ? () => setIsTheaterMode(!isTheaterMode) : undefined}
+                          playing={newsVideoPlaying}
                           key={currentVideo.id}
                         />
                       </div>
@@ -732,17 +734,22 @@ export default function Home() {
       {/* Disclaimer Footer */}
       <footer className="py-12 border-t border-border/40 text-center text-sm text-muted-foreground bg-card/20">
         <div className="container mx-auto px-4">
-          <p className="mb-4 font-semibold text-foreground">Meet the #1 App to Stream News. Watch Free!</p>
+          <p className="mb-4 font-semibold text-foreground">Meet the #1 App to Stream News &amp; Podcasts. Watch Free!</p>
           <div className="max-w-3xl mx-auto space-y-2 opacity-70">
             <p>
-              Disclaimer: All video content, logos, and trademarks displayed on this platform belong to their respective owners and original channels on YouTube. 
+              Disclaimer: All video and audio content, logos, and trademarks displayed on this platform belong to their respective owners and original channels.
             </p>
             <p>
-              Pocketnews TV is a curation platform providing centralized access to public news broadcasts for informational purposes.
+              Pocketnews TV is a free curation platform providing centralised access to public news broadcasts and podcast episodes for informational purposes. No revenue is shared with creators.
             </p>
           </div>
-          <div className="mt-8 pt-8 border-t border-border/10">
+          <div className="mt-8 pt-8 border-t border-border/10 space-y-3">
             <p>© {new Date().getFullYear()} Pocketnews TV. All rights reserved.</p>
+            <div className="flex justify-center gap-6">
+              <Link href="/terms" className="hover:text-foreground hover:underline transition-colors">Terms &amp; Conditions</Link>
+              <Link href="/privacy" className="hover:text-foreground hover:underline transition-colors">Privacy Policy</Link>
+              <a href="mailto:ads@pocketnewstv.com" className="hover:text-foreground hover:underline transition-colors">Advertise With Us</a>
+            </div>
           </div>
         </div>
       </footer>
