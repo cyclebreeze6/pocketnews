@@ -18,7 +18,7 @@ export function NetworkStatusIndicator() {
   return (
     <div
       role="status"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-destructive text-destructive-foreground p-4 flex items-center justify-center shadow-lg animate-in slide-in-from-bottom"
+      className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-[60] flex items-center justify-center bg-destructive p-4 text-destructive-foreground shadow-lg animate-in slide-in-from-bottom sm:bottom-0"
     >
       <div className="flex items-center gap-4">
         <WifiOff className="h-6 w-6" />

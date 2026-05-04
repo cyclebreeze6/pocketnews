@@ -1,31 +1,64 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Clapperboard, Package, History, User } from 'lucide-react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Home, Clapperboard, Mic, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUser } from '../firebase';
-import { useState } from 'react';
+import { useState, type ComponentType, type MouseEvent } from 'react';
 import { AuthDialog } from './auth-dialog';
+
+interface MobileNavItem {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  isProtected: boolean;
+  isActive: (pathname: string, tab: string | null) => boolean;
+}
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const activeTab = searchParams.get('tab');
 
-  const navItems = [
-    { href: '/', label: 'Home', icon: Home, isProtected: false },
-    { href: '/shorts', label: 'Shorts', icon: Clapperboard, isProtected: false },
-    { href: '/channels', label: 'Channels', icon: Package, isProtected: false },
-    { href: '/history', label: 'History', icon: History, isProtected: true },
-    { href: '/settings/profile', label: 'Profile', icon: User, isProtected: true },
+  const navItems: MobileNavItem[] = [
+    {
+      href: '/',
+      label: 'News',
+      icon: Home,
+      isProtected: false,
+      isActive: (currentPath, tab) => (currentPath === '/' && tab !== 'podcast') || currentPath.startsWith('/watch') || currentPath.startsWith('/category') || currentPath.startsWith('/channels'),
+    },
+    {
+      href: '/?tab=podcast',
+      label: 'Podcasts',
+      icon: Mic,
+      isProtected: false,
+      isActive: (currentPath, tab) => currentPath === '/' && tab === 'podcast',
+    },
+    {
+      href: '/shorts',
+      label: 'Shorts',
+      icon: Clapperboard,
+      isProtected: false,
+      isActive: (currentPath) => currentPath === '/shorts' || currentPath.startsWith('/shorts/'),
+    },
+    {
+      href: '/settings/profile',
+      label: 'Profile',
+      icon: User,
+      isProtected: true,
+      isActive: (currentPath) => currentPath.startsWith('/settings'),
+    },
   ];
 
   if (pathname.startsWith('/shorts/')) {
     return null;
   }
 
-  const handleLinkClick = (e: React.MouseEvent, isProtected: boolean) => {
+  const handleLinkClick = (e: MouseEvent, isProtected: boolean) => {
     if (isProtected && user?.isAnonymous) {
       e.preventDefault();
       setIsAuthDialogOpen(true);
@@ -34,23 +67,24 @@ export default function MobileNav() {
 
   return (
     <>
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-50">
-        <nav className="h-full">
-          <ul className="h-full flex justify-around items-center">
+      <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 pb-[env(safe-area-inset-bottom)]">
+        <nav className="h-[4.5rem]">
+          <ul className="grid h-full grid-cols-4 items-stretch">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = item.isActive(pathname, activeTab);
               return (
                 <li key={item.label} className="h-full">
                   <Link
                     href={item.href}
                     onClick={(e) => handleLinkClick(e, item.isProtected)}
                     className={cn(
-                      'flex flex-col items-center justify-center h-full w-16 text-muted-foreground transition-colors',
+                      'relative flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground transition-colors active:scale-[0.98]',
                       isActive && 'text-primary'
                     )}
                   >
-                    <item.icon className="h-6 w-6 mb-1" />
-                    <span className="text-xs">{item.label}</span>
+                    {isActive && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />}
+                    <item.icon className="h-5 w-5" />
+                    <span className="text-[11px] font-medium">{item.label}</span>
                   </Link>
                 </li>
               );

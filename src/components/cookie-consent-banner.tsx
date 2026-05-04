@@ -34,7 +34,7 @@ export function CookieConsentBanner() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-secondary text-secondary-foreground p-4 shadow-lg animate-in slide-in-from-bottom">
+    <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-[60] bg-secondary p-4 text-secondary-foreground shadow-lg animate-in slide-in-from-bottom sm:bottom-0">
       <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Cookie className="h-6 w-6 shrink-0" />

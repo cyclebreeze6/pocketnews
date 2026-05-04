@@ -6,6 +6,11 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
 @layer base {
   .dark {
     --background: 235 20% 12%; /* #1A237E - Deep Blue (as background) */
@@ -43,5 +48,23 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .container {
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role='button'] {
+    touch-action: manipulation;
   }
 }
