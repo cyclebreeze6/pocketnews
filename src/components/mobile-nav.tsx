@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Home, Clapperboard, Mic, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUser } from '../firebase';
-import { useState, type ComponentType, type MouseEvent } from 'react';
+import { useState, type ComponentType, type MouseEvent, Suspense } from 'react';
 import { AuthDialog } from './auth-dialog';
 
 interface MobileNavItem {
@@ -16,7 +16,7 @@ interface MobileNavItem {
   isActive: (pathname: string, tab: string | null) => boolean;
 }
 
-export default function MobileNav() {
+function MobileNavContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useUser();
@@ -94,5 +94,13 @@ export default function MobileNav() {
       </div>
       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
     </>
+  );
+}
+
+export default function MobileNav() {
+  return (
+    <Suspense fallback={null}>
+      <MobileNavContent />
+    </Suspense>
   );
 }
