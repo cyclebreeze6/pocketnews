@@ -514,9 +514,10 @@ export default function Home() {
                     <div
                       ref={playerContainerRef}
                       className={cn(
-                        'z-40 w-full bg-background h-full group',
+                        'z-40 w-full bg-background group',
+                        isTheaterMode ? 'h-full' : 'h-auto',
                         isPlayerSticky && isMobile && !isTheaterMode
-                          ? 'fixed top-0 left-0 right-0'
+                          ? 'fixed top-0 left-0 right-0 shadow-lg'
                           : 'relative'
                       )}
                     >
