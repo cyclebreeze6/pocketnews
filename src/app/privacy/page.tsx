@@ -2,8 +2,8 @@ import Link from 'next/link';
 import SiteHeader from '../../components/site-header';
 
 export const metadata = {
-  title: 'Privacy Policy | Pocketnews TV',
-  description: 'Privacy policy for Pocketnews TV — how we collect, use, and protect your data.',
+  title: 'Privacy Policy | Pocketnews TV (pocketnews.tv and pocketstream.tv)',
+  description: 'Privacy policy for Pocketnews TV (pocketnews.tv and pocketstream.tv) — how we collect, use, and protect your data.',
 };
 
 export default function PrivacyPage() {
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">1. Introduction</h2>
             <p>
-              Pocketnews TV (&quot;Platform&quot;, &quot;we&quot;, &quot;our&quot;) is committed to protecting your privacy. This
+              Pocketnews TV (pocketnews.tv and pocketstream.tv) (&quot;Platform&quot;, &quot;we&quot;, &quot;our&quot;) is committed to protecting your privacy. This
               Privacy Policy explains what information we collect, how we use it, and your rights regarding
               your data when you use the Platform — including our News, Podcast, and Shorts features.
             </p>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">4. Advertising &amp; No Revenue Sharing</h2>
             <p>
-              Pocketnews TV is a <strong>free platform</strong>. We may display third-party or
+              Pocketnews TV (pocketnews.tv and pocketstream.tv) is a <strong>free platform</strong>. We may display third-party or
               first-party advertisements alongside news and podcast content. We do not sell your personal
               data to advertisers. Advertisers may receive aggregated, anonymised performance data
               (e.g. impressions, click-through rates) but never your personally identifiable information
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
             <p className="mt-2">
               No advertising revenue is shared with creators or viewers. The Platform generates advertising
               income solely to fund operations and development. If you are interested in advertising on
-              Pocketnews TV, contact{' '}
+              Pocketnews TV (pocketnews.tv and pocketstream.tv), contact{' '}
               <a href="mailto:ads@pocketnewstv.com" className="text-primary hover:underline">
                 ads@pocketnewstv.com
               </a>.
@@ -189,7 +189,7 @@ export default function PrivacyPage() {
         </div>
       </main>
       <footer className="py-8 border-t border-border/40 text-center text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} Pocketnews TV. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Pocketnews TV (pocketnews.tv and pocketstream.tv). All rights reserved.</p>
         <div className="flex justify-center gap-4 mt-2">
           <Link href="/terms" className="hover:text-foreground hover:underline">Terms &amp; Conditions</Link>
           <Link href="/privacy" className="hover:text-foreground hover:underline">Privacy Policy</Link>
