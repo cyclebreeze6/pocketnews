@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Newspaper, Mic } from 'lucide-react';
+import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Newspaper, Mic, Download } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel } from '../lib/types';
@@ -746,6 +746,15 @@ export default function Home() {
           </div>
           <div className="mt-8 pt-8 border-t border-border/10 space-y-3">
             <p>© {new Date().getFullYear()} Pocketnews TV. All rights reserved.</p>
+            <div className="flex justify-center">
+              <a
+                href="https://studio-7985035708-93893.web.app/apk/app-debug.apk"
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Download className="h-4 w-4" />
+                Download Android APK
+              </a>
+            </div>
             <div className="flex justify-center gap-6">
               <Link href="/terms" className="hover:text-foreground hover:underline transition-colors">Terms &amp; Conditions</Link>
               <Link href="/privacy" className="hover:text-foreground hover:underline transition-colors">Privacy Policy</Link>
