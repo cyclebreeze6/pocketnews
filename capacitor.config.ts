@@ -6,8 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     androidScheme: 'https',
-    url: 'https://studio-7985035708-93893.web.app',
-    allowNavigation: ['studio-7985035708-93893.web.app'],
+    url: 'https://studio-593957916-4e99b.web.app',
+    allowNavigation: ['studio-593957916-4e99b.web.app'],
   },
 };
 
