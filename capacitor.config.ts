@@ -6,8 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     androidScheme: 'https',
-    url: 'https://studio-593957916-4e99b.web.app',
-    allowNavigation: ['studio-593957916-4e99b.web.app'],
+    url: 'https://pocketstream.tv',
+    allowNavigation: ['pocketstream.tv'],
   },
 };
 

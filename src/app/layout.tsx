@@ -11,7 +11,7 @@ import { CookieConsentBanner } from '../components/cookie-consent-banner';
 import { RegionProvider } from '../context/region-context';
 
 export const metadata: Metadata = {
-  title: 'Pockte News TV | Pocket Stream TV',
+  title: 'POCKET STREAM | POCKET NEWS TV',
   description: 'Your daily news, channelled.',
 };
 
