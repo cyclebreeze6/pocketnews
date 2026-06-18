@@ -471,7 +471,7 @@ export default function Home() {
             <button
               onClick={() => { setActiveTab('podcast'); setNewsVideoPlaying(false); }}
               className={cn(
-                'relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all',
+                'relative items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all hidden sm:flex',
                 activeTab === 'podcast'
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
@@ -741,11 +741,11 @@ export default function Home() {
               Disclaimer: All video and audio content, logos, and trademarks displayed on this platform belong to their respective owners and original channels.
             </p>
             <p>
-              Pocketnews TV is a free curation platform providing centralised access to public news broadcasts and podcast episodes for informational purposes. No revenue is shared with creators.
+              PocketStream is a free curation platform providing centralised access to public news broadcasts and podcast episodes for informational purposes. No revenue is shared with creators.
             </p>
           </div>
           <div className="mt-8 pt-8 border-t border-border/10 space-y-3">
-            <p>© {new Date().getFullYear()} Pocketnews TV. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} PocketStream. All rights reserved.</p>
             <div className="flex justify-center">
               <a
                 href="/apk/app-debug.apk"

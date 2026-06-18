@@ -196,7 +196,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
             )}
           <div className="mr-4 flex">
             <Link href="/" className="flex items-center space-x-2 p-2">
-               <Image src={Logo} alt="Pocketnews TV" width={115.2} height={28.8} />
+               <Image src={Logo} alt="PocketStream" width={115.2} height={28.8} />
             </Link>
           </div>
 
@@ -343,7 +343,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                         <DropdownMenuContent className="w-56" align="end" forceMount>
                           <DropdownMenuLabel className="font-normal">
                             <div className="flex flex-col space-y-1">
-                              <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'Pocketnews User'}</p>
+                              <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'PocketStream User'}</p>
                               <p className="text-xs leading-none text-muted-foreground">
                                 {user.email}
                               </p>

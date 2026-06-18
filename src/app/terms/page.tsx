@@ -2,8 +2,8 @@ import Link from 'next/link';
 import SiteHeader from '../../components/site-header';
 
 export const metadata = {
-  title: 'Terms & Conditions | Pocketnews TV (pocketnews.tv and pocketstream.tv)',
-  description: 'Terms and conditions for using Pocketnews TV (pocketnews.tv and pocketstream.tv) — a free news and podcast streaming platform.',
+  title: 'Terms & Conditions | PocketStream',
+  description: 'Terms and conditions for using PocketStream — a free news and podcast streaming platform.',
 };
 
 export default function TermsPage() {
@@ -21,7 +21,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using Pocketnews TV (pocketnews.tv and pocketstream.tv) (&quot;Platform&quot;, &quot;we&quot;, &quot;our&quot;), you agree to be bound by
+              By accessing or using PocketStream (&quot;Platform&quot;, &quot;we&quot;, &quot;our&quot;), you agree to be bound by
               these Terms &amp; Conditions and our{' '}
               <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
               If you do not agree, please do not use the Platform.
@@ -31,7 +31,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">2. Description of Service</h2>
             <p>
-              Pocketnews TV (pocketnews.tv and pocketstream.tv) is a free content curation platform that aggregates publicly available news
+              PocketStream is a free content curation platform that aggregates publicly available news
               broadcasts and podcast episodes from verified creators and channels. The Platform provides
               centralized access to:
             </p>
@@ -46,7 +46,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">3. Free Platform &amp; No Revenue Sharing</h2>
             <p>
-              Pocketnews TV (pocketnews.tv and pocketstream.tv) is provided <strong>free of charge</strong> to all viewers. We do not currently
+              PocketStream is provided <strong>free of charge</strong> to all viewers. We do not currently
               monetize content through subscription fees, paywalls, or viewer payments.
             </p>
             <p className="mt-2">
@@ -64,20 +64,20 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">4. Advertising</h2>
             <p>
-              Pocketnews TV (pocketnews.tv and pocketstream.tv) may display advertisements on content across the Platform, including news videos,
+              PocketStream may display advertisements on content across the Platform, including news videos,
               podcast episodes, and shorts. By publishing content on the Platform, creators acknowledge and
               accept that:
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li>Advertisements may appear on or alongside their published content.</li>
-              <li>All advertising revenue generated belongs exclusively to Pocketnews TV (pocketnews.tv and pocketstream.tv).</li>
+              <li>All advertising revenue generated belongs exclusively to PocketStream.</li>
               <li>No portion of advertising revenue is shared with creators unless a separate written
                 agreement is in place.</li>
             </ul>
             <p className="mt-2">
               <strong>Advertising opportunities:</strong> Businesses, brands, and individuals may contact us
               to place targeted advertisements alongside news and podcast content on the Platform. Advertising
-              on Pocketnews TV (pocketnews.tv and pocketstream.tv) is a commercial service offered by us, separate from any creator or viewer
+              on PocketStream is a commercial service offered by us, separate from any creator or viewer
               account. To enquire about advertising, please contact us at{' '}
               <a href="mailto:ads@pocketnewstv.com" className="text-primary hover:underline">
                 ads@pocketnewstv.com
@@ -89,14 +89,14 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold mb-2">5. Creator Accounts</h2>
             <p>
               To publish content (news channels, podcast episodes, or shorts) you must apply for a Creator
-              account and be approved by Pocketnews TV (pocketnews.tv and pocketstream.tv). By submitting content you confirm that:
+              account and be approved by PocketStream. By submitting content you confirm that:
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li>You own or have the rights to distribute all submitted content.</li>
               <li>Your content does not infringe any third-party copyright, trademark, or other intellectual
                 property rights.</li>
               <li>Your content complies with all applicable laws and our content guidelines.</li>
-              <li>You grant Pocketnews TV (pocketnews.tv and pocketstream.tv) a non-exclusive, worldwide, royalty-free licence to host, display,
+              <li>You grant PocketStream a non-exclusive, worldwide, royalty-free licence to host, display,
                 stream, and promote your content on the Platform.</li>
             </ul>
           </section>
@@ -105,9 +105,9 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold mb-2">6. Intellectual Property</h2>
             <p>
               All video content, logos, thumbnails, and trademarks displayed on the Platform belong to their
-              respective owners and original channels. Pocketnews TV (pocketnews.tv and pocketstream.tv) does not claim ownership of third-party
-              content. The Pocketnews TV (pocketnews.tv and pocketstream.tv) brand, logo, and original Platform code are owned exclusively by
-              Pocketnews TV (pocketnews.tv and pocketstream.tv).
+              respective owners and original channels. PocketStream does not claim ownership of third-party
+              content. The PocketStream brand, logo, and original Platform code are owned exclusively by
+              PocketStream.
             </p>
           </section>
 
@@ -127,7 +127,7 @@ export default function TermsPage() {
             <p>
               The Platform is provided &quot;as is&quot; without warranties of any kind. We do not guarantee
               uninterrupted access or the accuracy of curated content. To the maximum extent permitted by
-              law, Pocketnews TV (pocketnews.tv and pocketstream.tv) is not liable for any indirect, incidental, or consequential damages arising
+              law, PocketStream is not liable for any indirect, incidental, or consequential damages arising
               from your use of the Platform.
             </p>
           </section>
@@ -154,7 +154,7 @@ export default function TermsPage() {
         </div>
       </main>
       <footer className="py-8 border-t border-border/40 text-center text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} Pocketnews TV (pocketnews.tv and pocketstream.tv). All rights reserved.</p>
+        <p>© {new Date().getFullYear()} PocketStream. All rights reserved.</p>
         <div className="flex justify-center gap-4 mt-2">
           <Link href="/terms" className="hover:text-foreground hover:underline">Terms &amp; Conditions</Link>
           <Link href="/privacy" className="hover:text-foreground hover:underline">Privacy Policy</Link>

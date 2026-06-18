@@ -32,11 +32,11 @@ function MobileNavContent() {
       isActive: (currentPath, tab) => (currentPath === '/' && tab !== 'podcast') || currentPath.startsWith('/watch') || currentPath.startsWith('/category') || currentPath.startsWith('/channels'),
     },
     {
-      href: '/?tab=podcast',
+      href: '/podcast/channels',
       label: 'Podcasts',
       icon: Mic,
       isProtected: false,
-      isActive: (currentPath, tab) => currentPath === '/' && tab === 'podcast',
+      isActive: (currentPath, tab) => currentPath.startsWith('/podcast'),
     },
     {
       href: '/shorts',

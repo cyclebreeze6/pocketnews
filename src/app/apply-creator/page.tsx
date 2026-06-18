@@ -285,7 +285,7 @@ export default function ApplyCreatorPage() {
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                     By submitting this application, you agree to the following conditions: <br/>
                     1. You confirm that you own all the rights to the videos and content you upload. <br/>
-                    2. We operate on a revenue-share model. You qualify for monetization at 10,000 views. POCKETNEWS pays out a 60% share of earnings based on a standard rate (N600 total per 1,000 views). <br/>
+                    2. We operate on a revenue-share model. You qualify for monetization at 10,000 views. PocketStream pays out a 60% share of earnings based on a standard rate (N600 total per 1,000 views). <br/>
                     3. Your videos can be taken down for copyright strikes or if they go against our community standards (including nudity, violence, promoting propaganda, gambling, and failure to add explicit age limits/warnings to videos).
                   </p>
                 </div>
