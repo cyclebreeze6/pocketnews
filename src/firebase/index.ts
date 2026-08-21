@@ -4,6 +4,7 @@ import { firebaseConfig } from './config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getMessaging, Messaging } from 'firebase/messaging';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
@@ -11,7 +12,7 @@ export function initializeFirebase(): {
     firebaseApp: FirebaseApp;
     auth: Auth;
     firestore: Firestore;
-    storage: null;
+    storage: FirebaseStorage;
     messaging: Messaging | null;
 } {
   const isSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
@@ -32,7 +33,7 @@ export function getSdks(firebaseApp: FirebaseApp, messaging: Messaging | null) {
     firebaseApp,
     auth: getAuth(firebaseApp),
     firestore: getFirestore(firebaseApp),
-    storage: null,
+    storage: getStorage(firebaseApp),
     messaging: messaging,
   };
 }
@@ -43,6 +44,7 @@ export * from './firestore/use-collection';
 export * from './firestore/use-doc';
 export * from './non-blocking-updates';
 export * from './non-blocking-login';
+export * from './storage';
 export * from './errors';
 export * from './error-emitter';
 export * from './messaging';

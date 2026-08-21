@@ -1,21 +1,23 @@
-# Cron Schedules for AI Auto-Post & Channel Sync
+# Portable Cron Daemon for AI Auto-Post
 
-This project utilizes **Vercel Cron Jobs** defined in [`vercel.json`](file:///Users/faith_olaniyi/Documents/GitHub/pocketnews/vercel.json) when deployed in production on Vercel.
+This file (`cron-daemon.mjs`) ensures your auto-sync API routes are called even if you aren't hosting on Google Cloud App Hosting.
 
-## Production Vercel Crons
-Vercel automatically triggers the following Next.js API endpoints based on the `vercel.json` schedule:
-- **Breaking News Sync**: Every 20 minutes (`/api/cron/sync-breaking-news`)
-- **All Channels Sync**: Every 1 hour (`/api/cron/sync-all-channels`)
-- **Remaining Channels Sync**: Every hour at :30 (`/api/cron/sync-remaining-channels`)
-- **Shorts Sync**: Every 2 hours (`/api/cron/sync-shorts`)
+## How it works
+The daemon uses `node-cron` to execute standard HTTP GET requests to your Next.js API routes on the exact same schedule defined in `apphosting.yaml`.
 
-Vercel automatically attaches the `x-vercel-cron` header and `Authorization: Bearer <CRON_SECRET>` (if set in Environment Variables).
+## How to use it
+1. Make sure your Next.js application is running (`npm run dev` or `npm start`). By default, it runs on port 9002.
+2. If your `.env.local` contains a `CRON_SECRET`, the daemon will automatically use it for authentication.
+3. Open a second terminal window.
+4. Run the daemon using:
+   ```bash
+   npm run cron
+   ```
 
-## Local Cron Daemon
-For local development, `cron-daemon.mjs` runs the exact same schedules using `node-cron`:
-
+## Production use
+If you use PM2, you can run the daemon continuously in the background alongside your Next.js app:
 ```bash
-npm run cron
+pm2 start cron-daemon.mjs --name next-cron-daemon
 ```
 
-*Ensure your local `.env.local` contains `CRON_SECRET` and `NEXTJS_BASE_URL` (default: `http://localhost:9002`).*
+*Note: Ensure `NEXTJS_BASE_URL` is set to your production URL if you run the script on a different machine.*
