@@ -76,6 +76,7 @@ function MobileNavContent() {
                 <li key={item.label} className="h-full">
                   <Link
                     href={item.href}
+                    prefetch={false}
                     onClick={(e) => handleLinkClick(e, item.isProtected)}
                     className={cn(
                       'relative flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground transition-colors active:scale-[0.98]',

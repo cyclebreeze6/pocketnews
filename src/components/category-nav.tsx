@@ -76,6 +76,7 @@ export function CategoryNav({
     ) : (
     <Link
       href={href}
+      prefetch={false}
       onClick={onClick}
       className={cn(
         'relative inline-block px-3 py-3 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap',
@@ -184,7 +185,7 @@ export function CategoryNav({
                                     {category.name}
                                   </button>
                                 ) : (
-                                  <Link href={href} className={cn(isActive && 'text-primary')}>
+                                  <Link href={href} prefetch={false} className={cn(isActive && 'text-primary')}>
                                       {category.name}
                                   </Link>
                                 )}

@@ -231,7 +231,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                         {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                         {isSyncing ? 'Posting...' : 'Auto-Import'}
                     </Button>
-                    <Link href="/admin/auto-post" className='hidden sm:inline-flex'>
+                    <Link href="/admin/auto-post" prefetch={false} className='hidden sm:inline-flex'>
                         <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10" title="Go to Auto-Post Settings">
                             <Zap className="h-5 w-5 fill-primary/20 animate-pulse" />
                             <span className="sr-only">Auto-Post Dashboard</span>
@@ -240,19 +240,19 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                 </div>
               )}
 
-               <Link href="/shorts" className='hidden sm:inline-flex'>
+               <Link href="/shorts" prefetch={false} className='hidden sm:inline-flex'>
                 <Button variant="ghost">
                     <Clapperboard className="h-5 w-5 mr-2" />
                     Shorts
                 </Button>
               </Link>
-              <Link href="/podcast/channels" className='hidden sm:inline-flex'>
+              <Link href="/podcast/channels" prefetch={false} className='hidden sm:inline-flex'>
                 <Button variant="ghost">
                     <Mic className="h-5 w-5 mr-2" />
                     Podcast Channels
                 </Button>
               </Link>
-              <Link href="/channels" className='hidden sm:inline-flex'>
+              <Link href="/channels" prefetch={false} className='hidden sm:inline-flex'>
                 <Button variant="ghost">
                     <Package className="h-5 w-5 mr-2" />
                     Channels
@@ -369,13 +369,13 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
                                 </DropdownMenuItem>
                             )}
                           <DropdownMenuItem asChild>
-                            <Link href="/history"><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
+                            <Link href="/history" prefetch={false}><History className="mr-2 h-4 w-4" /><span>Watch History</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href="/settings/profile"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
+                            <Link href="/settings/profile" prefetch={false}><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href="/settings"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
+                            <Link href="/settings" prefetch={false}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={handleLogout}>
