@@ -6,6 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
+  signInWithPopup,
+  GoogleAuthProvider,
   User,
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
@@ -59,3 +61,21 @@ export function initiateEmailSignIn(
         onError?.(error);
     });
 }
+
+/** Initiate Google sign-in (non-blocking). */
+export function initiateGoogleSignIn(
+    authInstance: Auth,
+    onSuccess?: AuthSuccessCallback,
+    onError?: AuthErrorCallback
+): void {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  signInWithPopup(authInstance, provider)
+    .then((userCredential) => {
+        onSuccess?.(userCredential.user);
+    })
+    .catch((error: FirebaseError) => {
+        onError?.(error);
+    });
+}
+

@@ -40,6 +40,18 @@ const nextConfig: NextConfig = {
         hostname: 'yt3.ggpht.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatar.vercel.sh',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
