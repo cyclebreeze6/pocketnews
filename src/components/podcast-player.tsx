@@ -119,7 +119,7 @@ export function PodcastPlayer({ podcast, playing = true, playerKey }: PodcastPla
         className="absolute top-0 left-0"
         config={{
           youtube: {
-            playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+            playerVars: { playsinline: 1, rel: 0, modestbranding: 1, enablejsapi: 1, origin: typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://pocketstream.tv' },
           },
           facebook: { appId: '' },
           file: { attributes: {} },

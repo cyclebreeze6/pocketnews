@@ -55,11 +55,8 @@ export function VideoPlayer({
         config={{
             youtube: {
                 playerVars: {
-                    playsinline: 1,
-                    showinfo: 0,
-                    rel: 0,
-                    modestbranding: 1,
-                    origin: typeof window !== 'undefined' ? window.location.origin : '',
+                    enablejsapi: 1,
+                    origin: typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://pocketstream.tv',
                 }
             },
             file: {

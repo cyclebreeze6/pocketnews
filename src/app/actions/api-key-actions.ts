@@ -7,25 +7,13 @@
  */
 
 const HARDCODED_KEYS: string[] = [
-    'AIzaSyDtu3MgR_5sy8KtPReaCkU3tpADpo8XrpQ', // Key 1
-    'AIzaSyC4qwAWrFsG749_UQEOQF-zMpOqBHU8sXc', // Key 2
-    'AIzaSyBMf0WTsLQFteR6cPmTVps8_Gk4dpwGvVM', // Key 3
-    'AIzaSyCblNc5gY1jAK6zyGvmb7Trtt0ao7xstiY', // Key 4
-    'AIzaSyAEgBSJdvTTUjX6X7mIaiMCifEIm9oDzIU', // Key 5
-    'AIzaSyAR2ZrdM0ebaCdsaLMk9e7Q4uRoiRwDijE', // Key 6
-    'AIzaSyBmCbc2D0SZvVLVPKHpI3-7Lms3YUHzuSE', // Key 7
-    'AIzaSyD8QJQH4e1O5oA1sPwCbeE1wCUMBxkvD2Q', // Key 8
-    'AIzaSyClsxXyBAk3JVclUKzRKlH-64W_D9lhEsI', // Key 9
-    'AIzaSyAr5BrZBq6HSvGkL9mauKtd8Ark6S14PVY', // Key 10
-    'AIzaSyAEUauTicNs6B1qbyadTrgEDCykxZ6VrLU', // Key 11
-    'AIzaSyC1c71sBbM9yJFyjICz5OazoSnERjf_34o', // Key 12
-    'AIzaSyA0_4DVrKbrJ3oHtq4Ym9zq_UosYlOXOcE', // Key 13
-    'AIzaSyDNYMIlIfFq8VZssJD2ZdqFd73P7EbyieA', // Key 14
-    'AIzaSyDTy__pDXoCS07YMjB7FSdz5cZWg5NBJ6c', // Key 15
-    'AIzaSyCK2by0_-veDpXJctHO_tgUfjVfztEiKFE', // Key 16
-    'AIzaSyCRSllf2Iuf6u48_eaYQiSrMS5ge5wpAN4', // Key 17
-    'AIzaSyBiRhaQYFpKOrtZSyFZD_74iMyzZxxWR_w', // Key 18
-    'AIzaSyDr7N8DhXjM-RYKptjRwyc8oKXbTzUqx7E', // Key 19
+    'AIzaSyDr7N8DhXjM-RYKptjRwyc8oKXbTzUqx7E', // Key 1
+    'AIzaSyBiRhaQYFpKOrtZSyFZD_74iMyzZxxWR_w', // Key 2
+    'AIzaSyCRSllf2Iuf6u48_eaYQiSrMS5ge5wpAN4', // Key 3
+    'AIzaSyDNYMIlIfFq8VZssJD2ZdqFd73P7EbyieA', // Key 4
+    'AIzaSyCblNc5gY1jAK6zyGvmb7Trtt0ao7xstiY', // Key 5
+    'AIzaSyBMf0WTsLQFteR6cPmTVps8_Gk4dpwGvVM', // Key 6
+    'AIzaSyDtu3MgR_5sy8KtPReaCkU3tpADpo8XrpQ', // Key 7
 ];
 
 const ENV_KEYS = [
