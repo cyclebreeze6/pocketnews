@@ -57,7 +57,20 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_VAPID_KEY: process.env.NEXT_PUBLIC_VAPID_KEY,
-  }
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
