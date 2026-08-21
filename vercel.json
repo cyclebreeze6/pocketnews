@@ -3,19 +3,19 @@
   "crons": [
     {
       "path": "/api/cron/sync-breaking-news",
-      "schedule": "*/20 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/sync-all-channels",
-      "schedule": "0 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/sync-remaining-channels",
-      "schedule": "30 * * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/sync-shorts",
-      "schedule": "0 */2 * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
