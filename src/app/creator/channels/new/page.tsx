@@ -10,13 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { Textarea } from '../../../../components/ui/textarea';
-import { useFirebase, useStorage, uploadFile, useUser } from '../../../../firebase';
+import { useFirebase, useUser } from '../../../../firebase';
 import { useToast } from '../../../../hooks/use-toast';
 import { fetchYouTubeChannelInfo } from '../../../actions/youtube-channel-info-flow';
 
 export default function CreatorCreateChannelPage() {
   const { firestore } = useFirebase();
-  const storage = useStorage();
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
@@ -24,7 +23,6 @@ export default function CreatorCreateChannelPage() {
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [youtubeChannelId, setYoutubeChannelId] = useState<string>('');
   const [channelRegions, setChannelRegions] = useState<string[]>(['Global']);
@@ -53,16 +51,6 @@ export default function CreatorCreateChannelPage() {
     }
   };
 
-  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setLogoFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setLogoPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
   const handleCreateChannel = async () => {
     if (!user) return;
     if (!channelName.trim()) {
@@ -72,11 +60,7 @@ export default function CreatorCreateChannelPage() {
 
     setIsSaving(true);
     try {
-      let finalLogoUrl = logoPreview || '';
-      if (logoFile) {
-        const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
-        finalLogoUrl = await uploadFile(storage, logoFile, filePath);
-      }
+      const finalLogoUrl = logoPreview || '';
 
       const channelRef = doc(collection(firestore, 'channels'));
       await setDoc(channelRef, {
@@ -144,7 +128,7 @@ export default function CreatorCreateChannelPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="logo-file">Channel Logo</Label>
+              <Label>Channel Logo</Label>
               <div className="relative w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground overflow-hidden">
                 {logoPreview ? (
                   <Image src={logoPreview} alt="Channel logo" fill className="object-cover" />
@@ -152,7 +136,7 @@ export default function CreatorCreateChannelPage() {
                   <Tv className="w-14 h-14" />
                 )}
               </div>
-              <Input id="logo-file" type="file" accept="image/*" onChange={handleLogoFileChange} />
+              <p className="text-xs text-muted-foreground">Logo is automatically fetched from YouTube channel info.</p>
             </div>
           </div>
 

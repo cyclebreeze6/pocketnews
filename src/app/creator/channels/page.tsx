@@ -3,7 +3,7 @@
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, uploadFile, useStorage, addDocumentNonBlocking } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, RefreshCw, UploadCloud } from 'lucide-react';
@@ -32,7 +32,6 @@ import { Badge } from '../../../components/ui/badge';
 
 export default function CreatorChannelsPage() {
   const { firestore } = useFirebase();
-  const storage = useStorage();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -43,7 +42,6 @@ export default function CreatorChannelsPage() {
   const [channelDescription, setChannelDescription] = useState('');
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
   const [channelRegions, setChannelRegions] = useState<string[]>([]);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,8 +64,7 @@ export default function CreatorChannelsPage() {
       setChannelDescription(info.description || '');
       setChannelRegions(info.region || []);
       setLogoPreview(info.logoUrl);
-      setLogoFile(null); // Clear file if we fetched a new logo URL
-      toast({ title: "Channel info populated! Regions have been set automatically." });
+      toast({ title: "Channel info populated! Regions and logo set automatically." });
     } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Failed to fetch info', description: error.message });
@@ -76,24 +73,11 @@ export default function CreatorChannelsPage() {
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const resetForm = () => {
     setChannelName('');
     setChannelDescription('');
     setYoutubeChannelUrl('');
     setChannelRegions([]);
-    setLogoFile(null);
     setLogoPreview(null);
     setEditingChannel(null);
   };
@@ -106,7 +90,6 @@ export default function CreatorChannelsPage() {
       setYoutubeChannelUrl(channel.youtubeChannelUrl || '');
       setChannelRegions(Array.isArray(channel.region) ? channel.region : (channel.region ? [channel.region] : []));
       setLogoPreview(channel.logoUrl || null);
-      setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       resetForm();
@@ -122,15 +105,7 @@ export default function CreatorChannelsPage() {
     setIsSaving(true);
     
     try {
-        let finalLogoUrl = editingChannel?.logoUrl || '';
-
-        if (logoFile) {
-            const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
-            finalLogoUrl = await uploadFile(storage, logoFile, filePath);
-        } else if (logoPreview && !logoFile && (!editingChannel || editingChannel.logoUrl !== logoPreview)) {
-            // This case handles when a logo is fetched from youtube info or is different from original
-            finalLogoUrl = logoPreview;
-        }
+        const finalLogoUrl = logoPreview || editingChannel?.logoUrl || '';
 
         const channelData = {
           name: channelName,
@@ -191,7 +166,7 @@ export default function CreatorChannelsPage() {
         }
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Failed to fetch videos', description: error.message || 'Could not fetch videos for this channel.' });
-        setIsSyncDialogOpen(false); // Close dialog on error
+        setIsSyncDialogOpen(false);
     } finally {
         setIsSyncing(false);
         setSyncingChannelId(null);
@@ -200,9 +175,8 @@ export default function CreatorChannelsPage() {
 
   const handleImportVideo = (video: YouTubeVideoDetails) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
-    // Redirect to the new video page with the URL pre-filled
     router.push(`/creator/videos/new?youtubeUrl=${encodeURIComponent(youtubeUrl)}`);
-    setIsSyncDialogOpen(false); // Close the dialog after initiating import
+    setIsSyncDialogOpen(false);
   };
 
 
@@ -285,13 +259,12 @@ export default function CreatorChannelsPage() {
                 <Label htmlFor="logo">Channel Logo</Label>
                 <div className="relative w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
                     {logoPreview ? (
-                        <Image src={logoPreview} alt="Logo preview" layout="fill" className="object-cover rounded-lg" />
+                        <Image src={logoPreview} alt="Logo preview" fill className="object-cover rounded-lg" />
                     ) : (
                         <Tv className="w-16 h-16" />
                     )}
                 </div>
-                <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
-                <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 1MB.</p>
+                <p className="text-xs text-muted-foreground">Channel logo is automatically fetched from YouTube when clicking "Fetch Info".</p>
             </div>
           </div>
         </CardContent>

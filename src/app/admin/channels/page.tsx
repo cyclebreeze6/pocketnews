@@ -3,7 +3,7 @@
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking, uploadFile, useStorage } from '../../../firebase';
+import { useCollection, useFirebase, useMemoFirebase, deleteDocumentNonBlocking } from '../../../firebase';
 import type { Channel } from '../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PlusCircle, MoreHorizontal, Trash2, Loader2, X, Tv, RefreshCw, UploadCloud } from 'lucide-react';
@@ -33,7 +33,6 @@ import { Badge } from '../../../components/ui/badge';
 
 export default function AdminChannelsPage() {
   const { firestore } = useFirebase();
-  const storage = useStorage();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -45,7 +44,6 @@ export default function AdminChannelsPage() {
   const [youtubeChannelUrl, setYoutubeChannelUrl] = useState('');
   const [youtubeChannelId, setYoutubeChannelId] = useState('');
   const [channelRegions, setChannelRegions] = useState<string[]>([]);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,25 +69,12 @@ export default function AdminChannelsPage() {
       setChannelRegions(info.region || []);
       setLogoPreview(info.logoUrl);
       setYoutubeChannelId(info.youtubeChannelId);
-      setLogoFile(null); // Clear file if we fetched a new logo URL
-      toast({ title: "Channel info populated! ID and regions have been set automatically." });
+      toast({ title: "Channel info populated! ID, logo, and regions set automatically." });
     } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Failed to fetch info', description: error.message });
     } finally {
       setIsFetchingInfo(false);
-    }
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -99,7 +84,6 @@ export default function AdminChannelsPage() {
     setYoutubeChannelUrl('');
     setYoutubeChannelId('');
     setChannelRegions([]);
-    setLogoFile(null);
     setLogoPreview(null);
     setEditingChannel(null);
   };
@@ -113,7 +97,6 @@ export default function AdminChannelsPage() {
       setYoutubeChannelId(channel.youtubeChannelId || '');
       setChannelRegions(Array.isArray(channel.region) ? channel.region : (channel.region ? [channel.region] : []));
       setLogoPreview(channel.logoUrl || null);
-      setLogoFile(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       resetForm();
@@ -129,14 +112,7 @@ export default function AdminChannelsPage() {
     setIsSaving(true);
     
     try {
-        let finalLogoUrl = editingChannel?.logoUrl || '';
-
-        if (logoFile) {
-            const filePath = `channel-logos/${Date.now()}_${logoFile.name}`;
-            finalLogoUrl = await uploadFile(storage, logoFile, filePath);
-        } else if (logoPreview && !logoFile && (!editingChannel || editingChannel.logoUrl !== logoPreview)) {
-            finalLogoUrl = logoPreview;
-        }
+        const finalLogoUrl = logoPreview || editingChannel?.logoUrl || '';
 
         const channelData = {
           name: channelName,
@@ -303,8 +279,7 @@ export default function AdminChannelsPage() {
                         <Tv className="w-16 h-16" />
                     )}
                 </div>
-                <Input id="logo" type="file" accept="image/*" onChange={handleFileChange} />
-                <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 1MB.</p>
+                <p className="text-xs text-muted-foreground">Channel logo is automatically fetched from YouTube when clicking "Fetch Info".</p>
             </div>
           </div>
         </CardContent>

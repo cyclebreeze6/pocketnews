@@ -8,9 +8,7 @@ import {
   useDoc,
   useFirebase,
   useMemoFirebase,
-  useStorage,
   useUser,
-  uploadFile,
 } from '../../../../firebase';
 import type { Category, Channel, Podcast, PodcastContentType } from '../../../../lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
@@ -119,7 +117,6 @@ function getYouTubeVideoId(url: string): string | null {
 export default function CreatorPodcastEditPage() {
   const { user } = useUser();
   const { firestore } = useFirebase();
-  const storage = useStorage();
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
@@ -237,23 +234,11 @@ export default function CreatorPodcastEditPage() {
     setIsSaving(true);
     try {
       let finalThumbnailUrl = thumbnailUrl;
+      if (!finalThumbnailUrl && youtubeVideoId) {
+        finalThumbnailUrl = `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg`;
+      }
       let finalAudioUrl = audioUrl;
       let finalVideoUrl = videoUrl;
-
-      if (thumbnailFile) {
-        const path = `creator_uploads/podcasts/thumbnails/${user.uid}/${Date.now()}_${thumbnailFile.name}`;
-        finalThumbnailUrl = await uploadFile(storage, thumbnailFile, path);
-      }
-
-      if (contentType === 'audio' && audioFile) {
-        const path = `creator_uploads/podcasts/audio/${user.uid}/${Date.now()}_${audioFile.name}`;
-        finalAudioUrl = await uploadFile(storage, audioFile, path);
-      }
-
-      if (contentType === 'video' && videoFile) {
-        const path = `creator_uploads/podcasts/video/${user.uid}/${Date.now()}_${videoFile.name}`;
-        finalVideoUrl = await uploadFile(storage, videoFile, path);
-      }
 
       const ref = isNew ? doc(collection(firestore, 'podcasts')) : doc(firestore, 'podcasts', podcastId);
       const payload: any = {

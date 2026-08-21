@@ -2,7 +2,7 @@
 
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
-import { useDoc, useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, uploadFile, useStorage, useUser } from '../../../../firebase';
+import { useDoc, useCollection, useFirebase, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '../../../../firebase';
 import type { Video, Channel, Category } from '../../../../lib/types';
 import { collection, doc, serverTimestamp, setDoc, query, where } from 'firebase/firestore';
 import { Loader2, PlusCircle, ArrowLeft, UploadCloud, Link as LinkIcon, Youtube, Twitch, FileVideo, Facebook } from 'lucide-react';
@@ -35,7 +35,6 @@ type VideoSourceType = 'upload' | 'youtube' | 'direct' | 'facebook' | 'twitch';
 export default function VideoEditPage() {
   const { user } = useUser();
   const { firestore } = useFirebase();
-  const storage = useStorage();
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
@@ -193,40 +192,14 @@ export default function VideoEditPage() {
 
     setIsUploading(true);
     try {
-      const filePath = `creator_uploads/videos/${user.uid}/${Date.now()}_${videoFile.name}`;
-      const downloadUrl = await uploadFile(storage, videoFile, filePath);
-      
-      setVideoDetails(prev => ({
-        ...prev,
-        videoUrl: downloadUrl,
-        youtubeVideoId: '', 
-        title: prev?.title || videoFile.name.replace(/\.[^/.]+$/, ''), // Default to filename
-        description: prev?.description || '',
-        thumbnailUrl: prev?.thumbnailUrl || 'https://picsum.photos/seed/placeholder/1280/720',
-      }));
-      setVideoSourceType('upload');
-
-      toast({ title: 'Video Uploaded', description: 'Video uploaded successfully. Fill in the remaining details.' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+      toast({ variant: 'destructive', title: 'File Uploads Disabled', description: 'Please provide a YouTube URL or direct video URL.' });
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleThumbnailUploadChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !storage || !user) return;
-    
-    setThumbnailFile(file);
-    try {
-      const filePath = `creator_uploads/thumbnails/${user.uid}/${Date.now()}_${file.name}`;
-      const url = await uploadFile(storage, file, filePath);
-      setVideoDetails(prev => ({ ...prev, thumbnailUrl: url }));
-      toast({ title: 'Thumbnail Uploaded' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Thumbnail Upload Failed', description: error.message });
-    }
+    toast({ variant: 'destructive', title: 'File Uploads Disabled', description: 'Thumbnail is auto-fetched from YouTube.' });
   };
 
   // Remaining Handlers
@@ -266,16 +239,7 @@ export default function VideoEditPage() {
   const handleAddChannel = async () => {
     if (!newChannelName) return toast({ variant: 'destructive', title: 'Please enter a channel name.' });
 
-    let logoUrl = '';
-    if (newChannelLogoFile && storage) {
-        try {
-            const filePath = `channel-logos/${Date.now()}_${newChannelLogoFile.name}`;
-            logoUrl = await uploadFile(storage, newChannelLogoFile, filePath);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Upload failed' });
-            return;
-        }
-    }
+    const logoUrl = newChannelLogoPreview || '';
     
     const newChannelRef = doc(collection(firestore, 'channels'));
     const newChannelData: Channel = {
