@@ -13,11 +13,13 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  const isAuthorized = cronSecret && (
+  const isVercelCron = request.headers.get('x-vercel-cron') !== null;
+
+  const isAuthorized = isVercelCron || (cronSecret && (
     authHeader === `Bearer ${cronSecret}` || 
     authHeader === cronSecret ||
     querySecret === cronSecret
-  );
+  ));
 
   if (!isAuthorized) {
     console.error('[Cron] Unauthorized attempt to trigger Shorts sync.');

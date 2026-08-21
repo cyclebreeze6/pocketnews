@@ -14,10 +14,10 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
   
-  // App Hosting / Cloud Scheduler internal header
+  const isVercelCron = request.headers.get('x-vercel-cron') !== null;
   const isInternalGoogleTrigger = request.headers.get('x-appengine-cron') === 'true' || request.headers.get('x-cloudscheduler') === 'true';
 
-  const isAuthorized = isInternalGoogleTrigger || (cronSecret && (
+  const isAuthorized = isVercelCron || isInternalGoogleTrigger || (cronSecret && (
     authHeader === `Bearer ${cronSecret}` || 
     authHeader === cronSecret ||
     querySecret === cronSecret

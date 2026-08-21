@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/sync-breaking-news",
+      "schedule": "*/20 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-all-channels",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-remaining-channels",
+      "schedule": "30 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-shorts",
+      "schedule": "0 */2 * * *"
+    }
+  ]
+}
