@@ -156,10 +156,7 @@ export async function fetchChannelVideos(input: { channelUrl: string, channelId?
         })).filter(v => !!v.videoId);
 
     } catch (error: any) {
-        // If API fails due to quota, use the RSS failsafe
-        if (error.message?.toLowerCase().includes('quota')) {
-            return await fetchViaRSS(channelId);
-        }
-        throw error;
+        console.warn(`[Sync] API call failed (${error.message}). Invoking zero-quota RSS failsafe for ${channelId}...`);
+        return await fetchViaRSS(channelId);
     }
 }

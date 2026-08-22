@@ -77,50 +77,47 @@ export async function getYoutubeClient() {
         execute: async function execute<T>(apiCall: (client: youtube_v3.Youtube) => Promise<T>): Promise<T> {
             const apiKeys = await getApiKeys();
             
-            let attempts = 0;
-            const maxAttempts = Math.min(apiKeys.length, 3); // Attempt up to 3 keys if the primary one fails
-
             if (apiKeys.length === 0) {
                 throw new Error('YouTube API is restricted: No active API keys configured.');
             }
 
+            let attempts = 0;
+            const maxAttempts = apiKeys.length; // Attempt ALL available API keys in rotation
+
             while (attempts < maxAttempts) {
+                const currentIndex = (baseIndex + attempts) % apiKeys.length;
                 try {
                     const youtube = await getYouTubeClientInstance(baseIndex, attempts);
                     if (!youtube) {
                         throw new Error('No valid YouTube client instance could be created.');
                     }
-                    return await apiCall(youtube);
-                } catch (error: any) {
-                    const errorMessage = error.message?.toLowerCase() || '';
-                    const errorReason = error.errors?.[0]?.reason || '';
-                    
-                    // Detect common reasons to try a different key: Quota full or Auth issues
-                    const isQuotaError = 
-                        error.code === 403 || 
-                        errorMessage.includes('quota') || 
-                        errorReason === 'quotaExceeded';
+                    const result = await apiCall(youtube);
 
-                    const isKeyError = 
-                        error.code === 400 || 
-                        errorMessage.includes('key') || 
-                        errorMessage.includes('invalid') ||
-                        errorReason === 'keyInvalid';
-
-                    if ((isQuotaError || isKeyError) && apiKeys.length > 1) {
-                        attempts++;
-                        if (attempts < maxAttempts) {
-                            console.warn(`[YouTube API] Key attempt ${attempts} failed (${errorReason}). Trying next sequential key...`);
-                            continue;
+                    // Persist successful working key index if rotation occurred
+                    if (attempts > 0 && isFirebaseAdminInitialized) {
+                        try {
+                            await adminSDK.firestore().doc('metadata/api_state').set({
+                                lastUsedIndex: currentIndex,
+                                lastRotatedAt: adminSDK.firestore.FieldValue.serverTimestamp()
+                            }, { merge: true });
+                        } catch {
+                            // Non-critical persistence failure
                         }
                     }
+
+                    return result;
+                } catch (error: any) {
+                    attempts++;
+                    const errorMessage = error.message?.toLowerCase() || '';
+                    console.warn(`[YouTube API] Key attempt #${currentIndex + 1} failed: ${errorMessage}. Trying key #${((baseIndex + attempts) % apiKeys.length) + 1}...`);
                     
-                    console.error(`[YouTube API] Execution failed:`, errorMessage);
-                    throw error;
+                    if (attempts < maxAttempts) {
+                        continue;
+                    }
                 }
             }
             
-            throw new Error('All available API keys for this run have exhausted their quotas.');
+            throw new Error('All available YouTube API keys have exhausted their quotas.');
         }
     };
 }
