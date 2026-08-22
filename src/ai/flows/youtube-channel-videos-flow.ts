@@ -76,6 +76,18 @@ async function resolveChannelId(channelUrl: string): Promise<string | null> {
 
     try {
         const client = await getYoutubeClient();
+        const res = await client.execute(y => y.channels.list({
+            part: ['id'],
+            forHandle: `@${handle}`
+        }));
+        const foundId = res.data.items?.[0]?.id;
+        if (foundId) return foundId;
+    } catch {
+        // Fallback
+    }
+
+    try {
+        const client = await getYoutubeClient();
         const res = await client.execute(y => y.search.list({
             part: ['snippet'],
             q: handle,

@@ -42,18 +42,33 @@ async function getChannelIdFromUrl(youtube: (apiCall: any) => Promise<any>, chan
     const extractedId = extractChannelIdFromUrl(channelUrl);
     if (extractedId) return extractedId;
 
-    // 2. Try handle extraction and search
+    // 2. Try handle extraction using forHandle (1 quota unit cost)
     let match = channelUrl.match(/@([a-zA-Z0-9_.-]+)/);
     if (match) {
         const handle = match[1].split('/')[0];
-        const searchResponse = await youtube((client: any) => client.search.list({
-            part: ['snippet'],
-            q: handle,
-            type: ['channel'],
-            maxResults: 1
-        }));
-        const foundChannelId = searchResponse.data.items?.[0]?.snippet?.channelId;
-        if (foundChannelId) return foundChannelId;
+        try {
+            const handleResponse = await youtube((client: any) => client.channels.list({
+                part: ['id'],
+                forHandle: `@${handle}`
+            }));
+            const foundChannelId = handleResponse.data.items?.[0]?.id;
+            if (foundChannelId) return foundChannelId;
+        } catch {
+            // Fallback to search if forHandle is unsupported or fails
+        }
+
+        try {
+            const searchResponse = await youtube((client: any) => client.search.list({
+                part: ['snippet'],
+                q: handle,
+                type: ['channel'],
+                maxResults: 1
+            }));
+            const foundChannelId = searchResponse.data.items?.[0]?.snippet?.channelId;
+            if (foundChannelId) return foundChannelId;
+        } catch {
+            // Continue to fallback
+        }
     }
     
     // 3. Try legacy username
