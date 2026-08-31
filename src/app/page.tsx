@@ -7,6 +7,8 @@ import { CategoryNav } from '../components/category-nav';
 import { VideoPlayer } from '../components/video-player';
 import { PodcastSection } from '../components/podcast-section';
 import { IptvPlayer } from '../components/iptv-player';
+import { FloatingPlayer } from '../components/floating-player';
+import { EpgGuide } from '../components/epg-guide';
 import { fetchTdtChannelsFromSource, fetchTdtEpgFromSource, getCurrentEpgProgram } from '../lib/tdtchannels';
 import { Badge } from '../components/ui/badge';
 import Image from 'next/image';
@@ -171,6 +173,30 @@ export default function Home() {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [isPlayerSticky, setIsPlayerSticky] = useState(false);
+  const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
+  const [isFloatingManuallyEnabled, setIsFloatingManuallyEnabled] = useState(false);
+
+  // Reset floating dismissed state when active media changes
+  useEffect(() => {
+    setIsFloatingDismissed(false);
+  }, [currentVideo?.id, selectedIptvChannel?.id]);
+
+  // Floating player visibility evaluation
+  const isFloatingVisible = useMemo(() => {
+    if (isFloatingDismissed) return false;
+    if (isFloatingManuallyEnabled) return true;
+
+    // Float when scrolled past main player
+    if (isPlayerSticky) return true;
+
+    // Float when active media is playing on another tab
+    if (playingTab === 'live-tv' && activeTab !== 'live-tv') return true;
+    if (playingTab === 'news' && activeTab !== 'news') return true;
+
+    return false;
+  }, [isFloatingDismissed, isFloatingManuallyEnabled, isPlayerSticky, playingTab, activeTab]);
+
+  const floatingType: 'video' | 'iptv' = playingTab === 'live-tv' ? 'iptv' : 'video';
 
   // Combine Firestore IPTV channels with fallback TDTChannels source
   const iptvChannels = useMemo(() => {
@@ -700,6 +726,7 @@ export default function Home() {
                   <IptvPlayer
                     channel={selectedIptvChannel}
                     currentProgram={selectedIptvEpgProgram}
+                    active={activeTab === 'live-tv' || (playingTab === 'live-tv' && isFloatingVisible)}
                     onPlayStateChange={(playing) => {
                       if (playing) setPlayingTab('live-tv');
                     }}
@@ -735,23 +762,23 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="flex items-center flex-wrap gap-2">
+                      <div className="flex items-center flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
                         <Button 
                           variant="outline" 
                           size="sm" 
                           onClick={handlePrevIptvChannel}
-                          className="flex items-center gap-1 text-xs border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400"
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1 text-xs py-2 px-3 border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400 font-semibold rounded-lg"
                         >
-                          <ChevronLeft className="h-4 w-4" /> Previous
+                          <ChevronLeft className="h-4 w-4" /> Previous Channel
                         </Button>
 
                         <Button 
                           variant="outline" 
                           size="sm" 
                           onClick={handleNextIptvChannel}
-                          className="flex items-center gap-1 text-xs border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400"
+                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1 text-xs py-2 px-3 border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400 font-semibold rounded-lg"
                         >
-                          Next <ChevronRight className="h-4 w-4" />
+                          Next Channel <ChevronRight className="h-4 w-4" />
                         </Button>
 
                         {selectedIptvChannel.web && (
@@ -762,12 +789,12 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {selectedIptvEpgProgram?.description && (
-                      <div className="mt-4 p-4 rounded-lg bg-card/60 border border-border/40 text-sm text-muted-foreground leading-relaxed">
-                        <h4 className="font-bold text-foreground text-xs uppercase tracking-wider mb-1">Program Details</h4>
-                        {selectedIptvEpgProgram.description}
-                      </div>
-                    )}
+                    {/* Electronic Program Guide (EPG) Schedule Component */}
+                    <EpgGuide 
+                      channel={selectedIptvChannel} 
+                      epgPrograms={selectedIptvChannel.epgId ? epgMap[selectedIptvChannel.epgId] : undefined}
+                      currentProgram={selectedIptvEpgProgram}
+                    />
                   </div>
                 </>
               ) : (
@@ -909,6 +936,26 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      <FloatingPlayer
+        type={floatingType}
+        video={currentVideo}
+        iptvChannel={selectedIptvChannel}
+        isOpen={isFloatingVisible}
+        onClose={() => {
+          setIsFloatingDismissed(true);
+          setIsFloatingManuallyEnabled(false);
+        }}
+        onExpand={() => {
+          if (playingTab === 'live-tv') {
+            setActiveTab('live-tv');
+          } else {
+            setActiveTab('news');
+          }
+          setIsFloatingManuallyEnabled(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
 
       <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onLoginSuccess={() => setIsAuthDialogOpen(false)} />
       <Dialog open={isPremiumDialogOpen} onOpenChange={setIsPremiumDialogOpen}>

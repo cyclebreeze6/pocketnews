@@ -14,9 +14,10 @@ interface IptvPlayerProps {
   currentProgram?: EpgProgram | null;
   onPlayStateChange?: (isPlaying: boolean) => void;
   className?: string;
+  active?: boolean;
 }
 
-export function IptvPlayer({ channel, currentProgram, onPlayStateChange, className }: IptvPlayerProps) {
+export function IptvPlayer({ channel, currentProgram, onPlayStateChange, className, active = true }: IptvPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
@@ -25,6 +26,17 @@ export function IptvPlayer({ channel, currentProgram, onPlayStateChange, classNa
   const [volume, setVolume] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Pause playback when component is marked inactive
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (!active) {
+      video.pause();
+      setIsPlaying(false);
+    }
+  }, [active]);
 
   // Initialize HLS player
   useEffect(() => {
