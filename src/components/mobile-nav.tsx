@@ -26,17 +26,17 @@ function MobileNavContent() {
   const navItems: MobileNavItem[] = [
     {
       href: '/',
-      label: 'Live TV',
-      icon: Tv,
-      isProtected: false,
-      isActive: (currentPath, tab) => currentPath === '/' && (tab === 'live-tv' || !tab),
-    },
-    {
-      href: '/',
       label: 'YouTube Live',
       icon: Home,
       isProtected: false,
-      isActive: (currentPath, tab) => (currentPath === '/' && tab === 'news') || currentPath.startsWith('/watch') || currentPath.startsWith('/category') || currentPath.startsWith('/channels'),
+      isActive: (currentPath, tab) => (currentPath === '/' && (tab === 'news' || !tab)) || currentPath.startsWith('/watch') || currentPath.startsWith('/category') || currentPath.startsWith('/channels'),
+    },
+    {
+      href: '/?tab=live-tv',
+      label: 'Live TV',
+      icon: Tv,
+      isProtected: false,
+      isActive: (currentPath, tab) => currentPath === '/' && tab === 'live-tv',
     },
     {
       href: '/podcast/channels',

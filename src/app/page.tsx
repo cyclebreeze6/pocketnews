@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Newspaper, Mic, Download, Tv, Radio, Search } from 'lucide-react';
+import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Newspaper, Mic, Download, Tv, Radio, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
 import type { Video, Channel, IptvChannel, EpgProgram } from '../lib/types';
@@ -134,9 +134,9 @@ export default function Home() {
   const isMobile = useIsMobile();
   const { selectedRegion } = useRegion();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('live-tv');
-  const [playingTab, setPlayingTab] = useState<ActiveTab>('live-tv');
-  const [newsVideoPlaying, setNewsVideoPlaying] = useState(false);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('news');
+  const [playingTab, setPlayingTab] = useState<ActiveTab>('news');
+  const [newsVideoPlaying, setNewsVideoPlaying] = useState(true);
 
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
@@ -416,7 +416,7 @@ export default function Home() {
 
   // Filter IPTV channels for Live TV tab (by country/region, category, search)
   const filteredIptvChannels = useMemo(() => {
-    return iptvChannels.filter(ch => {
+    const list = iptvChannels.filter(ch => {
       const regionMatch = !selectedRegion || selectedRegion === 'Global' ||
         (ch.country && ch.country.toLowerCase() === selectedRegion.toLowerCase()) ||
         (ch.country && ch.country.toLowerCase().includes(selectedRegion.toLowerCase()));
@@ -434,7 +434,31 @@ export default function Home() {
 
       return regionMatch && categoryMatch && searchMatch;
     });
+
+    return list.length > 0 ? list : iptvChannels;
   }, [iptvChannels, selectedRegion, iptvCategoryFilter, iptvSearchQuery]);
+
+  const currentIptvIndex = useMemo(() => {
+    return filteredIptvChannels.findIndex(ch => ch.id === selectedIptvChannel?.id);
+  }, [filteredIptvChannels, selectedIptvChannel]);
+
+  const handlePrevIptvChannel = useCallback(() => {
+    if (filteredIptvChannels.length === 0) return;
+    if (currentIptvIndex > 0) {
+      setSelectedIptvChannel(filteredIptvChannels[currentIptvIndex - 1]);
+    } else {
+      setSelectedIptvChannel(filteredIptvChannels[filteredIptvChannels.length - 1]);
+    }
+  }, [currentIptvIndex, filteredIptvChannels]);
+
+  const handleNextIptvChannel = useCallback(() => {
+    if (filteredIptvChannels.length === 0) return;
+    if (currentIptvIndex >= 0 && currentIptvIndex < filteredIptvChannels.length - 1) {
+      setSelectedIptvChannel(filteredIptvChannels[currentIptvIndex + 1]);
+    } else {
+      setSelectedIptvChannel(filteredIptvChannels[0]);
+    }
+  }, [currentIptvIndex, filteredIptvChannels]);
 
   if (isLoading && allVideos.length === 0) {
       return <HomepageSkeleton />;
@@ -457,29 +481,7 @@ export default function Home() {
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/60">
         <div className="container mx-auto px-4">
           <div className="flex items-end gap-1 sm:gap-2">
-            {/* Tab 1: LIVE TV */}
-            <button
-              onClick={() => {
-                setActiveTab('live-tv');
-                setPlayingTab('live-tv');
-                setNewsVideoPlaying(false);
-              }}
-              className={cn(
-                'relative flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm font-semibold transition-all',
-                activeTab === 'live-tv'
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <Tv className="h-4 w-4 text-cyan-400" />
-              LIVE TV
-              {playingTab === 'live-tv' && <AnimatedLiveDot />}
-              {activeTab === 'live-tv' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 rounded-t-full" />
-              )}
-            </button>
-
-            {/* Tab 2: Youtube Live */}
+            {/* Tab 1: Youtube Live */}
             <button
               onClick={() => {
                 setActiveTab('news');
@@ -498,6 +500,28 @@ export default function Home() {
               {playingTab === 'news' && <AnimatedLiveDot />}
               {activeTab === 'news' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+              )}
+            </button>
+
+            {/* Tab 2: LIVE TV */}
+            <button
+              onClick={() => {
+                setActiveTab('live-tv');
+                setPlayingTab('live-tv');
+                setNewsVideoPlaying(false);
+              }}
+              className={cn(
+                'relative flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm font-semibold transition-all',
+                activeTab === 'live-tv'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Tv className="h-4 w-4 text-cyan-400" />
+              LIVE TV
+              {playingTab === 'live-tv' && <AnimatedLiveDot />}
+              {activeTab === 'live-tv' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 rounded-t-full" />
               )}
             </button>
 
@@ -711,11 +735,31 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {selectedIptvChannel.web && (
-                        <Button variant="outline" size="sm" onClick={() => window.open(selectedIptvChannel.web, '_blank')}>
-                          Official Website
+                      <div className="flex items-center flex-wrap gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handlePrevIptvChannel}
+                          className="flex items-center gap-1 text-xs border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400"
+                        >
+                          <ChevronLeft className="h-4 w-4" /> Previous
                         </Button>
-                      )}
+
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleNextIptvChannel}
+                          className="flex items-center gap-1 text-xs border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400"
+                        >
+                          Next <ChevronRight className="h-4 w-4" />
+                        </Button>
+
+                        {selectedIptvChannel.web && (
+                          <Button variant="outline" size="sm" onClick={() => window.open(selectedIptvChannel.web, '_blank')}>
+                            Official Website
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {selectedIptvEpgProgram?.description && (
