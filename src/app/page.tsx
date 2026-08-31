@@ -414,9 +414,13 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTheaterMode]);
 
-  // Filter IPTV channels for Live TV tab
+  // Filter IPTV channels for Live TV tab (by country/region, category, search)
   const filteredIptvChannels = useMemo(() => {
     return iptvChannels.filter(ch => {
+      const regionMatch = !selectedRegion || selectedRegion === 'Global' ||
+        (ch.country && ch.country.toLowerCase() === selectedRegion.toLowerCase()) ||
+        (ch.country && ch.country.toLowerCase().includes(selectedRegion.toLowerCase()));
+
       const categoryMatch = iptvCategoryFilter === 'all' 
         ? true 
         : iptvCategoryFilter === 'tv' ? ch.type === 'tv'
@@ -425,11 +429,12 @@ export default function Home() {
 
       const searchMatch = !iptvSearchQuery || 
         ch.name.toLowerCase().includes(iptvSearchQuery.toLowerCase()) || 
-        ch.category.toLowerCase().includes(iptvSearchQuery.toLowerCase());
+        ch.category.toLowerCase().includes(iptvSearchQuery.toLowerCase()) ||
+        (ch.country && ch.country.toLowerCase().includes(iptvSearchQuery.toLowerCase()));
 
-      return categoryMatch && searchMatch;
+      return regionMatch && categoryMatch && searchMatch;
     });
-  }, [iptvChannels, iptvCategoryFilter, iptvSearchQuery]);
+  }, [iptvChannels, selectedRegion, iptvCategoryFilter, iptvSearchQuery]);
 
   if (isLoading && allVideos.length === 0) {
       return <HomepageSkeleton />;
