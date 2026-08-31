@@ -54,6 +54,11 @@ service cloud.firestore {
       allow get, list: if true;
       allow write: if isCreatorOrAdmin();
     }
+
+    match /iptv_channels/{channelId} {
+      allow get, list: if true;
+      allow write: if isCreatorOrAdmin();
+    }
     
     match /shorts/{shortId} {
       allow get, list: if true;
