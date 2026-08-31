@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, Clapperboard, Mic, User } from 'lucide-react';
+import { Home, Clapperboard, Mic, User, Tv } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUser } from '../firebase';
 import { useState, type ComponentType, type MouseEvent, Suspense } from 'react';
@@ -26,10 +26,17 @@ function MobileNavContent() {
   const navItems: MobileNavItem[] = [
     {
       href: '/',
-      label: 'News',
+      label: 'Live TV',
+      icon: Tv,
+      isProtected: false,
+      isActive: (currentPath, tab) => currentPath === '/' && (tab === 'live-tv' || !tab),
+    },
+    {
+      href: '/',
+      label: 'YouTube Live',
       icon: Home,
       isProtected: false,
-      isActive: (currentPath, tab) => (currentPath === '/' && tab !== 'podcast') || currentPath.startsWith('/watch') || currentPath.startsWith('/category') || currentPath.startsWith('/channels'),
+      isActive: (currentPath, tab) => (currentPath === '/' && tab === 'news') || currentPath.startsWith('/watch') || currentPath.startsWith('/category') || currentPath.startsWith('/channels'),
     },
     {
       href: '/podcast/channels',
@@ -69,7 +76,7 @@ function MobileNavContent() {
     <>
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 pb-[env(safe-area-inset-bottom)]">
         <nav className="h-[4.5rem]">
-          <ul className="grid h-full grid-cols-4 items-stretch">
+          <ul className="grid h-full grid-cols-5 items-stretch">
             {navItems.map((item) => {
               const isActive = item.isActive(pathname, activeTab);
               return (

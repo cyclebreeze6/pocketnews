@@ -126,3 +126,27 @@ export interface Podcast {
   views?: number;
   duration?: string;
 }
+
+export interface EpgProgram {
+  title: string;
+  description?: string;
+  startTime: number; // Unix timestamp in seconds
+  endTime: number; // Unix timestamp in seconds
+  genre?: string;
+  image?: string;
+}
+
+export interface IptvChannel {
+  id: string;
+  name: string;
+  logoUrl: string;
+  m3u8Url: string;
+  epgId?: string;
+  type: 'tv' | 'radio';
+  category: string;
+  country: string;
+  web?: string;
+  extraInfo?: string[];
+  createdAt?: Timestamp | Date | string;
+}
+

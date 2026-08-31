@@ -27,7 +27,7 @@ export async function getChannelsForSync(options?: {
     const channelDoc = await firestore.collection('channels').doc(options.channelId).get();
     if (channelDoc.exists) {
       const data = channelDoc.data() as Channel;
-      if (data.youtubeChannelUrl) channelsToSync.push({ id: channelDoc.id, ...data });
+      if (data.youtubeChannelUrl) channelsToSync.push({ ...data, id: channelDoc.id });
     }
   } else {
     // FETCH LOGIC:

@@ -6,18 +6,20 @@ import SiteHeader from '../components/site-header';
 import { CategoryNav } from '../components/category-nav';
 import { VideoPlayer } from '../components/video-player';
 import { PodcastSection } from '../components/podcast-section';
+import { IptvPlayer } from '../components/iptv-player';
+import { fetchTdtChannelsFromSource, fetchTdtEpgFromSource, getCurrentEpgProgram } from '../lib/tdtchannels';
 import { Badge } from '../components/ui/badge';
 import Image from 'next/image';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../components/ui/button';
-import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Newspaper, Mic, Download } from 'lucide-react';
+import { Share, Flag, PlayCircle, Copy, UserPlus, Loader2, UserCheck, Maximize2, Newspaper, Mic, Download, Tv, Radio, Search } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Card, CardContent } from '../components/ui/card';
-import type { Video, Channel } from '../lib/types';
+import type { Video, Channel, IptvChannel, EpgProgram } from '../lib/types';
 import { collection, doc, serverTimestamp, Timestamp, query, orderBy, limit, where, getDocs, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -26,23 +28,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../components/ui/popover';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { initiateAnonymousSignIn, useAuth } from '../firebase';
+import { useAuth } from '../firebase';
 import { AuthDialog } from '../components/auth-dialog';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useRegion } from '../context/region-context';
 import { COUNTRY_TO_CONTINENT } from '../lib/region-map';
+import { Input } from '../components/ui/input';
 
-type ActiveTab = 'news' | 'podcast';
+type ActiveTab = 'news' | 'live-tv' | 'podcast';
 
 const AnimatedLiveDot = () => (
   <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 ml-1">
@@ -53,7 +51,6 @@ const AnimatedLiveDot = () => (
     LIVE
   </span>
 );
-
 
 function toDate(timestamp: Timestamp | Date | string): Date {
     if (timestamp instanceof Timestamp) {
@@ -129,17 +126,18 @@ function HomepageSkeleton() {
   )
 }
 
-
 export default function Home() {
   const { firestore } = useFirebase();
   const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { selectedRegion } = useRegion();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('news');
-  const [newsVideoPlaying, setNewsVideoPlaying] = useState(true);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('live-tv');
+  const [playingTab, setPlayingTab] = useState<ActiveTab>('live-tv');
+  const [newsVideoPlaying, setNewsVideoPlaying] = useState(false);
+
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -148,17 +146,10 @@ export default function Home() {
   
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
-  
-  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
-  const { data: channels, isLoading: channelsLoading } = useCollection<Channel>(channelsQuery);
 
-  // Screen size check for Theater Mode restriction (Laptop/TV sizes)
-  useEffect(() => {
-    const checkScreen = () => setIsLargeScreen(window.innerWidth >= 1024);
-    checkScreen();
-    window.addEventListener('resize', checkScreen);
-    return () => window.removeEventListener('resize', checkScreen);
-  }, []);
+  // News video queries & state
+  const channelsQuery = useMemoFirebase(() => collection(firestore, 'channels'), [firestore]);
+  const { data: channels } = useCollection<Channel>(channelsQuery);
 
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +157,61 @@ export default function Home() {
   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef(null);
-  
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+
+  // IPTV state
+  const iptvQuery = useMemoFirebase(() => collection(firestore, 'iptv_channels'), [firestore]);
+  const { data: firestoreIptvChannels } = useCollection<IptvChannel>(iptvQuery);
+  const [fallbackIptvChannels, setFallbackIptvChannels] = useState<IptvChannel[]>([]);
+  const [epgMap, setEpgMap] = useState<Record<string, EpgProgram[]>>({});
+  const [selectedIptvChannel, setSelectedIptvChannel] = useState<IptvChannel | null>(null);
+  const [iptvCategoryFilter, setIptvCategoryFilter] = useState<string>('all');
+  const [iptvSearchQuery, setIptvSearchQuery] = useState<string>('');
+
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const [isPlayerSticky, setIsPlayerSticky] = useState(false);
+
+  // Combine Firestore IPTV channels with fallback TDTChannels source
+  const iptvChannels = useMemo(() => {
+    if (firestoreIptvChannels && firestoreIptvChannels.length > 0) {
+      return firestoreIptvChannels;
+    }
+    return fallbackIptvChannels;
+  }, [firestoreIptvChannels, fallbackIptvChannels]);
+
+  // Load default fallback TDTChannels and EPG on mount
+  useEffect(() => {
+    async function loadTdtData() {
+      try {
+        const { tv, radio } = await fetchTdtChannelsFromSource();
+        const combined = [...tv, ...radio];
+        setFallbackIptvChannels(combined);
+
+        const epgData = await fetchTdtEpgFromSource();
+        setEpgMap(epgData);
+      } catch (err) {
+        console.error('Failed to load initial TDTChannels:', err);
+      }
+    }
+    loadTdtData();
+  }, []);
+
+  // Set default selected IPTV channel
+  useEffect(() => {
+    if (iptvChannels.length > 0 && !selectedIptvChannel) {
+      setSelectedIptvChannel(iptvChannels[0]);
+    }
+  }, [iptvChannels, selectedIptvChannel]);
+
+  // Screen size check for Theater Mode
+  useEffect(() => {
+    const checkScreen = () => setIsLargeScreen(window.innerWidth >= 1024);
+    checkScreen();
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
+
   const fetchVideos = useCallback(async (loadMore = false) => {
     const getQueryConstraints = () => {
         const constraints: any[] = [];
@@ -177,18 +222,14 @@ export default function Home() {
           if (continent && !searchRegions.includes(continent)) {
             searchRegions.push(continent);
           }
-          
           constraints.push(where('regions', 'array-contains-any', searchRegions));
         }
         
         constraints.push(orderBy('createdAt', 'desc'));
-
         if (loadMore && lastVisible) {
             constraints.push(startAfter(lastVisible));
         }
-        
         constraints.push(limit(10));
-
         return constraints;
     }
 
@@ -198,108 +239,57 @@ export default function Home() {
     } else {
         setIsLoading(true);
         setAllVideos([]);
-        setLastVisible(null);
-        setHasMore(true);
     }
-    
-    const queryConstraints = getQueryConstraints();
 
     try {
-        const q = query(collection(firestore, 'videos'), ...queryConstraints);
+        const q = query(collection(firestore, 'videos'), ...getQueryConstraints());
         const documentSnapshots = await getDocs(q);
-        
-        const newVideos = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Video));
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-        setLastVisible(lastDoc);
+        const newVideos = documentSnapshots.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as Video));
+
+        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1] || null);
         setHasMore(newVideos.length === 10);
-        
+
         if (loadMore) {
             setAllVideos(prev => [...prev, ...newVideos]);
         } else {
             setAllVideos(newVideos);
+            if (newVideos.length > 0) {
+                const videoIdFromUrl = getVideoIdFromPath();
+                const initialVideo = videoIdFromUrl ? newVideos.find(v => v.id === videoIdFromUrl) : newVideos[0];
+                setCurrentVideo(initialVideo || newVideos[0]);
+            }
         }
-
-    } catch (e) {
-        console.error("Error fetching videos: ", e);
+    } catch (error) {
+        console.error("Error fetching videos:", error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to load videos." });
     } finally {
         setIsLoading(false);
         setIsFetchingMore(false);
     }
-  }, [firestore, selectedRegion, isFetchingMore, hasMore, lastVisible]);
-  
+  }, [firestore, selectedRegion, lastVisible, isFetchingMore, hasMore, toast]);
+
   useEffect(() => {
-    fetchVideos(false);
+    fetchVideos();
   }, [selectedRegion]);
-  
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-        (entries) => {
-            if (entries[0].isIntersecting && hasMore && !isLoading && !isFetchingMore) {
-                fetchVideos(true);
-            }
-        },
-        { threshold: 1.0 }
-    );
-
-    const currentObserverRef = observerRef.current;
-    if (currentObserverRef) {
-        observer.observe(currentObserverRef);
-    }
-
-    return () => {
-        if (currentObserverRef) {
-            observer.unobserve(currentObserverRef);
-        }
-    };
-  }, [hasMore, isLoading, isFetchingMore, fetchVideos]);
-  
-  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-  const [isPlayerSticky, setIsPlayerSticky] = useState(false);
-  const playerContainerRef = useRef<HTMLDivElement>(null);
-  const mainRef = useRef<HTMLElement>(null);
-  const HEADER_HEIGHT = 0;
-  
-  const isInitiallyLoading = (isLoading && allVideos.length === 0) || channelsLoading || isUserLoading;
-  const isFeedEmpty = !isInitiallyLoading && allVideos.length === 0;
 
   useEffect(() => {
     const handleScroll = () => {
-        const container = playerContainerRef.current?.parentElement;
-        if (!container || !isMobile || isTheaterMode) return;
-
-        const playerTop = container.getBoundingClientRect().top;
-        
-        if (playerTop <= HEADER_HEIGHT && !isPlayerSticky) {
-            setIsPlayerSticky(true);
-        } else if (playerTop > HEADER_HEIGHT && isPlayerSticky) {
-             setIsPlayerSticky(false);
-        }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-}, [isPlayerSticky, isMobile, isTheaterMode]);
-
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      initiateAnonymousSignIn(auth);
-    }
-  }, [isUserLoading, user, auth]);
-
-  useEffect(() => {
-    if (allVideos && allVideos.length > 0) {
-      const isCurrentInList = allVideos.some(v => v.id === currentVideo?.id);
-      if (!isCurrentInList) {
-        setCurrentVideo(allVideos[0]);
+      if (playerContainerRef.current) {
+        const { bottom } = playerContainerRef.current.getBoundingClientRect();
+        setIsPlayerSticky(bottom < 0);
       }
-    } else if (!isLoading && allVideos.length === 0) {
-      setCurrentVideo(null);
-    }
-  }, [allVideos, isLoading, currentVideo?.id]);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
+    setPlayingTab('news');
     if (!isTheaterMode) {
         const container = playerContainerRef.current?.parentElement;
         if(isPlayerSticky && container) {
@@ -311,7 +301,7 @@ export default function Home() {
   
   useEffect(() => {
     const handlePopState = () => {
-       if (allVideos) {
+       if (allVideos.length > 0) {
          const videoIdFromUrl = getVideoIdFromPath();
          const videoToPlay = videoIdFromUrl ? allVideos.find(v => v.id === videoIdFromUrl) : allVideos[0];
          setCurrentVideo(videoToPlay || allVideos[0]);
@@ -370,8 +360,7 @@ export default function Home() {
     };
     
     setDocumentNonBlocking(reportRef, reportData, {});
-    
-    toast({ title: 'Report submitted', description: "Admin will review and follow through, thank you for your understanding"});
+    toast({ title: 'Report submitted', description: "Admin will review and follow through."});
     setIsReportDialogOpen(false);
     setReportReason('');
     setReportDetails('');
@@ -403,7 +392,6 @@ export default function Home() {
     }
 
     const followDocRef = doc(firestore, 'users', user.uid, 'followedChannels', currentChannel.id);
-
     if (isFollowing) {
         deleteDocumentNonBlocking(followDocRef);
         toast({ title: 'Unfollowed', description: `You've unfollowed ${currentChannel.name}.` });
@@ -426,16 +414,24 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTheaterMode]);
 
-  useEffect(() => {
-    if (isTheaterMode) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [isTheaterMode]);
-  
-  if (isInitiallyLoading) {
+  // Filter IPTV channels for Live TV tab
+  const filteredIptvChannels = useMemo(() => {
+    return iptvChannels.filter(ch => {
+      const categoryMatch = iptvCategoryFilter === 'all' 
+        ? true 
+        : iptvCategoryFilter === 'tv' ? ch.type === 'tv'
+        : iptvCategoryFilter === 'radio' ? ch.type === 'radio'
+        : ch.category?.toLowerCase() === iptvCategoryFilter.toLowerCase();
+
+      const searchMatch = !iptvSearchQuery || 
+        ch.name.toLowerCase().includes(iptvSearchQuery.toLowerCase()) || 
+        ch.category.toLowerCase().includes(iptvSearchQuery.toLowerCase());
+
+      return categoryMatch && searchMatch;
+    });
+  }, [iptvChannels, iptvCategoryFilter, iptvSearchQuery]);
+
+  if (isLoading && allVideos.length === 0) {
       return <HomepageSkeleton />;
   }
 
@@ -443,45 +439,82 @@ export default function Home() {
   const hasNext = currentIndex > -1 && currentIndex < (allVideos?.length ?? 0) - 1;
   const hasPrevious = currentIndex > 0;
 
+  // Selected IPTV EPG Program
+  const selectedIptvEpgProgram = selectedIptvChannel?.epgId 
+    ? getCurrentEpgProgram(epgMap[selectedIptvChannel.epgId]) 
+    : null;
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader hideCategoryNav={true} />
 
-      {/* ── Tab Navigation ──────────────────────────────────────── */}
+      {/* ── Tab Navigation Bar ──────────────────────────────────────── */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/60">
         <div className="container mx-auto px-4">
-          <div className="flex items-end">
+          <div className="flex items-end gap-1 sm:gap-2">
+            {/* Tab 1: LIVE TV */}
             <button
-              onClick={() => { setActiveTab('news'); setNewsVideoPlaying(true); }}
+              onClick={() => {
+                setActiveTab('live-tv');
+                setPlayingTab('live-tv');
+                setNewsVideoPlaying(false);
+              }}
               className={cn(
-                'relative flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all',
+                'relative flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm font-semibold transition-all',
+                activeTab === 'live-tv'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Tv className="h-4 w-4 text-cyan-400" />
+              LIVE TV
+              {playingTab === 'live-tv' && <AnimatedLiveDot />}
+              {activeTab === 'live-tv' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 rounded-t-full" />
+              )}
+            </button>
+
+            {/* Tab 2: Youtube Live */}
+            <button
+              onClick={() => {
+                setActiveTab('news');
+                setPlayingTab('news');
+                setNewsVideoPlaying(true);
+              }}
+              className={cn(
+                'relative flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm font-semibold transition-all',
                 activeTab === 'news'
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Newspaper className="h-4 w-4" />
-              News
-              {activeTab === 'news' && <AnimatedLiveDot />}
+              <Newspaper className="h-4 w-4 text-red-400" />
+              Youtube Live
+              {playingTab === 'news' && <AnimatedLiveDot />}
               {activeTab === 'news' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
               )}
             </button>
 
+            {/* Tab 3: Podcast */}
             <button
-              onClick={() => { setActiveTab('podcast'); setNewsVideoPlaying(false); }}
+              onClick={() => {
+                setActiveTab('podcast');
+                setPlayingTab('podcast');
+                setNewsVideoPlaying(false);
+              }}
               className={cn(
-                'relative items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all hidden sm:flex',
+                'relative flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm font-semibold transition-all',
                 activeTab === 'podcast'
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Mic className="h-4 w-4" />
+              <Mic className="h-4 w-4 text-purple-400" />
               Podcast
-              {activeTab === 'podcast' && <AnimatedLiveDot />}
+              {playingTab === 'podcast' && <AnimatedLiveDot />}
               {activeTab === 'podcast' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-t-full" />
               )}
             </button>
           </div>
@@ -492,11 +525,11 @@ export default function Home() {
       {activeTab === 'news' && <CategoryNav />}
 
       <main ref={mainRef} className="flex-1">
-        {/* ── NEWS TAB ─────────────────────────────────────────── */}
+        {/* ── NEWS AGGREGATOR TAB ──────────────────────────────────── */}
         <div className={activeTab === 'news' ? 'block' : 'hidden'}>
           <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
             <div className={cn("lg:col-span-2", isTheaterMode && "z-[100]")}>
-               {isFeedEmpty ? (
+               {allVideos.length === 0 ? (
                    <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center text-center p-8">
                       <h2 className="text-2xl font-bold mb-2">No Videos Found</h2>
                       <p className="text-muted-foreground">
@@ -536,197 +569,261 @@ export default function Home() {
                           key={currentVideo.id}
                         />
                       </div>
-
-                      {/* Theater Mode Overlays */}
-                      {isTheaterMode && (
-                        <>
-                          <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="max-w-4xl space-y-4">
-                              <h2 className="text-3xl md:text-4xl font-bold text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.8)]">
-                                {currentVideo.title}
-                              </h2>
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-10 w-10 border border-white/20">
-                                    <AvatarImage src={currentChannel.logoUrl} />
-                                    <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="font-semibold text-white">{currentChannel.name}</span>
-                                </div>
-                                <Badge variant="outline" className="text-white border-white/40 bg-white/10 backdrop-blur-md">
-                                  {currentVideo.contentCategory}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="absolute top-0 right-0 bottom-0 w-80 bg-black/60 backdrop-blur-xl border-l border-white/10 hidden xl:flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="p-6 border-b border-white/10">
-                              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                <Maximize2 className="h-4 w-4" />
-                                Up Next
-                              </h3>
-                            </div>
-                            <ScrollArea className="flex-1">
-                              <div className="p-4 space-y-4">
-                                {allVideos.map((video) => {
-                                  const isPlaying = video.id === currentVideo.id;
-                                  return (
-                                    <div 
-                                      key={video.id} 
-                                      onClick={() => handleSetCurrentVideo(video)}
-                                      className={cn(
-                                        "group/item cursor-pointer p-2 rounded-lg transition-colors pointer-events-auto",
-                                        isPlaying ? "bg-primary/20 border border-primary/30" : "hover:bg-white/10"
-                                      )}
-                                    >
-                                      <div className="relative aspect-video rounded-md overflow-hidden mb-2">
-                                        <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" />
-                                        {isPlaying && <div className="absolute inset-0 bg-primary/40 flex items-center justify-center"><PlayCircle className="text-white h-8 w-8" /></div>}
-                                      </div>
-                                      <p className={cn("text-xs font-medium line-clamp-2", isPlaying ? "text-primary" : "text-white/80")}>
-                                        {video.title}
-                                      </p>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </ScrollArea>
-                          </div>
-                        </>
-                      )}
                     </div>
-                    {isPlayerSticky && isMobile && !isTheaterMode && <div className="aspect-video" />}
                   </div>
 
-                  {!isTheaterMode && (
-                    <div className="px-4 md:px-0 pt-4">
-                        <h2 className="text-2xl md:text-3xl font-bold font-headline mb-4">{currentVideo.title}</h2>
+                  <div className="p-4 md:px-0">
+                    <h1 className="text-xl md:text-2xl font-bold tracking-tight font-headline mb-4">
+                      {currentVideo.title}
+                    </h1>
 
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                            <div className="flex items-center gap-3">
-                                <Link href={`/channels/${currentChannel.id}`}>
-                                  <Avatar>
-                                      <AvatarImage src={currentChannel.logoUrl || `https://picsum.photos/seed/${currentChannel.id}/40/40`} alt={currentChannel.name} />
-                                      <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
-                                  </Avatar>
-                                </Link>
-                                <div>
-                                    <Link href={`/channels/${currentChannel.id}`} className="flex items-center gap-2">
-                                        {currentChannel.region && currentChannel.region.length > 0 && (
-                                            <span className="text-xs text-muted-foreground font-normal bg-muted px-1.5 py-0.5 rounded">
-                                                {currentChannel.region[0]}
-                                            </span>
-                                        )}
-                                        <p className="font-semibold hover:underline">{currentChannel.name}</p>
-                                    </Link>
-                                    <p className="text-sm text-muted-foreground">{formatDistanceToNow(toDate(currentVideo.createdAt))} ago</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={handleFollowToggle}>
-                                    {isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                                    {isFollowing ? 'Following' : 'Follow'}
-                                </Button>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="secondary"><Share className="mr-2 h-4 w-4" /> Share</Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-2">
-                                        <div className="flex gap-2">
-                                            <Button size="icon" variant="outline" onClick={() => handleShare('facebook')}>
-                                                <FacebookIcon className="h-5 w-5" />
-                                            </Button>
-                                             <Button size="icon" variant="outline" onClick={() => handleShare('whatsapp')}>
-                                                <WhatsAppIcon className="h-5 w-5" />
-                                            </Button>
-                                            <Button size="icon" variant="outline" onClick={() => handleShare('copy')}>
-                                                <Copy className="h-5 w-5" />
-                                            </Button>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                 <Button variant="secondary" onClick={() => {
-                                      if (user?.isAnonymous) {
-                                        setIsAuthDialogOpen(true);
-                                      } else {
-                                        setIsReportDialogOpen(true);
-                                      }
-                                    }}>
-                                    <Flag className="mr-2 h-4 w-4" /> Report
-                                </Button>
-                            </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-4 border-y border-border/40">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border border-border">
+                          <AvatarImage src={currentChannel.logoUrl} alt={currentChannel.name} />
+                          <AvatarFallback>{currentChannel.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-bold text-sm leading-none flex items-center gap-2">
+                            {currentChannel.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDistanceToNow(toDate(currentVideo.createdAt))} ago
+                          </p>
                         </div>
-                        
-                        <div className="flex items-center gap-2 mt-4">
-                            <p className="text-sm font-medium">Related topics</p>
-                            <Badge variant="outline">#news</Badge>
-                            <Badge variant="outline">#technology</Badge>
-                            <Badge variant="outline">#sports</Badge>
-                        </div>
+                        <Button 
+                            variant={isFollowing ? "secondary" : "default"} 
+                            size="sm" 
+                            onClick={handleFollowToggle}
+                            className="ml-2 h-8 text-xs font-semibold"
+                        >
+                            {isFollowing ? <UserCheck className="h-3.5 w-3.5 mr-1" /> : <UserPlus className="h-3.5 w-3.5 mr-1" />}
+                            {isFollowing ? "Following" : "Follow"}
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleShare('facebook')}>
+                          <FacebookIcon className="h-4 w-4 mr-1 text-blue-500" /> Share
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleShare('whatsapp')}>
+                          <WhatsAppIcon className="h-4 w-4 mr-1 text-green-500" /> WhatsApp
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleShare('copy')}>
+                          <Copy className="h-4 w-4 mr-1" /> Copy Link
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setIsReportDialogOpen(true)}>
+                          <Flag className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </>
-              ) : <Skeleton className="aspect-video md:rounded-lg" /> }
+              ) : null}
             </div>
-            
+
+            {/* Sidebar Up Next */}
             <div className="lg:col-span-1 px-4 md:px-0">
-               
-              <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-semibold text-muted-foreground">Up Next</h3>
-              </div>
-              <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+              <h2 className="text-lg font-bold mb-4 font-headline flex items-center justify-between">
+                Up Next News
+              </h2>
+              <ScrollArea className="h-[calc(100vh-280px)] pr-4">
                   <div className="space-y-4">
                       {allVideos.map((video) => {
-                          const videoChannel = channels.find(c => c.id === video.channelId);
                           const isPlaying = video.id === currentVideo?.id;
+                          const videoChannel = channels?.find(c => c.id === video.channelId);
                           return (
-                          <div onClick={() => handleSetCurrentVideo(video)} key={video.id} className="cursor-pointer group flex gap-4 items-start p-2 rounded-lg hover:bg-card/80">
-                              <div className="relative w-32 h-20 flex-shrink-0">
-                                  <Image
-                                  src={video.thumbnailUrl}
-                                  alt={video.title}
-                                  fill
-                                  className="rounded-md object-cover"
-                                  />
-                                  <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
-                                    {Math.floor(video.views / 60000)}:{String(Math.floor((video.views % 60000)/1000)).padStart(2,'0')}
-                                  </div>
-                              </div>
-                              <div className="flex-grow">
+                          <div
+                              key={video.id}
+                              onClick={() => handleSetCurrentVideo(video)}
+                              className={cn(
+                              "group flex gap-3 items-start cursor-pointer p-2 rounded-lg transition-colors",
+                              isPlaying ? "bg-accent/80 border border-primary/30" : "hover:bg-accent/40"
+                              )}
+                          >
+                              <div className="relative w-36 aspect-video rounded-md overflow-hidden flex-shrink-0 bg-muted">
+                                  <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover group-hover:scale-105 transition-transform" />
                                   {isPlaying && (
-                                      <Badge variant="default" className="mb-1 text-xs animate-pulse">
-                                          <PlayCircle className="mr-1 h-3 w-3" />
-                                          Now Playing
-                                      </Badge>
+                                      <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
+                                          <PlayCircle className="text-white h-6 w-6" />
+                                      </div>
                                   )}
-                                  <h3 className="text-sm font-semibold line-clamp-3 leading-snug group-hover:text-primary">{video.title}</h3>
+                              </div>
+                              <div className="flex-grow min-w-0">
+                                  <h3 className="text-sm font-semibold line-clamp-2 leading-snug group-hover:text-primary">{video.title}</h3>
                                   <p className="text-xs text-muted-foreground mt-1">{videoChannel?.name} • {formatDistanceToNow(toDate(video.createdAt))} ago</p>
                               </div>
                           </div>
                           )
                       })}
-                      {isFetchingMore ? (
-                          <div className="flex justify-center items-center py-4">
-                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                          </div>
-                      ) : (
-                          <div ref={observerRef} />
-                      )}
                   </div>
               </ScrollArea>
-
-               <Card className="mt-8 bg-card/50">
-                  <CardContent className="p-4 flex items-center justify-between">
-                      <p className="text-sm max-w-[200px]">Enjoy ad-free news from 400+ local, national, and global channels</p>
-                      <Button variant="secondary" onClick={() => setIsPremiumDialogOpen(true)}>Go ad-free</Button>
-                  </CardContent>
-              </Card>
             </div>
           </div>
         </div>
 
-        {/* ── PODCAST TAB ──────────────────────────────────────── */}
+        {/* ── LIVE TV TAB (Cloned structure for IPTV & EPG) ───────── */}
+        <div className={activeTab === 'live-tv' ? 'block' : 'hidden'}>
+          <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
+            <div className="lg:col-span-2">
+              {selectedIptvChannel ? (
+                <>
+                  <IptvPlayer
+                    channel={selectedIptvChannel}
+                    currentProgram={selectedIptvEpgProgram}
+                    onPlayStateChange={(playing) => {
+                      if (playing) setPlayingTab('live-tv');
+                    }}
+                  />
+
+                  <div className="p-4 md:px-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 border-b border-border/40">
+                      <div className="flex items-center gap-3">
+                        {selectedIptvChannel.logoUrl ? (
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border bg-muted p-1 flex-shrink-0">
+                            <Image src={selectedIptvChannel.logoUrl} alt={selectedIptvChannel.name} fill className="object-contain" />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                            {selectedIptvChannel.type === 'radio' ? <Radio className="h-6 w-6" /> : <Tv className="h-6 w-6" />}
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h1 className="text-xl md:text-2xl font-bold tracking-tight font-headline">
+                              {selectedIptvChannel.name}
+                            </h1>
+                            <Badge variant="outline" className="text-xs uppercase bg-primary/10 text-primary border-primary/30">
+                              {selectedIptvChannel.type} • {selectedIptvChannel.category}
+                            </Badge>
+                          </div>
+                          {selectedIptvEpgProgram && (
+                            <p className="text-sm text-cyan-400 font-medium mt-1">
+                              Now Airing: <span className="text-foreground">{selectedIptvEpgProgram.title}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {selectedIptvChannel.web && (
+                        <Button variant="outline" size="sm" onClick={() => window.open(selectedIptvChannel.web, '_blank')}>
+                          Official Website
+                        </Button>
+                      )}
+                    </div>
+
+                    {selectedIptvEpgProgram?.description && (
+                      <div className="mt-4 p-4 rounded-lg bg-card/60 border border-border/40 text-sm text-muted-foreground leading-relaxed">
+                        <h4 className="font-bold text-foreground text-xs uppercase tracking-wider mb-1">Program Details</h4>
+                        {selectedIptvEpgProgram.description}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center p-8 text-center">
+                  <Tv className="w-12 h-12 text-muted-foreground mb-3" />
+                  <h3 className="text-xl font-bold mb-1">No IPTV Stream Selected</h3>
+                  <p className="text-sm text-muted-foreground">Select a channel from the right sidebar to start watching live.</p>
+                </div>
+              )}
+            </div>
+
+            {/* LIVE TV & Radio Channel Sidebar */}
+            <div className="lg:col-span-1 px-4 md:px-0">
+              <div className="space-y-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold font-headline flex items-center gap-2">
+                    <Tv className="h-5 w-5 text-cyan-400" />
+                    Live Channels ({filteredIptvChannels.length})
+                  </h2>
+                </div>
+
+                {/* Filter buttons */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {['all', 'tv', 'radio', 'generalistas', 'noticias', 'deportes'].map((cat) => (
+                    <Button
+                      key={cat}
+                      size="sm"
+                      variant={iptvCategoryFilter === cat ? 'default' : 'outline'}
+                      onClick={() => setIptvCategoryFilter(cat)}
+                      className="text-xs uppercase py-1 px-2.5 h-7 flex-shrink-0"
+                    >
+                      {cat === 'all' ? 'All' : cat}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Search channel */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search channel or genre..."
+                    value={iptvSearchQuery}
+                    onChange={(e) => setIptvSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <ScrollArea className="h-[calc(100vh-320px)] pr-2">
+                <div className="space-y-2">
+                  {filteredIptvChannels.map((ch) => {
+                    const isSelected = selectedIptvChannel?.id === ch.id;
+                    const program = ch.epgId ? getCurrentEpgProgram(epgMap[ch.epgId]) : null;
+
+                    return (
+                      <div
+                        key={ch.id}
+                        onClick={() => {
+                          setSelectedIptvChannel(ch);
+                          setPlayingTab('live-tv');
+                        }}
+                        className={cn(
+                          "group flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border",
+                          isSelected
+                            ? "bg-cyan-500/10 border-cyan-500/50 shadow-md"
+                            : "bg-card/40 border-border/30 hover:bg-accent/60"
+                        )}
+                      >
+                        <div className="relative w-11 h-11 rounded-md overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
+                          {ch.logoUrl ? (
+                            <Image src={ch.logoUrl} alt={ch.name} fill className="object-contain p-1" />
+                          ) : (
+                            ch.type === 'radio' ? <Radio className="h-5 w-5 text-purple-400" /> : <Tv className="h-5 w-5 text-cyan-400" />
+                          )}
+                        </div>
+
+                        <div className="flex-grow min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <h3 className={cn("text-sm font-semibold truncate", isSelected ? "text-cyan-400 font-bold" : "text-foreground")}>
+                              {ch.name}
+                            </h3>
+                            <Badge variant="outline" className="text-[9px] uppercase px-1 py-0 border-white/10 text-muted-foreground flex-shrink-0">
+                              {ch.type}
+                            </Badge>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {program ? program.title : ch.category}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {filteredIptvChannels.length === 0 && (
+                    <p className="text-xs text-center text-muted-foreground py-8">
+                      No channels match search filter.
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
+
+        {/* ── PODCAST TAB ────────────────────────────────────────── */}
         <div className={activeTab === 'podcast' ? 'block' : 'hidden'}>
           <PodcastSection isActive={activeTab === 'podcast'} />
         </div>
@@ -735,13 +832,13 @@ export default function Home() {
       {/* Disclaimer Footer */}
       <footer className="py-12 border-t border-border/40 text-center text-sm text-muted-foreground bg-card/20">
         <div className="container mx-auto px-4">
-          <p className="mb-4 font-semibold text-foreground">Meet the #1 App to Stream News &amp; Podcasts. Watch Free!</p>
+          <p className="mb-4 font-semibold text-foreground">Meet the #1 App to Stream News, Live TV &amp; Podcasts. Watch Free!</p>
           <div className="max-w-3xl mx-auto space-y-2 opacity-70">
             <p>
               Disclaimer: All video and audio content, logos, and trademarks displayed on this platform belong to their respective owners and original channels.
             </p>
             <p>
-              PocketStream is a free curation platform providing centralised access to public news broadcasts and podcast episodes for informational purposes. No revenue is shared with creators.
+              PocketStream is a free curation platform providing centralised access to public news broadcasts, live TV feeds, and podcast episodes.
             </p>
           </div>
           <div className="mt-8 pt-8 border-t border-border/10 space-y-3">
@@ -770,47 +867,12 @@ export default function Home() {
         <DialogHeader>
             <DialogTitle>Premium Membership Coming Soon!</DialogTitle>
             <DialogDescription>
-            Get ready for an ad-free experience, exclusive content, and more. We're putting the final touches on our premium membership.
+            Get ready for an ad-free experience, exclusive content, and more.
             </DialogDescription>
         </DialogHeader>
         <DialogFooter>
             <Button onClick={() => setIsPremiumDialogOpen(false)}>OK</Button>
         </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Report Video</DialogTitle>
-            <DialogDescription>
-              Why are you reporting this video? Your report is anonymous.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-                <Label htmlFor="report-reason">Reason</Label>
-                <Select onValueChange={setReportReason} value={reportReason}>
-                    <SelectTrigger id="report-reason">
-                        <SelectValue placeholder="Select a reason..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Copyright">Copyright</SelectItem>
-                        <SelectItem value="Wrong Information">Wrong Information</SelectItem>
-                        <SelectItem value="False News">False News</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-             <div className="grid gap-2">
-                <Label htmlFor="report-details">Details (optional)</Label>
-                <Textarea id="report-details" value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder="Provide additional details..." />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleReportSubmit}>Report Video</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
