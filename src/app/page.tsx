@@ -42,7 +42,7 @@ import { useRegion } from '../context/region-context';
 import { COUNTRY_TO_CONTINENT } from '../lib/region-map';
 import { Input } from '../components/ui/input';
 
-type ActiveTab = 'news' | 'live-tv' | 'podcast';
+type ActiveTab = 'news' | 'podcast';
 
 const AnimatedLiveDot = () => (
   <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 ml-1">
@@ -531,32 +531,10 @@ export default function Home() {
               )}
             >
               <Newspaper className="h-4 w-4 text-red-400" />
-              Youtube Live
+              News Videos
               {playingTab === 'news' && <AnimatedLiveDot />}
               {activeTab === 'news' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
-              )}
-            </button>
-
-            {/* Tab 2: LIVE TV */}
-            <button
-              onClick={() => {
-                setActiveTab('live-tv');
-                setPlayingTab('live-tv');
-                setNewsVideoPlaying(false);
-              }}
-              className={cn(
-                'relative flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm font-semibold transition-all',
-                activeTab === 'live-tv'
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <Tv className="h-4 w-4 text-cyan-400" />
-              LIVE TV
-              {playingTab === 'live-tv' && <AnimatedLiveDot />}
-              {activeTab === 'live-tv' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 rounded-t-full" />
               )}
             </button>
 
@@ -721,188 +699,6 @@ export default function Home() {
                           )
                       })}
                   </div>
-              </ScrollArea>
-            </div>
-          </div>
-        </div>
-
-        {/* ── LIVE TV TAB (Cloned structure for IPTV & EPG) ───────── */}
-        <div className={activeTab === 'live-tv' ? 'block' : 'hidden'}>
-          <div className="container mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:px-0 md:py-8">
-            <div className="lg:col-span-2">
-              {selectedIptvChannel ? (
-                <>
-                  <IptvPlayer
-                    channel={selectedIptvChannel}
-                    currentProgram={selectedIptvEpgProgram}
-                    active={activeTab === 'live-tv' || (playingTab === 'live-tv' && isFloatingVisible)}
-                    onPlayStateChange={(playing) => {
-                      if (playing) setPlayingTab('live-tv');
-                    }}
-                  />
-
-                  <div className="p-4 md:px-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 border-b border-border/40">
-                      <div className="flex items-center gap-3">
-                        {selectedIptvChannel.logoUrl ? (
-                          <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-border bg-muted p-1 flex-shrink-0">
-                            <Image src={selectedIptvChannel.logoUrl} alt={selectedIptvChannel.name} fill className="object-contain" />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg border border-border bg-muted flex items-center justify-center flex-shrink-0">
-                            {selectedIptvChannel.type === 'radio' ? <Radio className="h-6 w-6" /> : <Tv className="h-6 w-6" />}
-                          </div>
-                        )}
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h1 className="text-xl md:text-2xl font-bold tracking-tight font-headline">
-                              {selectedIptvChannel.name}
-                            </h1>
-                            <Badge variant="outline" className="text-xs uppercase bg-primary/10 text-primary border-primary/30">
-                              {selectedIptvChannel.type} • {selectedIptvChannel.category}
-                            </Badge>
-                          </div>
-                          {selectedIptvEpgProgram && (
-                            <p className="text-sm text-cyan-400 font-medium mt-1">
-                              Now Airing: <span className="text-foreground">{selectedIptvEpgProgram.title}</span>
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={handlePrevIptvChannel}
-                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1 text-xs py-2 px-3 border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400 font-semibold rounded-lg"
-                        >
-                          <ChevronLeft className="h-4 w-4" /> Previous Channel
-                        </Button>
-
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={handleNextIptvChannel}
-                          className="flex-1 sm:flex-initial flex items-center justify-center gap-1 text-xs py-2 px-3 border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-400 font-semibold rounded-lg"
-                        >
-                          Next Channel <ChevronRight className="h-4 w-4" />
-                        </Button>
-
-                        {selectedIptvChannel.web && (
-                          <Button variant="outline" size="sm" onClick={() => window.open(selectedIptvChannel.web, '_blank')}>
-                            Official Website
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Electronic Program Guide (EPG) Schedule Component */}
-                    <EpgGuide 
-                      channel={selectedIptvChannel} 
-                      epgPrograms={selectedIptvChannel.epgId ? epgMap[selectedIptvChannel.epgId] : undefined}
-                      currentProgram={selectedIptvEpgProgram}
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="aspect-video bg-muted md:rounded-lg flex flex-col items-center justify-center p-8 text-center">
-                  <Tv className="w-12 h-12 text-muted-foreground mb-3" />
-                  <h3 className="text-xl font-bold mb-1">No IPTV Stream Selected</h3>
-                  <p className="text-sm text-muted-foreground">Select a channel from the right sidebar to start watching live.</p>
-                </div>
-              )}
-            </div>
-
-            {/* LIVE TV & Radio Channel Sidebar */}
-            <div className="lg:col-span-1 px-4 md:px-0">
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold font-headline flex items-center gap-2">
-                    <Tv className="h-5 w-5 text-cyan-400" />
-                    Live Channels ({filteredIptvChannels.length})
-                  </h2>
-                </div>
-
-                {/* Filter buttons */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                  {['all', 'News', 'Entertainment', 'Music', 'General', 'Culture', 'Religious'].map((cat) => (
-                    <Button
-                      key={cat}
-                      size="sm"
-                      variant={iptvCategoryFilter === cat ? 'default' : 'outline'}
-                      onClick={() => setIptvCategoryFilter(cat)}
-                      className="text-xs uppercase py-1 px-2.5 h-7 flex-shrink-0"
-                    >
-                      {cat === 'all' ? 'All' : cat}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Search channel */}
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search channel or genre..."
-                    value={iptvSearchQuery}
-                    onChange={(e) => setIptvSearchQuery(e.target.value)}
-                    className="pl-8 h-8 text-xs"
-                  />
-                </div>
-              </div>
-
-              <ScrollArea className="h-[calc(100vh-320px)] pr-2">
-                <div className="space-y-2">
-                  {filteredIptvChannels.map((ch) => {
-                    const isSelected = selectedIptvChannel?.id === ch.id;
-                    const program = ch.epgId ? getCurrentEpgProgram(epgMap[ch.epgId]) : null;
-
-                    return (
-                      <div
-                        key={ch.id}
-                        onClick={() => {
-                          setSelectedIptvChannel(ch);
-                          setPlayingTab('live-tv');
-                        }}
-                        className={cn(
-                          "group flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border",
-                          isSelected
-                            ? "bg-cyan-500/10 border-cyan-500/50 shadow-md"
-                            : "bg-card/40 border-border/30 hover:bg-accent/60"
-                        )}
-                      >
-                        <div className="relative w-11 h-11 rounded-md overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
-                          {ch.logoUrl ? (
-                            <Image src={ch.logoUrl} alt={ch.name} fill className="object-contain p-1" unoptimized />
-                          ) : (
-                            ch.type === 'radio' ? <Radio className="h-5 w-5 text-purple-400" /> : <Tv className="h-5 w-5 text-cyan-400" />
-                          )}
-                        </div>
-
-                        <div className="flex-grow min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <h3 className={cn("text-sm font-semibold truncate", isSelected ? "text-cyan-400 font-bold" : "text-foreground")}>
-                              {ch.name}
-                            </h3>
-                            <Badge variant="outline" className="text-[9px] uppercase px-1 py-0 border-white/10 text-muted-foreground flex-shrink-0">
-                              {ch.type}
-                            </Badge>
-                          </div>
-
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {program ? program.title : ch.category}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {filteredIptvChannels.length === 0 && (
-                    <p className="text-xs text-center text-muted-foreground py-8">
-                      No channels match search filter.
-                    </p>
-                  )}
-                </div>
               </ScrollArea>
             </div>
           </div>

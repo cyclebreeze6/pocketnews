@@ -26,17 +26,10 @@ function MobileNavContent() {
   const navItems: MobileNavItem[] = [
     {
       href: '/',
-      label: 'YouTube Live',
+      label: 'Home',
       icon: Home,
       isProtected: false,
       isActive: (currentPath, tab) => (currentPath === '/' && (tab === 'news' || !tab)) || currentPath.startsWith('/watch') || currentPath.startsWith('/category') || currentPath.startsWith('/channels'),
-    },
-    {
-      href: '/?tab=live-tv',
-      label: 'Live TV',
-      icon: Tv,
-      isProtected: false,
-      isActive: (currentPath, tab) => currentPath === '/' && tab === 'live-tv',
     },
     {
       href: '/podcast/channels',
@@ -76,7 +69,7 @@ function MobileNavContent() {
     <>
       <div className="sm:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 pb-[env(safe-area-inset-bottom)]">
         <nav className="h-[4.5rem]">
-          <ul className="grid h-full grid-cols-5 items-stretch">
+          <ul className="grid h-full grid-cols-4 items-stretch">
             {navItems.map((item) => {
               const isActive = item.isActive(pathname, activeTab);
               return (
