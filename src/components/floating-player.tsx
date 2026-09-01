@@ -42,7 +42,7 @@ export function FloatingPlayer({
         <div className="flex items-center gap-2 truncate max-w-[70%]">
           {logoUrl ? (
             <div className="relative w-4 h-4 rounded overflow-hidden flex-shrink-0 bg-black/40">
-              <Image src={logoUrl} alt="" fill className="object-contain" />
+              <Image src={logoUrl} alt="" fill className="object-contain" unoptimized />
             </div>
           ) : type === 'iptv' ? (
             <Tv className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />

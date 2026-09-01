@@ -53,40 +53,30 @@ export const TDT_RADIO_JSON = 'https://www.tdtchannels.com/lists/radio.json';
 export const TDT_EPG_TV_JSON = 'https://www.tdtchannels.com/epg/TV.json';
 export const TDT_EPG_RADIO_JSON = 'https://www.tdtchannels.com/epg/RADIO.json';
 export const FREE_TV_PLAYLIST_URL = 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
+export const NIGERIA_IPTV_PLAYLIST_URL = 'https://iptv-org.github.io/iptv/countries/ng.m3u';
 
 /**
- * Verified working channels for African countries (Nigeria, Egypt, etc.)
+ * Verified working channels for Nigeria with logos
  */
-export const VERIFIED_AFRICAN_CHANNELS: IptvChannel[] = [
-  // NIGERIA
-  {
-    id: 'advocate-broadcasting-network-ng',
-    name: 'Advocate Broadcasting Network',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/AdvocateBroadcastingNetwork.ng.png',
-    m3u8Url: 'https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_045/Stream/playlist.m3u8',
-    epgId: 'AdvocateBroadcastingNetwork.ng',
-    type: 'tv',
-    category: 'News',
-    country: 'Nigeria',
-  },
+export const VERIFIED_NIGERIAN_CHANNELS: IptvChannel[] = [
   {
     id: 'channels-tv-ng',
     name: 'Channels TV',
     logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/ChannelsTV.ng.png',
-    m3u8Url: 'https://www.youtube.com/@ChannelsTelevision/live',
+    m3u8Url: 'https://cs2.push2stream.com/CHANNELSTV-DVR/playlist.m3u8',
     epgId: 'ChannelsTV.ng',
     type: 'tv',
     category: 'News',
     country: 'Nigeria',
   },
   {
-    id: 'istage-tv-ng',
-    name: 'Itage TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/ItageTV.ng.png',
-    m3u8Url: 'https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_011/Stream/playlist.m3u8',
-    epgId: 'ItageTV.ng',
+    id: 'tvc-news-ng',
+    name: 'TVC News',
+    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/TVCNews.ng.png',
+    m3u8Url: 'https://tvce.gridpapaservers.com/TVCSEPT/ngrp:myStream_all/playlist.m3u8',
+    epgId: 'TVCNews.ng',
     type: 'tv',
-    category: 'Entertainment',
+    category: 'News',
     country: 'Nigeria',
   },
   {
@@ -100,13 +90,13 @@ export const VERIFIED_AFRICAN_CHANNELS: IptvChannel[] = [
     country: 'Nigeria',
   },
   {
-    id: 'rave-tv-ng',
-    name: 'Rave TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/RaveTV.ng.png',
-    m3u8Url: 'https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_039/Stream/playlist.m3u8',
-    epgId: 'RaveTV.ng',
+    id: 'nta-international-ng',
+    name: 'NTA International',
+    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/NTANews24.ng.png',
+    m3u8Url: 'https://api.visionip.tv/live/ASHTTP/visiontvuk-entertainment-ntai-hsslive-25f-4x3-MB/playlist.m3u8',
+    epgId: 'NTANews24.ng',
     type: 'tv',
-    category: 'General',
+    category: 'Culture',
     country: 'Nigeria',
   },
   {
@@ -123,40 +113,10 @@ export const VERIFIED_AFRICAN_CHANNELS: IptvChannel[] = [
     id: 'soundcity-tv-ng',
     name: 'Soundcity TV',
     logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/SoundcityTV.ng.png',
-    m3u8Url: 'https://www.youtube.com/channel/UCGuIbAVY4_O-KOQmLkU0IKQ/live',
+    m3u8Url: 'https://cs2.push2stream.com/SOUNDCITY/playlist.m3u8',
     epgId: 'SoundcityTV.ng',
     type: 'tv',
     category: 'Music',
-    country: 'Nigeria',
-  },
-  {
-    id: 'superscreen-tv-ng',
-    name: 'Superscreen TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/SuperscreenTV.ng.png',
-    m3u8Url: 'https://video1.getstreamhosting.com:1936/8398/8398/playlist.m3u8',
-    epgId: 'SuperscreenTV.ng',
-    type: 'tv',
-    category: 'General',
-    country: 'Nigeria',
-  },
-  {
-    id: 'tvc-news-ng',
-    name: 'TVC News',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/TVCNews.ng.png',
-    m3u8Url: 'https://www.youtube.com/tvcnewsnigeria/live',
-    epgId: 'TVCNews.ng',
-    type: 'tv',
-    category: 'News',
-    country: 'Nigeria',
-  },
-  {
-    id: 'waffi-tv-ng',
-    name: 'Waffi TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/WaffiTV.ng.png',
-    m3u8Url: 'https://oqgdro3xd4rm-hls-live.5centscdn.com/waffiitvstreaminglivetfmediacast/e0885d428bea69e372309657f3bd895f.sdp/playlist.m3u8',
-    epgId: 'WaffiTV.ng',
-    type: 'tv',
-    category: 'General',
     country: 'Nigeria',
   },
   {
@@ -179,129 +139,109 @@ export const VERIFIED_AFRICAN_CHANNELS: IptvChannel[] = [
     category: 'Entertainment',
     country: 'Nigeria',
   },
-
-  // EGYPT
   {
-    id: 'aghapy-tv-eg',
-    name: 'Aghapy TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/AghapyTV.eg.png',
-    m3u8Url: 'https://5b622f07944df.streamlock.net/aghapy.tv/aghapy.smil/playlist.m3u8',
-    epgId: 'AghapyTV.eg',
-    type: 'tv',
-    category: 'Religious',
-    country: 'Egypt',
-  },
-  {
-    id: 'al-ghad-plus-eg',
-    name: 'Al Ghad Plus',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/AlGhadPlus.eg.png',
-    m3u8Url: 'https://playlist.fasttvcdn.com/pl/ykvm3f2fhokwxqsurp9xcg/alghad-plus/playlist.m3u8',
-    epgId: 'AlGhadPlus.eg',
+    id: 'advocate-broadcasting-network-ng',
+    name: 'Advocate Broadcasting Network',
+    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/AdvocateBroadcastingNetwork.ng.png',
+    m3u8Url: 'https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_045/Stream/playlist.m3u8',
+    epgId: 'AdvocateBroadcastingNetwork.ng',
     type: 'tv',
     category: 'News',
-    country: 'Egypt',
+    country: 'Nigeria',
   },
   {
-    id: 'al-ghad-tv-eg',
-    name: 'Al Ghad TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/AlGhadTV.eg.png',
-    m3u8Url: 'https://eazyvwqssi.erbvr.com/alghadtv/alghadtv.m3u8',
-    epgId: 'AlGhadTV.eg',
+    id: 'rave-tv-ng',
+    name: 'Rave TV',
+    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/RaveTV.ng.png',
+    m3u8Url: 'https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_039/Stream/playlist.m3u8',
+    epgId: 'RaveTV.ng',
+    type: 'tv',
+    category: 'General',
+    country: 'Nigeria',
+  },
+  {
+    id: 'istage-tv-ng',
+    name: 'Itage TV',
+    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/ItageTV.ng.png',
+    m3u8Url: 'https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_011/Stream/playlist.m3u8',
+    epgId: 'ItageTV.ng',
+    type: 'tv',
+    category: 'Entertainment',
+    country: 'Nigeria',
+  },
+  {
+    id: 'superscreen-tv-ng',
+    name: 'Superscreen TV',
+    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/SuperscreenTV.ng.png',
+    m3u8Url: 'https://video1.getstreamhosting.com:1936/8398/8398/playlist.m3u8',
+    epgId: 'SuperscreenTV.ng',
+    type: 'tv',
+    category: 'General',
+    country: 'Nigeria',
+  },
+  {
+    id: 'waffi-tv-ng',
+    name: 'Waffi TV',
+    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/WaffiTV.ng.png',
+    m3u8Url: 'https://oqgdro3xd4rm-hls-live.5centscdn.com/waffiitvstreaminglivetfmediacast/e0885d428bea69e372309657f3bd895f.sdp/playlist.m3u8',
+    epgId: 'WaffiTV.ng',
+    type: 'tv',
+    category: 'General',
+    country: 'Nigeria',
+  },
+  {
+    id: 'wap-tv-ng',
+    name: 'Wap TV',
+    logoUrl: 'https://i.imgur.com/Djng8pI.png',
+    m3u8Url: 'https://newproxy3.vidivu.tv/waptv/index.m3u8',
+    epgId: 'WapTV.ng',
+    type: 'tv',
+    category: 'Entertainment',
+    country: 'Nigeria',
+  },
+  {
+    id: 'ln247-ng',
+    name: 'LN247',
+    logoUrl: 'https://i.imgur.com/s6PUehQ.jpg',
+    m3u8Url: 'https://go5lmb6oyawb-hls-live.5centscdn.com/station/3dfd3752af3d7aec5c53992c2da3a316.sdp/playlist.m3u8',
+    epgId: 'LN247.ng',
     type: 'tv',
     category: 'News',
-    country: 'Egypt',
+    country: 'Nigeria',
   },
   {
-    id: 'al-qahera-news-eg',
-    name: 'Al Qahera News',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/AlQaheraNews.eg.png',
-    m3u8Url: 'https://bcovlive-a.akamaihd.net/d30cbb3350af4cb7a6e05b9eb1bfd850/eu-west-1/6057955906001/playlist.m3u8',
-    epgId: 'AlQaheraNews.eg',
+    id: 'amusic-channel-ng',
+    name: 'AMusic Channel',
+    logoUrl: 'https://i.imgur.com/06zuf64.png',
+    m3u8Url: 'http://mn-nl.mncdn.com/amusictv/amusicsrt.stream/playlist.m3u8',
+    epgId: 'AMusicChannel.ng',
     type: 'tv',
-    category: 'News',
-    country: 'Egypt',
+    category: 'Music',
+    country: 'Nigeria',
   },
   {
-    id: 'alhayat-tv-eg',
-    name: 'Alhayat TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/AlhayatTV.eg.png',
-    m3u8Url: 'https://cdn3.wowza.com/5/OE5HREpIcEkySlNT/alhayat-live/ngrp:livestream_all/playlist.m3u8',
-    epgId: 'AlhayatTV.eg',
+    id: 'qausain-tv-ng',
+    name: 'Qausain TV',
+    logoUrl: 'https://i.ibb.co/N70QyQ7/Qausain-TV-logo.png',
+    m3u8Url: 'https://acasmedia3.acangroup.org/qausaintv/qausaintv_output/playlist.m3u8',
+    epgId: 'QausainTV.ng',
     type: 'tv',
-    category: 'General',
-    country: 'Egypt',
+    category: 'Culture',
+    country: 'Nigeria',
   },
   {
-    id: 'coptic-tv-eg',
-    name: 'Coptic TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/CopticTV.eg.png',
-    m3u8Url: 'https://ctv.icopts.app/CTV/index.fmp4.m3u8',
-    epgId: 'CopticTV.eg',
-    type: 'tv',
-    category: 'Religious',
-    country: 'Egypt',
-  },
-  {
-    id: 'huda-tv-eg',
-    name: 'Huda TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/HudaTV.eg.png',
-    m3u8Url: 'https://cdn.bestream.io:19360/elfaro1/elfaro1.m3u8',
-    epgId: 'HudaTV.eg',
-    type: 'tv',
-    category: 'Religious',
-    country: 'Egypt',
-  },
-  {
-    id: 'koogi-tv-eg',
-    name: 'Koogi TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/KoogiTV.eg.png',
-    m3u8Url: 'https://5d658d7e9f562.streamlock.net/koogi.tv/koogi.smil/playlist.m3u8',
-    epgId: 'KoogiTV.eg',
-    type: 'tv',
-    category: 'Kids',
-    country: 'Egypt',
-  },
-  {
-    id: 'mbc-masr-1-eg',
-    name: 'MBC Masr 1',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/MBCMasr1.eg.png',
-    m3u8Url: 'https://shd-gcp-live.edgenextcdn.net/live/bitmovin-mbc-masr/956eac069c78a35d47245db6cdbb1575/index.m3u8',
-    epgId: 'MBCMasr1.eg',
+    id: 'rapid-tv-ng',
+    name: 'Rapid TV',
+    logoUrl: 'https://i.imgur.com/FkMNcj1.jpeg',
+    m3u8Url: 'https://stream-hls.castr-cdn.com/6a05a899db0ebd344a759542/live_9655bc604f8211f19e748901a3f596d0/index.m3u8',
+    epgId: 'RapidTV.ng',
     type: 'tv',
     category: 'General',
-    country: 'Egypt',
-  },
-  {
-    id: 'mbc-masr-2-eg',
-    name: 'MBC Masr 2',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/MBCMasr2.eg.png',
-    m3u8Url: 'https://shd-gcp-live.edgenextcdn.net/live/bitmovin-mbc-masr-2/754931856515075b0aabf0e583495c68/index.m3u8',
-    epgId: 'MBCMasr2.eg',
-    type: 'tv',
-    category: 'General',
-    country: 'Egypt',
-  },
-  {
-    id: 'rotana-cinema-eg',
-    name: 'Rotana Cinema',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/RotanaCinema.eg.png',
-    m3u8Url: 'https://rotana.hibridcdn.net/rotananet/cinemamasr_net-7Y83PP5adWixDF93/playlist.m3u8',
-    epgId: 'RotanaCinema.eg',
-    type: 'tv',
-    category: 'Movies',
-    country: 'Egypt',
-  },
-  {
-    id: 'watan-tv-eg',
-    name: 'Watan TV',
-    logoUrl: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/logos/WatanTV.eg.png',
-    m3u8Url: 'https://rp.tactivemedia.com/watantv_source/live/playlist.m3u8',
-    epgId: 'WatanTV.eg',
-    type: 'tv',
-    category: 'General',
-    country: 'Egypt',
+    country: 'Nigeria',
   },
 ];
+
+export const VERIFIED_AFRICAN_CHANNELS: IptvChannel[] = VERIFIED_NIGERIAN_CHANNELS;
 
 /**
  * Parses M3U/M3U8 playlist from Free-TV/IPTV repository into normalized IptvChannel objects
@@ -411,43 +351,54 @@ export function parseTdtChannels(data: RawTdtResponse, channelType: 'tv' | 'radi
 }
 
 /**
- * Fetches all TV and Radio IPTV channels from Free-TV/IPTV and TDTChannels
+ * Fetches TV and Radio IPTV channels for Nigeria
  */
 export async function fetchTdtChannelsFromSource(): Promise<{ tv: IptvChannel[]; radio: IptvChannel[] }> {
-  const [freeTvRes, tvRes, radioRes] = await Promise.allSettled([
+  const [ngRes, freeTvRes] = await Promise.allSettled([
+    fetch(NIGERIA_IPTV_PLAYLIST_URL, { next: { revalidate: 3600 } }),
     fetch(FREE_TV_PLAYLIST_URL, { next: { revalidate: 3600 } }),
-    fetch(TDT_TV_JSON, { next: { revalidate: 3600 } }),
-    fetch(TDT_RADIO_JSON, { next: { revalidate: 3600 } })
   ]);
 
-  let allChannels: IptvChannel[] = [...VERIFIED_AFRICAN_CHANNELS];
+  let allChannels: IptvChannel[] = [...VERIFIED_NIGERIAN_CHANNELS];
 
-  // Parse Free-TV playlist
+  // Parse Nigeria IPTV playlist
+  if (ngRes.status === 'fulfilled' && ngRes.value.ok) {
+    const ngText = await ngRes.value.text();
+    const ngChannels = parseM3uPlaylist(ngText).map(ch => ({
+      ...ch,
+      country: 'Nigeria',
+    }));
+    allChannels.push(...ngChannels);
+  }
+
+  // Parse Free-TV playlist for Nigerian streams
   if (freeTvRes.status === 'fulfilled' && freeTvRes.value.ok) {
     const freeTvText = await freeTvRes.value.text();
     const freeTvChannels = parseM3uPlaylist(freeTvText);
-    allChannels.push(...freeTvChannels);
+    const ngFreeTvChannels = freeTvChannels.filter(c =>
+      c.country?.toLowerCase() === 'nigeria' ||
+      c.country?.toLowerCase() === 'ng' ||
+      c.id.endsWith('-ng') ||
+      c.epgId?.endsWith('.ng')
+    );
+    allChannels.push(...ngFreeTvChannels);
   }
 
-  // Parse TDTChannels TV
-  if (tvRes.status === 'fulfilled' && tvRes.value.ok) {
-    const tvData: RawTdtResponse = await tvRes.value.json();
-    const tdtTv = parseTdtChannels(tvData, 'tv');
-    allChannels.push(...tdtTv);
-  }
+  // Filter strictly for Nigerian channels
+  const nigerianChannels = allChannels.filter(c =>
+    !c.country ||
+    c.country.toLowerCase() === 'nigeria' ||
+    c.country.toLowerCase() === 'ng' ||
+    c.id.endsWith('-ng') ||
+    c.epgId?.endsWith('.ng')
+  );
 
-  // Parse TDTChannels Radio
-  if (radioRes.status === 'fulfilled' && radioRes.value.ok) {
-    const radioData: RawTdtResponse = await radioRes.value.json();
-    const tdtRadio = parseTdtChannels(radioData, 'radio');
-    allChannels.push(...tdtRadio);
-  }
-
-  // Deduplicate channels by id
+  // Deduplicate channels by id or name
   const channelMap = new Map<string, IptvChannel>();
-  for (const ch of allChannels) {
-    if (!channelMap.has(ch.id)) {
-      channelMap.set(ch.id, ch);
+  for (const ch of nigerianChannels) {
+    const key = ch.name.toLowerCase().trim();
+    if (!channelMap.has(key)) {
+      channelMap.set(key, ch);
     }
   }
 
@@ -455,7 +406,7 @@ export async function fetchTdtChannelsFromSource(): Promise<{ tv: IptvChannel[];
   const tv = uniqueChannels.filter(c => c.type === 'tv');
   const radio = uniqueChannels.filter(c => c.type === 'radio');
 
-  return { tv, radio };
+  return { tv: tv.length > 0 ? tv : VERIFIED_NIGERIAN_CHANNELS, radio };
 }
 
 /**

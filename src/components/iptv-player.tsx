@@ -196,7 +196,7 @@ export function IptvPlayer({ channel, currentProgram, onPlayStateChange, classNa
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 p-6 text-center">
           <div className="relative w-28 h-28 mb-4 rounded-full overflow-hidden border-4 border-primary/50 shadow-xl flex items-center justify-center bg-black/40">
             {channel.logoUrl ? (
-              <Image src={channel.logoUrl} alt={channel.name} fill className="object-cover" />
+              <Image src={channel.logoUrl} alt={channel.name} fill className="object-cover" unoptimized />
             ) : (
               <Radio className="w-12 h-12 text-primary" />
             )}
@@ -247,7 +247,7 @@ export function IptvPlayer({ channel, currentProgram, onPlayStateChange, classNa
         <div className="flex items-center gap-3">
           {channel.logoUrl && (
             <div className="relative w-9 h-9 rounded-lg overflow-hidden border border-white/20 bg-black/60 flex-shrink-0">
-              <Image src={channel.logoUrl} alt={channel.name} fill className="object-contain p-1" />
+              <Image src={channel.logoUrl} alt={channel.name} fill className="object-contain p-1" unoptimized />
             </div>
           )}
           <div>

@@ -198,12 +198,21 @@ export default function Home() {
 
   const floatingType: 'video' | 'iptv' = playingTab === 'live-tv' ? 'iptv' : 'video';
 
-  // Combine Firestore IPTV channels with fallback TDTChannels source
+  // Combine Firestore IPTV channels with fallback sources, strictly filtered for Nigerian channels
   const iptvChannels = useMemo(() => {
-    if (firestoreIptvChannels && firestoreIptvChannels.length > 0) {
-      return firestoreIptvChannels;
-    }
-    return fallbackIptvChannels;
+    const raw = (firestoreIptvChannels && firestoreIptvChannels.length > 0)
+      ? firestoreIptvChannels
+      : fallbackIptvChannels;
+
+    const filtered = raw.filter(ch =>
+      !ch.country ||
+      ch.country.toLowerCase() === 'nigeria' ||
+      ch.country.toLowerCase() === 'ng' ||
+      ch.id.endsWith('-ng') ||
+      ch.epgId?.endsWith('.ng')
+    );
+
+    return filtered.length > 0 ? filtered : fallbackIptvChannels;
   }, [firestoreIptvChannels, fallbackIptvChannels]);
 
   // Load default fallback TDTChannels and EPG on mount
@@ -818,7 +827,7 @@ export default function Home() {
 
                 {/* Filter buttons */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                  {['all', 'tv', 'radio', 'generalistas', 'noticias', 'deportes'].map((cat) => (
+                  {['all', 'News', 'Entertainment', 'Music', 'General', 'Culture', 'Religious'].map((cat) => (
                     <Button
                       key={cat}
                       size="sm"
@@ -865,7 +874,7 @@ export default function Home() {
                       >
                         <div className="relative w-11 h-11 rounded-md overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center flex-shrink-0">
                           {ch.logoUrl ? (
-                            <Image src={ch.logoUrl} alt={ch.name} fill className="object-contain p-1" />
+                            <Image src={ch.logoUrl} alt={ch.name} fill className="object-contain p-1" unoptimized />
                           ) : (
                             ch.type === 'radio' ? <Radio className="h-5 w-5 text-purple-400" /> : <Tv className="h-5 w-5 text-cyan-400" />
                           )}
