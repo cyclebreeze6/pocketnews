@@ -17,9 +17,12 @@ env:
 
 cron:
   - schedule: "every 20 minutes"
+    uri: "/api/cron/auto-import"
+    timeoutSeconds: 540
+  - schedule: "every 20 minutes"
     uri: "/api/cron/sync-breaking-news"
     timeoutSeconds: 540
-  - schedule: "every 1 hours"
+  - schedule: "every 20 minutes"
     uri: "/api/cron/sync-all-channels"
     timeoutSeconds: 540
   - schedule: "30 * * * *"
@@ -28,3 +31,4 @@ cron:
   - schedule: "every 2 hours"
     uri: "/api/cron/sync-shorts"
     timeoutSeconds: 540
+

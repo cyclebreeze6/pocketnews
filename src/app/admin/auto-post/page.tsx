@@ -1,14 +1,12 @@
-'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { useToast } from '../../../hooks/use-toast';
-import { useFirebase, useCollection, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '../../../firebase';
+import { useFirebase, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '../../../firebase';
 import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import type { Channel, Short } from '../../../lib/types';
-import { Loader2, Plus, Zap, Trash2, CheckCircle2, RefreshCw, Clapperboard } from 'lucide-react';
+import { Loader2, Plus, Zap, Trash2, CheckCircle2, RefreshCw, Clapperboard, Clock, Play } from 'lucide-react';
 import { fetchYouTubeChannelInfo } from '../../actions/youtube-channel-info-flow';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Switch } from '../../../components/ui/switch';
@@ -24,6 +22,8 @@ export default function AdminAutoPostPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSyncingShorts, setIsSyncingShorts] = useState(false);
+  const [isAutoImportRunning, setIsAutoImportRunning] = useState(false);
+  const [browserAutoRunEnabled, setBrowserAutoRunEnabled] = useState(true);
 
   // Fetch channels that have a YouTube URL
   const autoSyncQuery = useMemoFirebase(() => 
@@ -35,6 +35,51 @@ export default function AdminAutoPostPage() {
   // Fetch total shorts count for visibility
   const shortsQuery = useMemoFirebase(() => collection(firestore, 'shorts'), [firestore]);
   const { data: shorts } = useCollection<Short>(shortsQuery);
+
+  // Fetch 20-minute auto-import status metadata
+  const autoImportMetaRef = useMemoFirebase(() => doc(firestore, 'metadata/auto_import_status'), [firestore]);
+  const { data: autoImportMeta } = useDoc<any>(autoImportMetaRef);
+
+  // Automatic 20-minute client timer fallback for active admin session
+  useEffect(() => {
+    if (!browserAutoRunEnabled) return;
+
+    // Run initial check / set up 20-minute (1,200,000 ms) interval
+    const TWENTY_MINUTES_MS = 20 * 60 * 1000;
+    const interval = setInterval(async () => {
+      console.log('[Auto-Import Ticker] Firing 20-minute client auto-import...');
+      try {
+        await handleRunAutoImport(true);
+      } catch (err: any) {
+        console.error('[Auto-Import Ticker] Error:', err.message);
+      }
+    }, TWENTY_MINUTES_MS);
+
+    return () => clearInterval(interval);
+  }, [browserAutoRunEnabled]);
+
+  const handleRunAutoImport = async (silent = false) => {
+    setIsAutoImportRunning(true);
+    try {
+      const response = await fetch('/api/cron/auto-import', { method: 'GET' });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Auto-import request failed');
+      }
+      if (!silent) {
+        toast({
+          title: '20-Min Auto-Import Completed',
+          description: `Imported ${data.stats?.newVideosImported ?? 0} new videos across ${data.stats?.channelsSynced ?? 0} YouTube channels.`,
+        });
+      }
+    } catch (error: any) {
+      if (!silent) {
+        toast({ variant: 'destructive', title: 'Auto-Import Error', description: error.message });
+      }
+    } finally {
+      setIsAutoImportRunning(false);
+    }
+  };
 
   const handleAddChannel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +107,7 @@ export default function AdminAutoPostPage() {
           youtubeChannelUrl: newChannelUrl,
           youtubeChannelId: info.youtubeChannelId,
           region: info.region || ['Global'],
-          createdAt: serverTimestamp(),
+          createdAt: serverTimestamp() as any,
           isAutoSyncEnabled: true,
         };
         
@@ -122,12 +167,16 @@ export default function AdminAutoPostPage() {
     }
   };
 
+  const lastImportDate = autoImportMeta?.lastAutoImportAt?.toDate 
+    ? autoImportMeta.lastAutoImportAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'Pending initial run';
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight font-headline">AI Auto-Post</h1>
-          <p className="text-muted-foreground">Manage channels that feed your news tickers and shorts feed.</p>
+          <h1 className="text-3xl font-bold tracking-tight font-headline">AI Auto-Post & Auto-Import</h1>
+          <p className="text-muted-foreground">Monitors YouTube channels and automatically imports videos every 20 minutes.</p>
         </div>
         <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full border border-primary/20 text-sm font-medium">
@@ -140,6 +189,75 @@ export default function AdminAutoPostPage() {
             </div>
         </div>
       </div>
+
+      {/* 20-Minute Auto-Import Status Card */}
+      <Card className="border-primary/40 bg-gradient-to-r from-primary/5 via-background to-secondary/10 shadow-md">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                <Clock className="h-6 w-6 text-primary animate-spin-slow" />
+                20-Minute Auto-Import Engine
+              </CardTitle>
+              <CardDescription className="text-sm mt-1">
+                Scans all active YouTube channels automatically every 20 minutes to import fresh videos.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                Auto-Import: Active (Every 20m)
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-background/80 border border-border/50 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Last Auto-Import</p>
+              <p className="text-base font-semibold text-foreground mt-0.5">{lastImportDate}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">New Videos Last Run</p>
+              <p className="text-base font-semibold text-foreground mt-0.5">{autoImportMeta?.newVideosImported ?? 0} imported</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Channels Synced</p>
+              <p className="text-base font-semibold text-foreground mt-0.5">{autoImportMeta?.syncedChannels ?? 0} active channels</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-1">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <Switch 
+                id="browser-auto-run" 
+                checked={browserAutoRunEnabled} 
+                onCheckedChange={setBrowserAutoRunEnabled} 
+              />
+              <label htmlFor="browser-auto-run" className="cursor-pointer font-medium text-foreground">
+                In-Browser 20-Min Auto-Runner (Active during admin session)
+              </label>
+            </div>
+            <Button 
+              onClick={() => handleRunAutoImport(false)} 
+              disabled={isAutoImportRunning} 
+              className="w-full sm:w-auto font-medium"
+            >
+              {isAutoImportRunning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Auto-Importing...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4 fill-current" />
+                  Run 20-Min Auto-Import Now
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Sync Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

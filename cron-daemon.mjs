@@ -58,24 +58,30 @@ function triggerSyncRoute(endpointName, uri) {
 console.log('🚀 Starting Standalone Cron Daemon...');
 console.log(`Targeting Next.js API at: ${NEXTJS_BASE_URL}`);
 
-// 1. Sync Breaking News (Every 20 minutes)
+// 1. Auto-Import YouTube Videos (Every 20 minutes)
+cron.schedule('*/20 * * * *', () => {
+  triggerSyncRoute('YouTube Channel Auto-Import', '/api/cron/auto-import');
+});
+
+// 2. Sync Breaking News (Every 20 minutes)
 cron.schedule('*/20 * * * *', () => {
   triggerSyncRoute('Breaking News Sync', '/api/cron/sync-breaking-news');
 });
 
-// 2. Sync All Active Channels (Every 1 hour)
-cron.schedule('0 * * * *', () => {
+// 3. Sync All Active Channels (Every 20 minutes)
+cron.schedule('*/20 * * * *', () => {
   triggerSyncRoute('All Channels Sync', '/api/cron/sync-all-channels');
 });
 
-// 3. Sync Remaining Channels (At minute 30 past every hour)
+// 4. Sync Remaining Channels (At minute 30 past every hour)
 cron.schedule('30 * * * *', () => {
   triggerSyncRoute('Remaining Channels Sync', '/api/cron/sync-remaining-channels');
 });
 
-// 4. Sync Shorts (Every 2 hours)
+// 5. Sync Shorts (Every 2 hours)
 cron.schedule('0 */2 * * *', () => {
   triggerSyncRoute('Shorts Sync', '/api/cron/sync-shorts');
 });
 
-console.log('🕒 Cron schedules loaded. Waiting for next interval...');
+console.log('🕒 Cron schedules loaded (20-minute auto-import active). Waiting for next interval...');
+
