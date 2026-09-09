@@ -42,20 +42,20 @@ export default function AdminAutoPostPage() {
   const autoImportMetaRef = useMemoFirebase(() => doc(firestore, 'metadata/auto_import_status'), [firestore]);
   const { data: autoImportMeta } = useDoc<any>(autoImportMetaRef);
 
-  // Automatic 20-minute client timer fallback for active admin session
+  // Automatic 30-minute client timer fallback for active admin session
   useEffect(() => {
     if (!browserAutoRunEnabled) return;
 
-    // Run initial check / set up 20-minute (1,200,000 ms) interval
-    const TWENTY_MINUTES_MS = 20 * 60 * 1000;
+    // Run initial check / set up 30-minute (1,800,000 ms) interval
+    const THIRTY_MINUTES_MS = 30 * 60 * 1000;
     const interval = setInterval(async () => {
-      console.log('[Auto-Import Ticker] Firing 20-minute client auto-import...');
+      console.log('[Auto-Import Ticker] Firing 30-minute client auto-import...');
       try {
         await handleRunAutoImport(true);
       } catch (err: any) {
         console.error('[Auto-Import Ticker] Error:', err.message);
       }
-    }, TWENTY_MINUTES_MS);
+    }, THIRTY_MINUTES_MS);
 
     return () => clearInterval(interval);
   }, [browserAutoRunEnabled]);
@@ -63,15 +63,11 @@ export default function AdminAutoPostPage() {
   const handleRunAutoImport = async (silent = false) => {
     setIsAutoImportRunning(true);
     try {
-      const response = await fetch('/api/cron/auto-import', { method: 'GET' });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Auto-import request failed');
-      }
+      const data = await syncAllChannelsAction();
       if (!silent) {
         toast({
-          title: '20-Min Auto-Import Completed',
-          description: `Imported ${data.stats?.newVideosImported ?? 0} new videos across ${data.stats?.channelsSynced ?? 0} YouTube channels.`,
+          title: '30-Min Auto-Import Completed',
+          description: `Imported ${data.count ?? 0} new videos across ${data.synced ?? 0} YouTube channels.`,
         });
       }
     } catch (error: any) {
@@ -178,7 +174,7 @@ export default function AdminAutoPostPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline">AI Auto-Post & Auto-Import</h1>
-          <p className="text-muted-foreground">Monitors YouTube channels and automatically imports videos every 20 minutes.</p>
+          <p className="text-muted-foreground">Monitors YouTube channels and automatically imports videos every 30 minutes.</p>
         </div>
         <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full border border-primary/20 text-sm font-medium">
@@ -192,23 +188,23 @@ export default function AdminAutoPostPage() {
         </div>
       </div>
 
-      {/* 20-Minute Auto-Import Status Card */}
+      {/* 30-Minute Auto-Import Status Card */}
       <Card className="border-primary/40 bg-gradient-to-r from-primary/5 via-background to-secondary/10 shadow-md">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-2 text-xl font-bold">
                 <Clock className="h-6 w-6 text-primary animate-spin-slow" />
-                20-Minute Auto-Import Engine
+                30-Minute Auto-Import Engine
               </CardTitle>
               <CardDescription className="text-sm mt-1">
-                Scans all active YouTube channels automatically every 20 minutes to import fresh videos.
+                Scans all active YouTube channels automatically every 30 minutes to import fresh videos.
               </CardDescription>
             </div>
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-                Auto-Import: Active (Every 20m)
+                Auto-Import: Active (Every 30m)
               </span>
             </div>
           </div>
@@ -237,7 +233,7 @@ export default function AdminAutoPostPage() {
                 onCheckedChange={setBrowserAutoRunEnabled} 
               />
               <label htmlFor="browser-auto-run" className="cursor-pointer font-medium text-foreground">
-                In-Browser 20-Min Auto-Runner (Active during admin session)
+                In-Browser 30-Min Auto-Runner (Active during admin session)
               </label>
             </div>
             <Button 
@@ -253,7 +249,7 @@ export default function AdminAutoPostPage() {
               ) : (
                 <>
                   <Play className="mr-2 h-4 w-4 fill-current" />
-                  Run 20-Min Auto-Import Now
+                  Run 30-Min Auto-Import Now
                 </>
               )}
             </Button>

@@ -58,18 +58,18 @@ function triggerSyncRoute(endpointName, uri) {
 console.log('🚀 Starting Standalone Cron Daemon...');
 console.log(`Targeting Next.js API at: ${NEXTJS_BASE_URL}`);
 
-// 1. Auto-Import YouTube Videos (Every 20 minutes)
-cron.schedule('*/20 * * * *', () => {
+// 1. Auto-Import YouTube Videos (Every 30 minutes)
+cron.schedule('*/30 * * * *', () => {
   triggerSyncRoute('YouTube Channel Auto-Import', '/api/cron/auto-import');
 });
 
-// 2. Sync Breaking News (Every 20 minutes)
-cron.schedule('*/20 * * * *', () => {
+// 2. Sync Breaking News (Every 30 minutes)
+cron.schedule('*/30 * * * *', () => {
   triggerSyncRoute('Breaking News Sync', '/api/cron/sync-breaking-news');
 });
 
-// 3. Sync All Active Channels (Every 20 minutes)
-cron.schedule('*/20 * * * *', () => {
+// 3. Sync All Active Channels (Every 30 minutes)
+cron.schedule('*/30 * * * *', () => {
   triggerSyncRoute('All Channels Sync', '/api/cron/sync-all-channels');
 });
 
@@ -83,5 +83,5 @@ cron.schedule('0 */2 * * *', () => {
   triggerSyncRoute('Shorts Sync', '/api/cron/sync-shorts');
 });
 
-console.log('🕒 Cron schedules loaded (20-minute auto-import active). Waiting for next interval...');
+console.log('🕒 Cron schedules loaded (30-minute auto-import active). Waiting for next interval...');
 

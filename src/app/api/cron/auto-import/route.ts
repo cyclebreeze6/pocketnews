@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         const firestore = adminSDK.firestore();
         await firestore.doc('metadata/auto_import_status').set({
           lastAutoImportAt: FieldValue.serverTimestamp(),
-          nextScheduledAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+          nextScheduledAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
           syncedChannels: result.synced,
           newVideosImported: result.count,
           durationMs,
@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      intervalMinutes: 20,
-      message: `Successfully processed 20-min auto-import. Added ${result.count} new videos.`,
+      intervalMinutes: 30,
+      message: `Successfully processed 30-min auto-import. Added ${result.count} new videos.`,
       stats: {
         newVideosImported: result.count,
         channelsSynced: result.synced,

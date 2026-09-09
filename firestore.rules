@@ -56,7 +56,12 @@ service cloud.firestore {
     }
 
     match /iptv_channels/{channelId} {
-      allow get, list: if true;
+      allow read: if true;
+      allow write: if isCreatorOrAdmin();
+    }
+
+    match /{path=**}/iptv_channels/{channelId} {
+      allow read: if true;
       allow write: if isCreatorOrAdmin();
     }
     

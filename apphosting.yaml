@@ -16,13 +16,13 @@ env:
     value: "Z5b6zdd8uwS9cpfBNuuI6/msR+nC7xurKw2VnhbAkZA="
 
 cron:
-  - schedule: "every 20 minutes"
+  - schedule: "every 30 minutes"
     uri: "/api/cron/auto-import"
     timeoutSeconds: 540
-  - schedule: "every 20 minutes"
+  - schedule: "every 30 minutes"
     uri: "/api/cron/sync-breaking-news"
     timeoutSeconds: 540
-  - schedule: "every 20 minutes"
+  - schedule: "every 30 minutes"
     uri: "/api/cron/sync-all-channels"
     timeoutSeconds: 540
   - schedule: "30 * * * *"
