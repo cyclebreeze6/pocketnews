@@ -222,6 +222,8 @@ export function VideoPlayer({
             config={{
               youtube: {
                 playerVars: {
+                  autoplay: 1,
+                  playsinline: 1,
                   controls: 0,
                   modestbranding: 1,
                   rel: 0,

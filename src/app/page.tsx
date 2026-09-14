@@ -296,6 +296,7 @@ export default function Home() {
                 const videoIdFromUrl = getVideoIdFromPath();
                 const initialVideo = videoIdFromUrl ? newVideos.find(v => v.id === videoIdFromUrl) : newVideos[0];
                 setCurrentVideo(initialVideo || newVideos[0]);
+                setNewsVideoPlaying(true);
             }
         }
     } catch (error) {
@@ -311,6 +312,12 @@ export default function Home() {
     fetchVideos();
   }, [selectedRegion]);
 
+  // Ensure autoplay triggers on homepage mount/navigation
+  useEffect(() => {
+    setNewsVideoPlaying(true);
+    setPlayingTab('news');
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       if (playerContainerRef.current) {
@@ -324,6 +331,7 @@ export default function Home() {
 
   const handleSetCurrentVideo = useCallback((video: Video) => {
     setCurrentVideo(video);
+    setNewsVideoPlaying(true);
     setPlayingTab('news');
     if (!isTheaterMode) {
         const container = playerContainerRef.current?.parentElement;
@@ -340,6 +348,8 @@ export default function Home() {
          const videoIdFromUrl = getVideoIdFromPath();
          const videoToPlay = videoIdFromUrl ? allVideos.find(v => v.id === videoIdFromUrl) : allVideos[0];
          setCurrentVideo(videoToPlay || allVideos[0]);
+         setNewsVideoPlaying(true);
+         setPlayingTab('news');
        }
     };
     window.addEventListener('popstate', handlePopState);
