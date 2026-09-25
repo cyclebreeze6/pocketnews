@@ -80,6 +80,29 @@ export function VideoPlayer({
     setIsPlaying(playing);
   }, [playing]);
 
+  // MediaSession API for mobile lockscreen & background play when minimized
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'PocketNews Video',
+        artist: 'PocketNews',
+        album: 'PocketNews Media',
+      });
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        setIsPlaying(true);
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        setIsPlaying(false);
+      });
+    } catch (err) {
+      console.warn('MediaSession warning:', err);
+    }
+  }, [isPlaying]);
+
   const url = youtubeId ? `https://www.youtube.com/watch?v=${youtubeId}` : videoUrl;
 
   // Auto hide controls on inactivity

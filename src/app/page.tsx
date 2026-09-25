@@ -599,11 +599,8 @@ export default function Home() {
                     <div
                       ref={playerContainerRef}
                       className={cn(
-                        'z-40 w-full bg-background group',
-                        isTheaterMode ? 'h-full' : 'h-auto',
-                        isPlayerSticky && isMobile && !isTheaterMode
-                          ? 'fixed top-0 left-0 right-0 shadow-lg'
-                          : 'relative'
+                        'z-40 w-full bg-background group relative',
+                        isTheaterMode && 'h-full'
                       )}
                     >
                       <div className={cn("aspect-video", isTheaterMode && "h-full")}>
@@ -617,7 +614,7 @@ export default function Home() {
                           hasPrevious={hasPrevious}
                           isTheaterMode={isTheaterMode}
                           onToggleTheater={isLargeScreen ? () => setIsTheaterMode(!isTheaterMode) : undefined}
-                          playing={newsVideoPlaying}
+                          playing={newsVideoPlaying && (!isFloatingVisible || activeTab !== 'news')}
                           key={currentVideo.id}
                         />
                       </div>

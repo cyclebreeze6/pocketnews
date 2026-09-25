@@ -38,6 +38,57 @@ export function IptvPlayer({ channel, currentProgram, onPlayStateChange, classNa
     }
   }, [active]);
 
+  // MediaSession API for lockscreen controls, WebView APK background playback & auto PiP
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+
+    if (channel) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: currentProgram?.title || channel.name || 'Live IPTV Stream',
+          artist: channel.name,
+          album: channel.category || 'PocketNews Live',
+          artwork: channel.logoUrl ? [
+            { src: channel.logoUrl, sizes: '96x96', type: 'image/png' },
+            { src: channel.logoUrl, sizes: '192x192', type: 'image/png' },
+            { src: channel.logoUrl, sizes: '512x512', type: 'image/png' },
+          ] : [],
+        });
+        navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+        navigator.mediaSession.setActionHandler('play', () => {
+          if (videoRef.current) {
+            videoRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
+          }
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          if (videoRef.current) {
+            videoRef.current.pause();
+            setIsPlaying(false);
+          }
+        });
+      } catch (err) {
+        console.warn('MediaSession initialization warning:', err);
+      }
+    }
+  }, [channel, currentProgram, isPlaying]);
+
+  // Auto Picture-in-Picture when browser or webview APK is backgrounded/minimized
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const video = videoRef.current;
+      if (document.visibilityState === 'hidden' && video && !video.paused && !document.pictureInPictureElement) {
+        if ('requestPictureInPicture' in video) {
+          video.requestPictureInPicture().catch(() => {
+            // Auto PiP might be blocked without gesture on some platforms, MediaSession handles background audio/stream
+          });
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   // Initialize HLS player
   useEffect(() => {
     const video = videoRef.current;
@@ -189,6 +240,8 @@ export function IptvPlayer({ channel, currentProgram, onPlayStateChange, classNa
         className={cn("w-full h-full object-contain", isRadio && "hidden")}
         playsInline
         crossOrigin="anonymous"
+        // @ts-ignore
+        autoPictureInPicture="true"
       />
 
       {/* Radio Visualizer Background */}
