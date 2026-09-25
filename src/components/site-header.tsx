@@ -185,7 +185,7 @@ export default function SiteHeader({ hideCategoryNav = false }: SiteHeaderProps)
 
   return (
     <>
-      <header className="w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top,0px)]">
         <div className="container flex h-16 items-center px-4 sm:px-6 md:px-8">
             {isDashboardPage && (
                 <div className="mr-4 md:hidden">

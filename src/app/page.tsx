@@ -42,7 +42,7 @@ import { useRegion } from '../context/region-context';
 import { COUNTRY_TO_CONTINENT } from '../lib/region-map';
 import { Input } from '../components/ui/input';
 
-type ActiveTab = 'news' | 'podcast';
+type ActiveTab = 'news' | 'podcast' | 'live-tv';
 
 const AnimatedLiveDot = () => (
   <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 ml-1">
@@ -176,9 +176,19 @@ export default function Home() {
   const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
   const [isFloatingManuallyEnabled, setIsFloatingManuallyEnabled] = useState(false);
 
-  // Reset floating dismissed state when active media changes
+  // Track video progress across main player and floating player
+  const [videoCurrentTime, setVideoCurrentTime] = useState<number>(0);
+
+  const handleVideoProgress = useCallback((state: { playedSeconds: number }) => {
+    if (state.playedSeconds > 0) {
+      setVideoCurrentTime(state.playedSeconds);
+    }
+  }, []);
+
+  // Reset floating dismissed state and video position when active video changes
   useEffect(() => {
     setIsFloatingDismissed(false);
+    setVideoCurrentTime(0);
   }, [currentVideo?.id, selectedIptvChannel?.id]);
 
   // Floating player visibility evaluation
@@ -615,6 +625,8 @@ export default function Home() {
                           isTheaterMode={isTheaterMode}
                           onToggleTheater={isLargeScreen ? () => setIsTheaterMode(!isTheaterMode) : undefined}
                           playing={newsVideoPlaying && (!isFloatingVisible || activeTab !== 'news')}
+                          initialTime={videoCurrentTime}
+                          onProgress={handleVideoProgress}
                           key={currentVideo.id}
                         />
                       </div>
@@ -754,6 +766,8 @@ export default function Home() {
         video={currentVideo}
         iptvChannel={selectedIptvChannel}
         isOpen={isFloatingVisible}
+        initialTime={videoCurrentTime}
+        onProgress={handleVideoProgress}
         onClose={() => {
           setIsFloatingDismissed(true);
           setIsFloatingManuallyEnabled(false);

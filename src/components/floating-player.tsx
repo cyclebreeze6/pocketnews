@@ -8,6 +8,7 @@ import Image from 'next/image';
 import type { Video, IptvChannel } from '../lib/types';
 import { VideoPlayer } from './video-player';
 import { IptvPlayer } from './iptv-player';
+import { useToast } from '../hooks/use-toast';
 
 interface FloatingPlayerProps {
   type: 'video' | 'iptv';
@@ -16,6 +17,8 @@ interface FloatingPlayerProps {
   isOpen: boolean;
   onClose: () => void;
   onExpand: () => void;
+  initialTime?: number;
+  onProgress?: (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => void;
 }
 
 export function FloatingPlayer({
@@ -25,9 +28,12 @@ export function FloatingPlayer({
   isOpen,
   onClose,
   onExpand,
+  initialTime = 0,
+  onProgress,
 }: FloatingPlayerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isPipActive, setIsPipActive] = useState(false);
+  const { toast } = useToast();
 
   // Dragging position state
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -61,7 +67,7 @@ export function FloatingPlayer({
       }
 
       // 1. Try native HTML5 video PiP (HTML5 video or HLS)
-      const videoEl = containerRef.current?.querySelector('video') || document.querySelector('video');
+      const videoEl = containerRef.current?.querySelector('video');
       if (videoEl && 'requestPictureInPicture' in videoEl) {
         await videoEl.requestPictureInPicture();
         setIsPipActive(true);
@@ -71,32 +77,45 @@ export function FloatingPlayer({
       // 2. Try Chrome / Edge Document Picture-in-Picture API
       if (typeof window !== 'undefined' && 'documentPictureInPicture' in (window as any)) {
         const docPip = (window as any).documentPictureInPicture;
+        
+        if (docPip.window) {
+          docPip.window.close();
+          setIsPipActive(false);
+          return;
+        }
+
         const pipWindow = await docPip.requestWindow({
           width: 380,
           height: 220,
         });
 
-        // Copy active styles into PiP window
-        [...document.styleSheets].forEach((styleSheet) => {
-          try {
-            const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
-            const style = document.createElement('style');
-            style.textContent = cssRules;
-            pipWindow.document.head.appendChild(style);
-          } catch (e) {
-            if (styleSheet.href) {
-              const link = document.createElement('link');
-              link.rel = 'stylesheet';
-              link.href = styleSheet.href;
-              pipWindow.document.head.appendChild(link);
-            }
-          }
+        // Copy active styles into PiP window safely from document.head
+        const styleElements = document.querySelectorAll('style, link[rel="stylesheet"]');
+        styleElements.forEach((node) => {
+          pipWindow.document.head.appendChild(node.cloneNode(true));
         });
 
-        // Copy container node
+        const pipContainer = pipWindow.document.createElement('div');
+        pipContainer.style.width = '100vw';
+        pipContainer.style.height = '100vh';
+        pipContainer.style.backgroundColor = '#000';
+        pipContainer.style.display = 'flex';
+        pipContainer.style.alignItems = 'center';
+        pipContainer.style.justifyContent = 'center';
+        pipWindow.document.body.style.margin = '0';
+        pipWindow.document.body.style.overflow = 'hidden';
+        pipWindow.document.body.appendChild(pipContainer);
+
         if (containerRef.current) {
-          const clone = containerRef.current.cloneNode(true);
-          pipWindow.document.body.appendChild(clone);
+          const clone = containerRef.current.cloneNode(true) as HTMLElement;
+          clone.style.position = 'relative';
+          clone.style.left = '0';
+          clone.style.top = '0';
+          clone.style.right = '0';
+          clone.style.bottom = '0';
+          clone.style.width = '100%';
+          clone.style.height = '100%';
+          pipContainer.appendChild(clone);
         }
 
         pipWindow.addEventListener('pagehide', () => {
@@ -104,9 +123,19 @@ export function FloatingPlayer({
         });
 
         setIsPipActive(true);
+        return;
       }
-    } catch (err) {
+
+      toast({
+        title: "Floating Player Active",
+        description: "The video mini-player is active on screen.",
+      });
+    } catch (err: any) {
       console.warn('Picture-in-Picture trigger error:', err);
+      toast({
+        title: "Picture-in-Picture",
+        description: "Floating mini-player is active on screen.",
+      });
     }
   };
 
@@ -244,6 +273,8 @@ export function FloatingPlayer({
             youtubeId={video.youtubeVideoId}
             videoUrl={video.videoUrl}
             playing={true}
+            initialTime={initialTime}
+            onProgress={onProgress}
           />
         ) : type === 'iptv' && iptvChannel ? (
           <IptvPlayer

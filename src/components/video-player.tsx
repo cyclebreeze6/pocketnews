@@ -31,6 +31,8 @@ interface VideoPlayerProps {
   isTheaterMode?: boolean;
   onToggleTheater?: () => void;
   className?: string;
+  initialTime?: number;
+  onProgress?: (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -57,11 +59,14 @@ export function VideoPlayer({
   hasPrevious,
   isTheaterMode,
   onToggleTheater,
-  className
+  className,
+  initialTime = 0,
+  onProgress: externalOnProgress,
 }: VideoPlayerProps) {
   const playerRef = useRef<ReactPlayer | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasSeekedInitialRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(playing);
   const [played, setPlayed] = useState(0);
@@ -79,6 +84,28 @@ export function VideoPlayer({
   useEffect(() => {
     setIsPlaying(playing);
   }, [playing]);
+
+  // Reset initial seek flag when video source changes
+  useEffect(() => {
+    hasSeekedInitialRef.current = false;
+  }, [youtubeId, videoUrl]);
+
+  // Handle seeking to initialTime when player becomes ready or starts playing
+  const handleReady = useCallback(() => {
+    if (initialTime > 0 && !hasSeekedInitialRef.current && playerRef.current) {
+      playerRef.current.seekTo(initialTime, 'seconds');
+      hasSeekedInitialRef.current = true;
+    }
+  }, [initialTime]);
+
+  useEffect(() => {
+    if (playing && initialTime > 0 && playerRef.current) {
+      if (!hasSeekedInitialRef.current || Math.abs(currentTime - initialTime) > 3) {
+        playerRef.current.seekTo(initialTime, 'seconds');
+        hasSeekedInitialRef.current = true;
+      }
+    }
+  }, [playing, initialTime]);
 
   // MediaSession API for mobile lockscreen & background play when minimized
   useEffect(() => {
@@ -156,6 +183,9 @@ export function VideoPlayer({
       setCurrentTime(state.playedSeconds);
     }
     setLoaded(state.loaded);
+    if (externalOnProgress) {
+      externalOnProgress(state);
+    }
   };
 
   const handleDuration = (dur: number) => {
@@ -166,13 +196,16 @@ export function VideoPlayer({
     const val = parseFloat(e.target.value);
     setPlayed(val);
     setCurrentTime(val * duration);
+    if (playerRef.current) {
+      playerRef.current.seekTo(val, 'fraction');
+    }
   };
 
-  const handleSeekMouseDown = () => {
+  const handleSeekStart = () => {
     setIsSeeking(true);
   };
 
-  const handleSeekMouseUp = (e: React.MouseEvent<HTMLInputElement>) => {
+  const handleSeekEnd = (e: React.SyntheticEvent<HTMLInputElement>) => {
     setIsSeeking(false);
     const val = parseFloat((e.target as HTMLInputElement).value);
     if (playerRef.current) {
@@ -236,6 +269,7 @@ export function VideoPlayer({
             controls={false}
             volume={isMuted ? 0 : volume}
             muted={isMuted}
+            onReady={handleReady}
             onProgress={handleProgress}
             onDuration={handleDuration}
             onEnded={onEnd}
@@ -327,7 +361,7 @@ export function VideoPlayer({
         showControls || !isPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
         {/* Interactive Scrub Bar / Timeline */}
-        <div className="relative w-full flex items-center group/slider">
+        <div className="relative w-full flex items-center group/slider py-1">
           <input
             type="range"
             min={0}
@@ -335,9 +369,15 @@ export function VideoPlayer({
             step="0.001"
             value={played}
             onChange={handleSeekChange}
-            onMouseDown={handleSeekMouseDown}
-            onMouseUp={handleSeekMouseUp}
-            className="w-full h-1.5 hover:h-2.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary transition-all duration-150 relative z-10"
+            onMouseDown={handleSeekStart}
+            onMouseUp={handleSeekEnd}
+            onTouchStart={handleSeekStart}
+            onTouchEnd={handleSeekEnd}
+            onPointerDown={handleSeekStart}
+            onPointerUp={handleSeekEnd}
+            onClick={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className="w-full h-2.5 sm:h-1.5 hover:h-2.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-cyan-400 transition-all duration-150 relative z-10 touch-none"
             style={{
               background: `linear-gradient(to right, #06b6d4 ${played * 100}%, rgba(255, 255, 255, 0.3) ${played * 100}%, rgba(255, 255, 255, 0.2) ${loaded * 100}%, rgba(255, 255, 255, 0.1) 100%)`
             }}
@@ -346,7 +386,7 @@ export function VideoPlayer({
 
         {/* Buttons & Time Row */}
         <div className="flex items-center justify-between text-white text-xs sm:text-sm pt-1">
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -360,7 +400,7 @@ export function VideoPlayer({
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); handleRewind(); }}
-              className="text-white hover:bg-white/20 h-8 w-8 rounded-full hidden sm:flex"
+              className="text-white hover:bg-white/20 h-8 w-8 rounded-full flex"
               title="Rewind 10s"
             >
               <RotateCcw className="h-4 w-4" />
@@ -370,7 +410,7 @@ export function VideoPlayer({
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); handleFastForward(); }}
-              className="text-white hover:bg-white/20 h-8 w-8 rounded-full hidden sm:flex"
+              className="text-white hover:bg-white/20 h-8 w-8 rounded-full flex"
               title="Forward 10s"
             >
               <RotateCw className="h-4 w-4" />
